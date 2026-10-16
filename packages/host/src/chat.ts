@@ -199,7 +199,8 @@ export async function buildMemoryBrief(store?: BriefStore): Promise<string> {
         const { existsSync } = await import('node:fs');
         if (!existsSync(dbPath)) return '';
       }
-      search = getStore().searchNotes.bind(getStore());
+      const briefStore = getStore();
+      search = briefStore.searchNotes.bind(briefStore);
     }
     const { results } = search({
       query: 'user preferences profile about the user',

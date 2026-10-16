@@ -325,16 +325,24 @@ export class MemoryStore {
     const cleanTags = normalizeTags(tags);
     const wiki = extractWikiLinks(body);
     const allLinks = [...new Set([...(links || []).map(String).map((s) => s.trim()).filter(Boolean), ...wiki])];
-    this.db.prepare('INSERT INTO notes(title, body, created, updated) VALUES(?, ?, ?, ?)').run(title, body, now, now);
-    const rowid = this.getRowId(title);
-    if (this.ftsAvailable && rowid !== null) {
-      this.db.prepare('INSERT INTO notes_fts(rowid, title, body) VALUES(?, ?, ?)').run(rowid, title, body);
-    }
-    for (const t of cleanTags) {
-      this.db.prepare('INSERT OR IGNORE INTO tags(note_title, tag) VALUES(?, ?)').run(title, t);
-    }
-    for (const l of allLinks) {
-      this.db.prepare('INSERT OR IGNORE INTO links(from_title, to_title) VALUES(?, ?)').run(title, l);
+    // Single transaction: one round trip instead of 1 + N_tags + N_links.
+    // Export stays outside the txn (best-effort file write, never rolls back DB).
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const info = this.db.prepare('INSERT INTO notes(title, body, created, updated) VALUES(?, ?, ?, ?)').run(title, body, now, now) as unknown as { lastInsertRowid: number | bigint };
+      if (this.ftsAvailable && info && info.lastInsertRowid !== undefined) {
+        this.db.prepare('INSERT INTO notes_fts(rowid, title, body) VALUES(?, ?, ?)').run(Number(info.lastInsertRowid), title, body);
+      }
+      for (const t of cleanTags) {
+        this.db.prepare('INSERT OR IGNORE INTO tags(note_title, tag) VALUES(?, ?)').run(title, t);
+      }
+      for (const l of allLinks) {
+        this.db.prepare('INSERT OR IGNORE INTO links(from_title, to_title) VALUES(?, ?)').run(title, l);
+      }
+      this.db.exec('COMMIT');
+    } catch (e) {
+      try { this.db.exec('ROLLBACK'); } catch { /* ignore */ }
+      throw e;
     }
     if (doExport) this.exportNote(title, body, cleanTags, allLinks);
   }
@@ -351,16 +359,24 @@ export class MemoryStore {
 
   readNote(title: string): NoteRow {
     const name = String(title || '').trim();
-    const direct = this.db.prepare('SELECT title, body, created, updated FROM notes WHERE title = ?').get(name) as Omit<NoteRow, 'tags' | 'links'> | undefined;
-    let row = direct;
+    // Single round trip: note + tags + links via GROUP_CONCAT subselects
+    // (unit separator avoids comma collisions in tag/link names).
+    const fetch = (key: string) => this.db.prepare(
+      `SELECT title, body, created, updated,
+        (SELECT GROUP_CONCAT(tag, CHAR(31)) FROM tags WHERE note_title = notes.title) AS tags,
+        (SELECT GROUP_CONCAT(to_title, CHAR(31)) FROM links WHERE from_title = notes.title) AS links
+       FROM notes WHERE title = ?`
+    ).get(key) as { title: string; body: string; created: string; updated: string; tags: string | null; links: string | null } | undefined;
+    let row = fetch(name);
     if (!row && name.endsWith('.md')) {
-      const base = path.basename(name, '.md');
-      row = this.db.prepare('SELECT title, body, created, updated FROM notes WHERE title = ?').get(base) as Omit<NoteRow, 'tags' | 'links'> | undefined;
+      row = fetch(path.basename(name, '.md'));
     }
     if (!row) throw new Error(`note not found: ${title}`);
-    const tags = (this.db.prepare('SELECT tag FROM tags WHERE note_title = ? ORDER BY tag').all(row.title) as { tag: string }[]).map((r) => r.tag);
-    const links = (this.db.prepare('SELECT to_title AS t FROM links WHERE from_title = ? ORDER BY to_title').all(row.title) as { t: string }[]).map((r) => r.t);
-    return { ...row, tags, links };
+    return {
+      ...row,
+      tags: row.tags ? row.tags.split('\u001f').sort() : [],
+      links: row.links ? row.links.split('\u001f').sort() : [],
+    };
   }
 
   updateNote(input: UpdateNoteInput): { success: boolean; title: string } {
@@ -389,23 +405,30 @@ export class MemoryStore {
       links = [...new Set([...stored, ...wiki])];
     }
 
-    this.db.prepare('UPDATE notes SET title = ?, body = ?, updated = ? WHERE title = ?').run(newTitle, body, now, title);
-    if (newTitle !== title) {
-      // ON UPDATE CASCADE handles tags.from/link.from; to_title is dangling by design — remap manually.
-      this.db.prepare('UPDATE links SET to_title = ? WHERE to_title = ?').run(newTitle, title);
-      this.removeExport(title);
-    }
-    const rowid = this.getRowId(newTitle);
-    if (this.ftsAvailable && rowid !== null) {
-      this.db.prepare('UPDATE notes_fts SET title = ?, body = ? WHERE rowid = ?').run(newTitle, body, rowid);
-    }
-    if (tags !== null) {
-      this.db.prepare('DELETE FROM tags WHERE note_title = ?').run(newTitle);
-      for (const t of tags) this.db.prepare('INSERT OR IGNORE INTO tags(note_title, tag) VALUES(?, ?)').run(newTitle, t);
-    }
-    if (links !== null) {
-      this.db.prepare('DELETE FROM links WHERE from_title = ?').run(newTitle);
-      for (const l of links) this.db.prepare('INSERT OR IGNORE INTO links(from_title, to_title) VALUES(?, ?)').run(newTitle, l);
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare('UPDATE notes SET title = ?, body = ?, updated = ? WHERE title = ?').run(newTitle, body, now, title);
+      if (newTitle !== title) {
+        // ON UPDATE CASCADE handles tags.from/link.from; to_title is dangling by design — remap manually.
+        this.db.prepare('UPDATE links SET to_title = ? WHERE to_title = ?').run(newTitle, title);
+        this.removeExport(title);
+      }
+      const rowid = this.getRowId(newTitle);
+      if (this.ftsAvailable && rowid !== null) {
+        this.db.prepare('UPDATE notes_fts SET title = ?, body = ? WHERE rowid = ?').run(newTitle, body, rowid);
+      }
+      if (tags !== null) {
+        this.db.prepare('DELETE FROM tags WHERE note_title = ?').run(newTitle);
+        for (const t of tags) this.db.prepare('INSERT OR IGNORE INTO tags(note_title, tag) VALUES(?, ?)').run(newTitle, t);
+      }
+      if (links !== null) {
+        this.db.prepare('DELETE FROM links WHERE from_title = ?').run(newTitle);
+        for (const l of links) this.db.prepare('INSERT OR IGNORE INTO links(from_title, to_title) VALUES(?, ?)').run(newTitle, l);
+      }
+      this.db.exec('COMMIT');
+    } catch (e) {
+      try { this.db.exec('ROLLBACK'); } catch { /* ignore */ }
+      throw e;
     }
     const finalTags = tags !== null ? tags : (this.db.prepare('SELECT tag FROM tags WHERE note_title = ?').all(newTitle) as { tag: string }[]).map((r) => r.tag);
     const finalLinks = links !== null ? links : (this.db.prepare('SELECT to_title AS t FROM links WHERE from_title = ?').all(newTitle) as { t: string }[]).map((r) => r.t);
@@ -444,12 +467,14 @@ export class MemoryStore {
     const tagParams: string[] = [...tags];
 
     const ftsQuery = toFtsQuery(query);
-    let rows: { title: string; body: string; rank: number }[] = [];
+    let rows: { title: string; body: string; rank: number; tags: string | null; links: string | null }[] = [];
 
     if (this.ftsAvailable && ftsQuery) {
       try {
         const sql = `
-          SELECT n.title AS title, n.body AS body, bm25(notes_fts) AS rank
+          SELECT n.title AS title, n.body AS body, bm25(notes_fts) AS rank,
+            (SELECT GROUP_CONCAT(tag, CHAR(31)) FROM tags WHERE note_title = n.title) AS tags,
+            (SELECT GROUP_CONCAT(to_title, CHAR(31)) FROM links WHERE from_title = n.title) AS links
           FROM notes_fts JOIN notes n ON n.rowid = notes_fts.rowid
           WHERE notes_fts MATCH ? ${tagFilter}
           ORDER BY rank LIMIT ? OFFSET ?`;
@@ -463,7 +488,9 @@ export class MemoryStore {
       // LIKE fallback (also covers single-char queries and FTS-unavailable runtimes).
       const like = `%${query}%`;
       const sql = `
-        SELECT n.title AS title, n.body AS body, 0 AS rank FROM notes n
+        SELECT n.title AS title, n.body AS body, 0 AS rank,
+          (SELECT GROUP_CONCAT(tag, CHAR(31)) FROM tags WHERE note_title = n.title) AS tags,
+          (SELECT GROUP_CONCAT(to_title, CHAR(31)) FROM links WHERE from_title = n.title) AS links FROM notes n
         WHERE (n.title LIKE ? OR n.body LIKE ?) ${tagFilter}
         ORDER BY n.updated DESC LIMIT ? OFFSET ?`;
       try {
@@ -477,8 +504,10 @@ export class MemoryStore {
     }
 
     const results: SearchHit[] = rows.map((r) => {
-      const tagRows = this.db.prepare('SELECT tag FROM tags WHERE note_title = ?').all(r.title) as { tag: string }[];
-      const linkRows = this.db.prepare('SELECT to_title AS t FROM links WHERE from_title = ?').all(r.title) as { t: string }[];
+      // Tags/links arrive pre-joined (unit separator); split + sort to match
+      // the old per-row ORDER BY queries without the N+1 round trips.
+      const tags = r.tags ? (r.tags as unknown as string).split('\u001f').sort() : [];
+      const links = r.links ? (r.links as unknown as string).split('\u001f').sort() : [];
       // FTS rank is negative (lower = better); convert to positive score.
       const score = typeof r.rank === 'number' && r.rank < 0 ? -r.rank : 1;
       return {
@@ -486,8 +515,8 @@ export class MemoryStore {
         title: r.title,
         path: r.title,
         content: r.body.slice(0, 500),
-        tags: tagRows.map((x) => x.tag),
-        links: linkRows.map((x) => x.t),
+        tags,
+        links,
         score,
         highlights: highlight ? sentenceHighlights(r.body, query) : [],
       };
@@ -501,11 +530,17 @@ export class MemoryStore {
   }
 
   buildGraph(): GraphResult {
-    const notes = this.db.prepare('SELECT title FROM notes ORDER BY title').all() as { title: string }[];
-    const nodes = notes.map((n) => {
-      const tags = (this.db.prepare('SELECT tag FROM tags WHERE note_title = ?').all(n.title) as { tag: string }[]).map((r) => r.tag).slice(0, 20);
-      return { id: n.title, title: n.title, tags };
-    });
+    // One round trip for notes+tags (was 1 + N per-note tag queries).
+    const notes = this.db.prepare(
+      `SELECT title,
+        (SELECT GROUP_CONCAT(tag, CHAR(31)) FROM tags WHERE note_title = notes.title) AS tags
+       FROM notes ORDER BY title`
+    ).all() as { title: string; tags: string | null }[];
+    const nodes = notes.map((n) => ({
+      id: n.title,
+      title: n.title,
+      tags: (n.tags ? n.tags.split('\u001f').sort() : []).slice(0, 20),
+    }));
     const edges = (this.db.prepare('SELECT from_title AS f, to_title AS t FROM links ORDER BY from_title, to_title').all() as { f: string; t: string }[])
       .filter((e) => e.f && e.t && e.f !== e.t)
       .map((e) => ({ from: e.f, to: e.t }));

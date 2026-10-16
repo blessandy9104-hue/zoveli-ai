@@ -21,6 +21,12 @@ export class ZoveliHost {
   private provided = new Map<string, any>();
   private handlers = new Map<string, Function[]>();
   readonly systemSections: string[] = [];
+  // Cached tool list + name map. Registrations are append-only during
+  // mount; any register() call invalidates the cache. Tools are static
+  // post-boot, so /health, /api/tools and every chat turn reuse it
+  // instead of rebuilding + sorting ~60 tools per call.
+  private toolsCache: HostTool[] | null = null;
+  private toolMap = new Map<string, HostTool>();
 
   readonly ctx: ZoveliContext;
 
@@ -30,6 +36,8 @@ export class ZoveliHost {
         const arr = this.registrations.get(key) ?? [];
         arr.push(value);
         this.registrations.set(key, arr);
+        // Tools derive from registrations — invalidate the cached list.
+        this.toolsCache = null;
         return value;
       },
       provide: (key: string, value?: any) => {
@@ -81,8 +89,9 @@ export class ZoveliHost {
     return agent;
   }
 
-  /** Every executable tool across all mounted plugins. */
+  /** Every executable tool across all mounted plugins (cached; rebuilt on register). */
   tools(): HostTool[] {
+    if (this.toolsCache) return [...this.toolsCache];
     const out: HostTool[] = [];
     const seen = new Set<string>();
     const consider = (plugin: string, value: any) => {
@@ -103,11 +112,14 @@ export class ZoveliHost {
     for (const [key, values] of this.registrations) {
       for (const v of values) consider(key, v);
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name));
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    this.toolsCache = out;
+    this.toolMap = new Map(out.map((t) => [t.name, t]));
+    return [...out];
   }
 
   getTool(name: string): HostTool {
-    const t = this.tools().find((x) => x.name === name);
+    const t = this.toolMap.get(name) ?? this.tools().find((x) => x.name === name);
     if (!t) throw new Error(`unknown tool: ${name}`);
     return t;
   }
