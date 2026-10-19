@@ -20,7 +20,7 @@ User (CLI / Desktop)
     → Cordis context (ctx)
       → zoveli plugins (22 packages; 30 mounted by default)
         → capabilities (scanner → registry → adaptation)
-        → tools (guarded pre/post pipeline, ~63 live)
+        → tools (guarded pre/post pipeline, ~61 live)
         → sessions (JSONL + projections)
         → external systems (mathcore MCP, SQLite store, vault FS, LLM APIs)
 ```

@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { rmSync, mkdirSync, statSync, existsSync } from 'node:fs';
+import { rmSync, mkdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { MemoryStore, resetStoreForTests } from '../../packages/memory-store/src/store';
 import { zoveliMemoryStore } from '../../packages/memory-store/src/index';
 import { zoveliMemory } from '../../packages/memory/src/index';
 import { zoveliSearch } from '../../packages/search/src/index';
 import { zoveliGraph } from '../../packages/graph/src/index';
 import { memoryTools } from '../../packages/core/src/memory-tools';
+import { ZoveliHost } from '../../packages/host/src/host';
 import { createMockContext } from '../setup';
 
 let dirCounter = 0;
@@ -87,6 +88,38 @@ describe('memory-store (SQLite FTS5)', () => {
     expect(store.toDot(g)).toContain('digraph vault');
   });
 
+  it('exposes vault_graph through the graph plugin and honors vaultPath', async () => {
+    // Each vault gets its own in-memory DB so the import-on-first-boot path
+    // runs per store (a shared file DB would import only once).
+    process.env.ZOVELI_MEMORY_DB = ':memory:';
+    process.env.ZOVELI_MEMORY_EXPORT = '0';
+    resetStoreForTests();
+
+    const defaultVault = paths.vault;
+    const targetVault = `${paths.vault}-target`;
+    mkdirSync(defaultVault, { recursive: true });
+    mkdirSync(targetVault, { recursive: true });
+    writeFileSync(join(defaultVault, 'Default.md'), '---\ntitle: "Default Vault"\n---\nignored\n');
+    writeFileSync(join(targetVault, 'Target.md'), '---\ntitle: "Target Vault"\n---\nfound\n');
+
+    try {
+      const host = new ZoveliHost();
+      host.mount([zoveliMemoryStore, zoveliGraph] as any);
+
+      // Host dedup is first-wins: memory-store must not shadow @zoveli/graph.
+      const matches = host.tools().filter((t) => t.name === 'vault_graph');
+      expect(matches).toHaveLength(1);
+      expect(host.getTool('vault_graph').plugin).toBe('graph-tools');
+
+      const g = (await host.runTool('vault_graph', { vaultPath: targetVault })) as any;
+      const ids = g.nodes.map((n: any) => n.id);
+      expect(ids).toEqual(['Target Vault']);
+      expect(ids).not.toContain('Default Vault');
+    } finally {
+      rmSync(targetVault, { recursive: true, force: true });
+    }
+  });
+
   it('lists tags sorted', () => {
     store.createNote({ title: 'T1', content: 'x', tags: ['zebra', 'apple'] });
     expect(store.listTags().tags).toEqual(['apple', 'zebra']);
@@ -102,14 +135,17 @@ describe('memory-store (SQLite FTS5)', () => {
 });
 
 describe('memory-store plugin contract (tool names preserved)', () => {
-  it('registers memory_* + vault_* tools', () => {
+  it('registers memory_* + vault_search tools, leaving vault_graph to @zoveli/graph', () => {
     const ctx = createMockContext();
     zoveliMemoryStore.setup(ctx);
     const tools = ctx.register.mock.calls.find((c) => c[0] === 'memory-store-tools')?.[1] as any[];
     expect(tools).toBeDefined();
-    for (const name of ['memory_create_note', 'memory_search', 'memory_read_note', 'memory_list_tags', 'memory_update_note', 'memory_delete_note', 'vault_search', 'vault_graph']) {
+    for (const name of ['memory_create_note', 'memory_search', 'memory_read_note', 'memory_list_tags', 'memory_update_note', 'memory_delete_note', 'vault_search']) {
       expect(tools.some((t) => t.name === name)).toBe(true);
     }
+    // Registering vault_graph here would win host dedup and shadow the
+    // graph plugin's vaultPath-aware implementation.
+    expect(tools.some((t) => t.name === 'vault_graph')).toBe(false);
   });
 
   it('delegates: memory/search/graph + core tools use the store', async () => {

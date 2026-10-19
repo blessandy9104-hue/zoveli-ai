@@ -37,6 +37,7 @@ describe('zoveli own capabilities register', () => {
     const ctx = setup(zoveliGraph);
     const call = ctx.register.mock.calls.find((c: any[]) => c[0] === 'graph-tools');
     expect(call).toBeDefined();
+    expect(call[1][0].name).toBe('vault_graph');
   });
 
   it('scheduler registers tasks_schedule tool', () => {

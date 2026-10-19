@@ -14,13 +14,14 @@ TS store             @zoveli/memory-store     MemoryStore (sync) + getStore()
   single source: DB path, vault path,         no `node:sqlite` static import
   FTS query builder, markdown codec           (process.getBuiltinModule, vite-safe)
                              |
-TS tools             memory_create_note       registered by @zoveli/memory-store
-                     memory_search            as memory-store-tools; @zoveli/core
-                     memory_read_note         (assistant-memory-tools),
-                     memory_list_tags         @zoveli/memory, @zoveli/search
-                     memory_update_note       (vault_search), @zoveli/graph
-                     memory_delete_note       (vault_graph) delegate to it.
-                     vault_search / vault_graph  names preserved, deduped by host
+TS tools             memory_create_note       memory_* registered by
+                     memory_search            @zoveli/memory-store;
+                     memory_read_note         @zoveli/core and
+                     memory_list_tags         @zoveli/memory delegate.
+                     memory_update_note       vault_search is owned by
+                     memory_delete_note       @zoveli/search and vault_graph
+                     vault_search             by @zoveli/graph (honors
+                     vault_graph              vaultPath).
                              |
 Callers              CLI /tools, web /api/tools, agent loop, REPL
 ```
@@ -40,6 +41,15 @@ Callers              CLI /tools, web /api/tools, agent loop, REPL
 `ZOVELI_MEMORY_EXPORT=0` disables the Markdown mirror.
 Engines: Node `>=22.16.0` (FTS5 guarantee; verified on 24.21 / SQLite 3.53.4).
 
+## Tool ownership
+
+The host dedupes tools by name with first registration winning, so plugins
+must not register the same name with *different behavior*. `memory_*` tools
+are registered here (and mirrored by `@zoveli/core` as identical
+delegates), `vault_search` in `@zoveli/search`, and `vault_graph` in
+`@zoveli/graph`. This package deliberately does not register `vault_graph`:
+it would shadow the graph plugin's `vaultPath`-aware implementation.
+
 ## Guarantees
 
 - **ACID + ranked search:** one writer (WAL), FTS5 `bm25` ranking, tag filter,
@@ -47,13 +57,15 @@ Engines: Node `>=22.16.0` (FTS5 guarantee; verified on 24.21 / SQLite 3.53.4).
 - **CRUD complete:** old vault had no update/delete; now `memory_update_note`
   (incl. rename + link remap) and `memory_delete_note` (removes export too).
 - **Graph from SQL:** nodes/edges/orphans/hubs via queries, `DOT` export —
-  no per-call file walk.
+  no per-call file walk; `vault_graph` accepts the vault path it should read.
 - **Obsidian interop kept:** every write exports frontmatter Markdown;
   first boot with an empty DB imports existing `*.md` (migration).
 
 ## Tests
 
 - `tests/unit/memory-store.test.ts` — CRUD, ranked+tag search, graph/dot,
-  tags sorted, tool-name contract + delegation.
+  tags sorted, tool-name contract + delegation. Regression: `vault_graph`
+  resolves to `graph-tools` and reads the requested `vaultPath`, not the
+  default vault.
 - E2E: `/tools` lists `vault_graph`; host smoke: create→search→graph→
   update→read→delete + legacy `.md` import.

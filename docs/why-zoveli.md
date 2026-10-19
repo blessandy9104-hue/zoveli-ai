@@ -11,7 +11,7 @@
 |---|---|
 | Price | Free forever, MIT licensed |
 | Where it runs | **Your machine** (CLI, web UI, desktop, Docker) |
-| Offline | **Yes** — ~63 local tools work with no network |
+| Offline | **Yes** — ~61 local tools work with no network |
 | Your data | **Never leaves home**; SQLite store you own (+ Markdown mirror); **never trained on** |
 | Math answers | **Verified or withheld** (mathcore: independent methods must agree + sealed certificate; governed specialists memorize proofs) |
 | Model lock-in | None — any API key, any compatible base (incl. local Ollama), or tools-only |

@@ -35,10 +35,11 @@ export const zoveliMemoryStore = definePlugin({
       getStats: () => ({ indexedFiles: store.count(), backend: 'sqlite-fts5', lastReindex: new Date() }),
     });
 
-    // Keep the dedicated graph plugin as the canonical graph service. The
-    // memory-store package provides search/memory primitives only; registering
-    // `graph` here duplicates the same service already registered by
-    // `packages/graph/src/index.ts` and creates a last-writer-wins conflict.
+    // Keep the dedicated graph plugin as the canonical owner of the `graph`
+    // service and the `vault_graph` tool. The memory-store package provides
+    // search/memory primitives only; registering either here would duplicate
+    // `packages/graph/src/index.ts`, and the host's first-wins tool dedup
+    // would shadow the graph plugin's vaultPath-aware implementation.
 
     ctx.register('memory-store-tools', [
       {
@@ -138,19 +139,6 @@ export const zoveliMemoryStore = definePlugin({
         },
         async execute({ query, tags, limit, offset }: any) {
           return getStore().searchNotes({ query, tags, limit, offset }).results;
-        },
-      },
-      {
-        name: 'vault_graph',
-        description: 'Build knowledge graph of store wiki-links (nodes, edges, orphans, hubs)',
-        parameters: {
-          type: 'object',
-          properties: { format: { type: 'string', enum: ['json', 'dot'] } },
-        },
-        async execute({ format }: any) {
-          const g = getStore().buildGraph();
-          if (format === 'dot') return { dot: getStore().toDot(g) };
-          return g;
         },
       },
     ]);

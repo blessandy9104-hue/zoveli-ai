@@ -19,7 +19,7 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/**
 |---|---|
 | Price | **Free forever**, MIT |
 | Your data | **Stays on your machine**, never trained on |
-| Offline | **Yes** — ~63 tools, no network needed |
+| Offline | **Yes** — ~61 tools, no network needed |
 | Math | **Verified or withheld** (+ audit certificate) |
 | Lock-in | None — BYO key or local Ollama |
 | Login | Passwordless email code — the only password you'll ever need is your email account's |
@@ -109,7 +109,7 @@ Try: `/math solve x^2 - 5x + 6 = 0` · `/sys` · `/tools`.
 
 - **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, calculus, statistics, logic, units, discrete, arithmetic, geometry, trigonometry, probability, linear, number) that memorize verified proofs and recall them (keyword + semantic)
 - **🧠 Local-First Memory** — SQLite store with FTS5 ranked search, wiki-links and tags (Markdown vault kept as human-readable export mirror)
-- **🤖 Full Agent Framework** — 22 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists all ~63 live tools)
+- **🤖 Full Agent Framework** — 22 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists all ~61 live tools)
 - **🖥️ System & Hardware Awareness** — local OS/CPU/memory/disk/GPU/battery/network insight with budget checks (`@zoveli/sysinfo`)
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
 - **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports

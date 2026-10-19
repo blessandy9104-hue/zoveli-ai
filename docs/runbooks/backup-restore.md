@@ -32,7 +32,7 @@ cp ~/.mathcore/audit.jsonl ~/zoveli-backup/
 # 2. Copy the files back to the paths above (honor the env overrides
 #    if you use them).
 # 3. Start the server and verify:
-curl http://127.0.0.1:3080/health   # {"ok":true,"tools":63}
+curl http://127.0.0.1:3080/health   # {"ok":true,"tools":61}
 ```
 
 ## Notes

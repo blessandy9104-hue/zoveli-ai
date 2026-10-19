@@ -25,7 +25,7 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all ~63 local tools
+- **Tool list:** `/tools` → all ~61 local tools
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 

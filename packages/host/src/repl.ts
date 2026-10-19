@@ -64,7 +64,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
     console.log('Try in 30 seconds (all offline, math is verified or withheld):');
     console.log('  /math solve x^2 - 5x + 6 = 0   proven answer + certificate');
     console.log('  /sys                           this machine: OS/CPU/RAM/disk/GPU');
-    console.log('  /tools                         every local tool (~51), no API key needed');
+    console.log('  /tools                         every local tool (~61), no API key needed');
   }
 
   // Created lazily in TTY mode only: an Interface starts consuming stdin
