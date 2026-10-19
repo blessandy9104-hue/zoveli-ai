@@ -19,7 +19,7 @@
     "@zoveli/secscan": "workspace:*"
   },
   "devDependencies": {
-    "electron": "^44.7.0",
+    "electron": "^44.8.0",
     "vitest": "catalog:",
     "oxlint": "catalog:"
   }
