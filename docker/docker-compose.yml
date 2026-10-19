@@ -5,7 +5,7 @@ services:
   zoveli-cli:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.cli
+      dockerfile: docker/Dockerfile
     container_name: zoveli-cli
     volumes:
       - ./data/vault:/app/data/vault

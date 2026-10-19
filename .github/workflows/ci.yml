@@ -296,7 +296,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/Dockerfile.cli
+          file: ./docker/Dockerfile
           push: ${{ github.event_name == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -380,7 +380,7 @@ jobs:
           # dist/**/* is omitted: the workspace publishes nothing
           # (see NOTE above), so the pattern matches no files.
           files: |
-            docker/Dockerfile.cli
+            docker/Dockerfile
             docker/docker-compose.yml
             docker/prometheus.yml
             docker/grafana/dashboards/zoveli-overview.json

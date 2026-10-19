@@ -21,7 +21,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable automerge
-        uses: peter-evans/enable-p-auto-merge@v3
+        uses: peter-evans/enable-pull-request-automerge@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-method: squash

@@ -47,7 +47,7 @@ jobs:
           python -m pip install pip-audit
           python -m pip_audit --progress-spinner off || true
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@v2
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           format: 'table'

@@ -108,7 +108,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/Dockerfile.cli
+          file: ./docker/Dockerfile
           push: false
           tags: zoveli-cli:installer-check
           cache-from: type=gha

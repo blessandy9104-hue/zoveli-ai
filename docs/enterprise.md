@@ -1,7 +1,7 @@
 # Zoveli Enterprise Notes
 
 ## Air-gapped deployment
-1. Build images: `docker build -f docker/Dockerfile.cli .`
+1. Build images: `docker build -f docker/Dockerfile .`
 2. Pre-install: Python + mathcore wheel, Ollama + GGUF models, LSP servers.
 3. Run with `--network none` except loopback; mount vault + sessions as volumes.
 4. Verify: the Playwright e2e suite passes fully offline; `capability_report` shows `mcp.mathcore: available`.
