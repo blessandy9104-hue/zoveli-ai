@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-core": "workspace:*",
-    "nodemailer": "^10.1.1"
+    "nodemailer": "^10.1.2"
   },
   "devDependencies": {
     "tsdown": "^0.3.0",
