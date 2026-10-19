@@ -13,8 +13,6 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Approve PR
         uses: hmarr/auto-approve-action@v4
         with:
@@ -23,5 +21,6 @@ jobs:
       - name: Enable automerge
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: squash
