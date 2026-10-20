@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { CapabilityScanner } from '@zoveli/capability/src/scanner';
 import { CapabilityRegistry } from '@zoveli/capability/src/registry';
 import { CapabilityAdaptation } from '@zoveli/capability/src/adaptation';
+import { zoveliCapability } from '@zoveli/capability/src/index';
 import { createMockContext, createMockCapability } from '../setup';
 
 describe('CapabilityScanner', () => {
@@ -142,5 +143,22 @@ describe('CapabilityAdaptation', () => {
     expect(report.capabilities).toBeDefined();
     expect(report.recommendations).toBeDefined();
     expect(report.gaps).toBeDefined();
+  });
+});
+
+describe('capability plugin registry wiring', () => {
+  it('registers scan results so capability_check/list see them', async () => {
+    const ctx = createMockContext();
+    zoveliCapability.setup(ctx);
+    const provided = ctx.provide.mock.calls.find(
+      (call: any[]) => call[0] === 'capability'
+    )?.[1];
+    expect(provided).toBeTruthy();
+    expect(provided.registry.getAll()).toHaveLength(0);
+
+    const scanned = await provided.scan();
+    expect(scanned.length).toBeGreaterThan(0);
+    expect(provided.registry.getAll()).toHaveLength(scanned.length);
+    expect(provided.getCapability('mathcore.verified-compute')).toBeTruthy();
   });
 });

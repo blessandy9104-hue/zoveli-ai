@@ -47,6 +47,9 @@ importers:
       '@zoveli/config-audit':
         specifier: workspace:*
         version: link:../../packages/config-audit
+      '@zoveli/diagnostics':
+        specifier: workspace:*
+        version: link:../../packages/diagnostics
       '@zoveli/host':
         specifier: workspace:*
         version: link:../../packages/host
@@ -211,6 +214,37 @@ importers:
         specifier: 'catalog:'
         version: 1.6.1(@types/node@26.6.5)(@vitest/ui@1.6.1)(happy-dom@20.14.6)
 
+  packages/diagnostics:
+    dependencies:
+      '@deepseek-ai/dsh-core':
+        specifier: workspace:*
+        version: link:../shim-dsh-core
+      '@zoveli/config-audit':
+        specifier: workspace:*
+        version: link:../config-audit
+      '@zoveli/math-intelligence':
+        specifier: workspace:*
+        version: link:../math-intelligence
+      '@zoveli/memory-store':
+        specifier: workspace:*
+        version: link:../memory-store
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.43
+      oxlint:
+        specifier: 'catalog:'
+        version: 0.18.1
+      tsdown:
+        specifier: ^0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 1.6.1(@types/node@20.19.43)(@vitest/ui@1.6.1)(happy-dom@20.14.6)
+
   packages/docgen:
     dependencies:
       '@deepseek-ai/dsh-core':
@@ -313,6 +347,9 @@ importers:
       '@zoveli/core':
         specifier: workspace:*
         version: link:../core
+      '@zoveli/diagnostics':
+        specifier: workspace:*
+        version: link:../diagnostics
       '@zoveli/docgen':
         specifier: workspace:*
         version: link:../docgen

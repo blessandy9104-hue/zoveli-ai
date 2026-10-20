@@ -37,9 +37,10 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
   → `MATCH` (wrong answers get `MISMATCH`, never a silent guess)
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
 - **MCP pool:** `/mcp` → mathcore pid, spawns, restarts, pending calls, last error (`mathcore_status` does the same from chat)
+- **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures and timings
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all ~62 local tools
+- **Tool list:** `/tools` → all ~63 local tools
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 
@@ -103,6 +104,24 @@ secrets shorter than 16 characters, an unresolvable `MATHCORE_MCP_COMMAND`)
 and vault drift (schema older or newer than this build supports). Secrets are
 never printed. The same report is available programmatically from
 `@zoveli/config-audit` (`configAuditReport()`).
+
+## Health check
+
+```bash
+pnpm health:check             # human rollup; exit 1 only on blocking problems
+pnpm health:check -- --json   # machine-readable report for scripts
+pnpm health:check -- --offline  # skip the live mathcore spawn
+```
+
+Aggregates runtime facts, environment drift, vault schema, the mathcore MCP
+pool and (unless `--offline`) a live `tools/list` handshake that proves the
+whole MCP path (the first spawn can take a few seconds while Python imports
+its math stack). Missing mathcore degrades verified math but the app still runs,
+so it is reported as `degraded` (not blocking); config/vault integrity failures
+exit 1. Inside the REPL, `/health` includes capability status and `/trace`
+shows recent tool calls with durations and redacted errors
+(`ZOVELI_TRACE=1` mirrors the trace to stderr). The tool is also available to
+chat as `health_report`.
 
 ## Env
 

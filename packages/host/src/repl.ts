@@ -27,6 +27,8 @@ const HELP = `zoveli commands:
   /tools                list available tools
   /math <expression>    verified computation (mathcore, offline)
   /mcp                  mathcore MCP pool status (pid, restarts, last error)
+  /health               runtime health rollup (config, vault, pool, capabilities)
+  /trace                recent tool calls and failures
   /check <q> ;; <a>     audit a proposed answer against mathcore
   /sys                  host snapshot (OS/CPU/RAM/disk/GPU)
   /caps                 capability summary
@@ -65,7 +67,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
     console.log('Try in 30 seconds (all offline, math is verified or withheld):');
     console.log('  /math solve x^2 - 5x + 6 = 0   proven answer + certificate');
     console.log('  /sys                           this machine: OS/CPU/RAM/disk/GPU');
-    console.log('  /tools                         every local tool (~62), no API key needed');
+    console.log('  /tools                         every local tool (~63), no API key needed');
   }
 
   // Created lazily in TTY mode only: an Interface starts consuming stdin
@@ -142,6 +144,26 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
             `spawns ${s.spawns} · restarts ${s.restarts} · pending ${s.pending}` +
             (s.lastError ? ` · last error: ${s.lastError}` : '')
         );
+      } else if (text === '/health') {
+        const report = (await host.runTool('health_report', { probeMathcore: false })) as any;
+        console.log(`health: ${report.status} (${report.checkedAt})`);
+        for (const check of report.checks ?? []) {
+          console.log(`  [${check.level}] ${check.title}: ${check.summary}`);
+        }
+      } else if (text === '/trace') {
+        const stats = host.toolStats(10);
+        const avg = stats.calls > 0 ? Math.round(stats.totalMs / stats.calls) : 0;
+        console.log(
+          `tool calls: ${stats.calls} · failures: ${stats.failures} · avg ${avg}ms` +
+            (stats.lastError ? ` · last error: ${stats.lastError}` : '')
+        );
+        for (const call of stats.recent) {
+          const outcome = call.ok ? 'ok  ' : 'FAIL';
+          const error = call.error ? ` — ${call.error}` : '';
+          console.log(
+            `  ${call.at.slice(11, 19)} ${outcome} ${call.tool} ${call.durationMs}ms${error}`
+          );
+        }
       } else if (text.startsWith('/check ')) {
         const rest = text.slice(7);
         const sep = rest.indexOf(';;');

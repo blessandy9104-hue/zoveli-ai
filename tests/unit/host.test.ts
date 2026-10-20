@@ -58,6 +58,14 @@ describe('ZoveliHost', () => {
     await expect(host.runTool('nope', {})).rejects.toThrow('unknown tool: nope');
   });
 
+  it('resolves provided services before registrations', () => {
+    const host = new ZoveliHost();
+    host.ctx.register('thing', { source: 'registration' });
+    expect((host.ctx.get('thing') as any).source).toBe('registration');
+    host.ctx.provide('thing', { source: 'service' });
+    expect((host.ctx.get('thing') as any).source).toBe('service');
+  });
+
   it('fires agent/created handlers with an injectable agent', () => {
     const host = new ZoveliHost();
     const seen: string[] = [];
@@ -73,6 +81,47 @@ describe('ZoveliHost', () => {
       },
     ]);
     expect(seen).toEqual(['fired']);
+  });
+});
+
+describe('ZoveliHost tool trace', () => {
+  it('records successful and failed calls with counters', async () => {
+    const host = new ZoveliHost();
+    host.mount([
+      fakePlugin('a', [
+        { name: 'ok', description: 'ok', execute: async () => 1 },
+        {
+          name: 'boom',
+          description: 'boom',
+          execute: async () => {
+            throw new Error('upstream rejected sk-abcdefghijklmnopqrstuvwxyz');
+          },
+        },
+      ]),
+    ]);
+
+    await host.runTool('ok');
+    await expect(host.runTool('boom')).rejects.toThrow('upstream rejected');
+
+    const stats = host.toolStats();
+    expect(stats.calls).toBe(2);
+    expect(stats.failures).toBe(1);
+    expect(stats.recent.map((e) => e.tool)).toEqual(['ok', 'boom']);
+    expect(stats.recent[0]).toMatchObject({ ok: true, registration: 'a-tools' });
+    expect(stats.recent[1].ok).toBe(false);
+    expect(stats.recent[1].error).toContain('[REDACTED]');
+    expect(stats.lastError).toContain('[REDACTED]');
+    expect(stats.totalMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('keeps only the requested recent slice', async () => {
+    const host = new ZoveliHost();
+    host.mount([
+      fakePlugin('a', [{ name: 'noop', description: 'n', execute: async () => null }]),
+    ]);
+    for (let i = 0; i < 5; i += 1) await host.runTool('noop');
+    expect(host.toolStats(2).recent).toHaveLength(2);
+    expect(host.toolStats(2).calls).toBe(5);
   });
 });
 

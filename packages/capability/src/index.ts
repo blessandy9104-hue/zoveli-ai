@@ -11,12 +11,19 @@ export const zoveliCapability = definePlugin({
     const scanner = new CapabilityScanner(ctx);
     const registry = new CapabilityRegistry(ctx);
     const adaptation = new CapabilityAdaptation(ctx, scanner, registry);
+    // Scans feed the registry: without this, capability_check/list (and any
+    // consumer of the provided API) never see what capability_scan found.
+    const runScan = async (options: { deep?: boolean; forceRefresh?: boolean } = {}) => {
+      const caps = await scanner.scanAll(options);
+      for (const cap of caps) registry.register(cap);
+      return caps;
+    };
 
     ctx.provide('capability', {
       scanner,
       registry,
       adaptation,
-      scan: () => scanner.scanAll(),
+      scan: () => runScan(),
       getCapabilities: () => registry.getAll(),
       getCapability: (name: string) => registry.get(name),
       can: (capability: string) => registry.has(capability),
@@ -46,7 +53,7 @@ export const zoveliCapability = definePlugin({
           }
         },
         async execute({ deep, category }: any) {
-          const caps = deep ? await scanner.deepScan() : await scanner.quickScan();
+          const caps = await runScan({ deep: Boolean(deep) });
           return category ? caps.filter(c => c.category === category) : caps;
         }
       },

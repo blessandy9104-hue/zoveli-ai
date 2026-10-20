@@ -25,7 +25,7 @@ This document provides practical workarounds for all identified negative consequ
 - **Visual Trace Viewer**: 📋 proposed `/debug/events`; not implemented
 - **Correlation IDs**: 📋 proposed; no `x-correlation-id` propagation today
 - **Replay Tool**: 📋 proposed; no `replay:event` script
-- **Structured Logging**: partial — tool errors are surfaced by name, but there is no event bus trace
+- **Structured Logging**: partial — ✅ bounded tool-call trace with durations/failures (`/trace`, `ZOVELI_TRACE=1`), errors redacted before they reach the trace; 📋 no JSONL/event-bus export yet
 
 ### Negative: Service Lookup Overhead
 **Workaround (guidance):**
@@ -180,6 +180,7 @@ This document provides practical workarounds for all identified negative consequ
 | Vault Backup / Verify / Restore | ✅ Implemented | `packages/memory-store/src/maintenance.ts`; `pnpm vault:backup/verify/restore` |
 | Git Auto-Commit Hooks | 📋 Planned | no `.husky/` yet |
 | Config Drift Detection | ✅ Implemented | `packages/config-audit/` (env registry + vault schema audit); `pnpm config:check` |
+| Runtime Health Rollup | ✅ Implemented | `packages/diagnostics/` (`health_report`, `/health`, `/trace`); `pnpm health:check` |
 | Programming Languages Fallbacks | ✅ Implemented | `packages/languages/` (native → deterministic fallback) |
 | Knowledge Graph Export | ✅ Implemented | `packages/graph/` (JSON + DOT) |
 | Security Secret Patterns | ✅ Implemented | `packages/secscan/` (7 pattern families) |

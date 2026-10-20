@@ -1,0 +1,27 @@
+{
+  "name": "@zoveli/diagnostics",
+  "version": "0.1.0",
+  "description": "Runtime health rollup for Zoveli: config, vault, MCP pool and capabilities",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run --passWithNoTests",
+    "lint": "oxlint",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-core": "workspace:*",
+    "@zoveli/config-audit": "workspace:*",
+    "@zoveli/math-intelligence": "workspace:*",
+    "@zoveli/memory-store": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "^0.3.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "oxlint": "catalog:",
+    "@types/node": "^20.10.0"
+  }
+}

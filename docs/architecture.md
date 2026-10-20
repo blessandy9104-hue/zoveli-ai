@@ -18,9 +18,9 @@ are core (stable, semver-minded) vs experimental (opt-in, may change).
 User (CLI / Desktop)
   → dsh profile (config/*.cordis.yml)
     → Cordis context (ctx)
-      → zoveli plugins (22 packages; 30 mounted by default)
+      → zoveli plugins (23 packages; 31 mounted by default)
         → capabilities (scanner → registry → adaptation)
-        → tools (guarded pre/post pipeline, ~61 live)
+        → tools (guarded pre/post pipeline, ~63 live)
         → sessions (JSONL + projections)
         → external systems (mathcore MCP, SQLite store, vault FS, LLM APIs)
 ```

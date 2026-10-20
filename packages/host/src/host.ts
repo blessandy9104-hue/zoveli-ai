@@ -1,9 +1,29 @@
 import type { ZoveliContext, ZoveliPlugin, Tool } from '@deepseek-ai/dsh-core';
 import { checkToolCall, defaultPolicy } from '@zoveli/guard';
+import { redactSecrets } from '@zoveli/secscan';
 
 export interface HostTool extends Tool {
   plugin: string;
 }
+
+export interface ToolCallTrace {
+  at: string;
+  tool: string;
+  registration: string;
+  durationMs: number;
+  ok: boolean;
+  error?: string;
+}
+
+export interface ToolCallStats {
+  calls: number;
+  failures: number;
+  totalMs: number;
+  lastError: string | null;
+  recent: ToolCallTrace[];
+}
+
+const MAX_TRACE_ENTRIES = 200;
 
 interface AgentLike {
   inject: (msg: { type: string; content: string }) => void;
@@ -27,6 +47,11 @@ export class ZoveliHost {
   // instead of rebuilding + sorting ~60 tools per call.
   private toolsCache: HostTool[] | null = null;
   private toolMap = new Map<string, HostTool>();
+  private trace: ToolCallTrace[] = [];
+  private callCount = 0;
+  private failureCount = 0;
+  private totalMs = 0;
+  private lastError: string | null = null;
 
   readonly ctx: ZoveliContext;
 
@@ -58,6 +83,9 @@ export class ZoveliHost {
         return results;
       },
       get: (key: string) => {
+        // Provided services come first (Cordis semantics); registrations are
+        // the back-compat fallback for config-style keys.
+        if (this.provided.has(key)) return this.provided.get(key);
         const arr = this.registrations.get(key);
         return arr?.[0];
       },
@@ -133,7 +161,53 @@ export class ZoveliHost {
       if (!verdict.allowed) throw new Error(verdict.message);
     }
     const t = this.getTool(name);
-    return await t.execute(args);
+    const startedAt = Date.now();
+    try {
+      const result = await t.execute(args);
+      this.recordToolCall(t, Date.now() - startedAt);
+      return result;
+    } catch (e) {
+      this.recordToolCall(t, Date.now() - startedAt, e);
+      throw e;
+    }
+  }
+
+  /** Bounded in-process trace + counters (supports `/trace` and `/health`). */
+  toolStats(limit = 20): ToolCallStats {
+    return {
+      calls: this.callCount,
+      failures: this.failureCount,
+      totalMs: this.totalMs,
+      lastError: this.lastError,
+      recent: this.trace.slice(-Math.max(1, limit)),
+    };
+  }
+
+  private recordToolCall(tool: HostTool, durationMs: number, error?: unknown): void {
+    this.callCount += 1;
+    this.totalMs += durationMs;
+    const message =
+      error === undefined
+        ? undefined
+        : redactSecrets(error instanceof Error ? error.message : String(error));
+    if (message !== undefined) {
+      this.failureCount += 1;
+      this.lastError = message;
+    }
+    const entry: ToolCallTrace = {
+      at: new Date().toISOString(),
+      tool: tool.name,
+      registration: tool.plugin,
+      durationMs,
+      ok: message === undefined,
+    };
+    if (message !== undefined) entry.error = message;
+    this.trace.push(entry);
+    if (this.trace.length > MAX_TRACE_ENTRIES) this.trace.shift();
+    if (process.env.ZOVELI_TRACE === '1') {
+      const outcome = message === undefined ? 'ok' : `error: ${message}`;
+      console.error(`[trace] ${tool.name} ${outcome} ${durationMs}ms`);
+    }
   }
 }
 

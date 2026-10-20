@@ -38,6 +38,7 @@
     { "path": "./packages/persona" },
     { "path": "./packages/webresearch" },
     { "path": "./packages/auth" },
-    { "path": "./packages/config-audit" }
+    { "path": "./packages/config-audit" },
+    { "path": "./packages/diagnostics" }
   ]
 }

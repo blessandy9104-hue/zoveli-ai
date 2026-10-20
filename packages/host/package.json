@@ -38,7 +38,8 @@
     "@zoveli/capability": "workspace:*",
     "@zoveli/guard": "workspace:*",
     "@zoveli/persona": "workspace:*",
-    "@zoveli/webresearch": "workspace:*"
+    "@zoveli/webresearch": "workspace:*",
+    "@zoveli/diagnostics": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.3.0",

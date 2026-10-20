@@ -20,6 +20,7 @@ import { zoveliCapability } from '@zoveli/capability';
 import { zoveliGuard } from '@zoveli/guard';
 import { zoveliPersona } from '@zoveli/persona';
 import { zoveliWebResearch } from '@zoveli/webresearch';
+import { zoveliDiagnostics } from '@zoveli/diagnostics';
 
 /**
  * The default tool-bearing plugin set. Config-only plugins (agent loop,
@@ -57,6 +58,7 @@ export const defaultPlugins = [
   zoveliGuard,
   zoveliPersona,
   zoveliWebResearch,
+  zoveliDiagnostics,
 ];
 
 /** Boot the host, mount the default plugins, and start the REPL. */

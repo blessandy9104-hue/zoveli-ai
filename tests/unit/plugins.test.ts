@@ -22,7 +22,7 @@ describe('plugin contract: every built package loads and sets up', () => {
 
   it('discovers a healthy package set', () => {
     // Guard against the test silently covering nothing.
-    // 22 packages ship (CLI boot path + web); the rest were deleted as dead.
+    // 23 feature packages ship (CLI boot path + web); the rest were deleted as dead.
     expect(entries.length).toBeGreaterThanOrEqual(20);
   });
 
