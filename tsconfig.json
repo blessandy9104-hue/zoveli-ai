@@ -16,6 +16,7 @@
   },
   "exclude": ["node_modules", "dist", "**/dist/**"],
   "references": [
+    { "path": "./packages/shim-dsh-core" },
     { "path": "./packages/core" },
     { "path": "./packages/math-intelligence" },
     { "path": "./packages/math-domains" },
@@ -36,6 +37,7 @@
     { "path": "./packages/sysinfo" },
     { "path": "./packages/host" },
     { "path": "./packages/persona" },
+    { "path": "./packages/guard" },
     { "path": "./packages/webresearch" },
     { "path": "./packages/auth" },
     { "path": "./packages/config-audit" },

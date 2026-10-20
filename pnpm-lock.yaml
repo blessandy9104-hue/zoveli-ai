@@ -47,6 +47,9 @@ importers:
       '@zoveli/config-audit':
         specifier: workspace:*
         version: link:../../packages/config-audit
+      '@zoveli/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@zoveli/diagnostics':
         specifier: workspace:*
         version: link:../../packages/diagnostics
@@ -222,6 +225,9 @@ importers:
       '@zoveli/config-audit':
         specifier: workspace:*
         version: link:../config-audit
+      '@zoveli/core':
+        specifier: workspace:*
+        version: link:../core
       '@zoveli/math-intelligence':
         specifier: workspace:*
         version: link:../math-intelligence

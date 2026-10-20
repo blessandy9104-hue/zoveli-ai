@@ -66,6 +66,16 @@ function fixtureRoot(): string {
 }
 
 describe('plugin scaffolder', () => {
+  it('inherits the root product version', () => {
+    const root = fixtureRoot();
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'zoveli', version: '9.9.9' }));
+    generatePlugin({ rootDir: root, name: 'versioned-plugin' });
+    const manifest = JSON.parse(
+      readFileSync(join(root, 'packages', 'versioned-plugin', 'package.json'), 'utf-8')
+    );
+    expect(manifest.version).toBe('9.9.9');
+  });
+
   it('validates plugin names', () => {
     expect(validatePluginName('daily-brief')).toBe('daily-brief');
     for (const bad of ['', 'Upper', '1nope', '-lead', 'has space', 'x', 'a'.repeat(40)]) {

@@ -72,6 +72,7 @@ pnpm test
 pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
+pnpm release:check     # version/tsconfig/changelog consistency
 ```
 
 **macOS / Linux:**
@@ -97,6 +98,7 @@ pnpm test
 pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
+pnpm release:check     # version/tsconfig/changelog consistency
 ```
 
 ## Launch it
@@ -140,7 +142,8 @@ Try: `/math solve x^2 - 5x + 6 = 0` · `/sys` · `/tools`.
 - [Architecture](docs/architecture.md)
 - [Math intelligence subsystem](docs/math-subsystem.md) · [Memory store](docs/memory-store.md)
 - [API Reference](docs/api/) · [Plugin SDK](docs/plugin-sdk/README.md)
-- [Runbooks](docs/runbooks/)
+- [Runbooks](docs/runbooks/) · [Release runbook](docs/runbooks/release.md)
+- [Upgrading](docs/guides/upgrading.md) · [Changelog](CHANGELOG.md)
 - [ADRs](docs/adr/)
 - [Security policy](SECURITY.md)
 - [Desktop guide](docs/guides/desktop.md) · [CLI guide](docs/guides/cli.md)

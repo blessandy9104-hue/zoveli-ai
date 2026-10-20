@@ -53,6 +53,41 @@ describe('vault safety (schema, backup, restore, migration)', () => {
     expect(() => new MemoryStore(db, join(base, 'vault'))).toThrow(/newer than supported/);
   });
 
+  it('upgrades a pre-versioned vault without losing notes', () => {
+    const base = tempDir();
+    const db = join(base, 'legacy.db');
+    const raw = openDatabaseSync(db);
+    raw.exec(`
+      CREATE TABLE notes(
+        title TEXT PRIMARY KEY,
+        body TEXT NOT NULL DEFAULT '',
+        created TEXT NOT NULL,
+        updated TEXT NOT NULL
+      );
+      CREATE TABLE tags(
+        note_title TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        PRIMARY KEY(note_title, tag)
+      );
+      CREATE TABLE links(
+        from_title TEXT NOT NULL,
+        to_title TEXT NOT NULL,
+        PRIMARY KEY(from_title, to_title)
+      );
+      INSERT INTO notes(title, body, created, updated)
+        VALUES ('Legacy note', 'kept through the upgrade', '2025-01-01T00:00:00.000Z', '2025-01-01T00:00:00.000Z');
+      INSERT INTO tags(note_title, tag) VALUES ('Legacy note', 'old');
+    `);
+    raw.close();
+
+    const store = new MemoryStore(db, join(base, 'vault'), { importVault: false });
+    expect(store.schemaVersion()).toBe(1);
+    const note = store.readNote('Legacy note');
+    expect(note.body).toBe('kept through the upgrade');
+    expect(note.tags).toContain('old');
+    store.close();
+  });
+
   it('backs up WAL-safe state with checksums and detects tampering', async () => {
     const base = tempDir();
     const db = join(base, 'memory.db');

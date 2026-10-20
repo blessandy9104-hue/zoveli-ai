@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@zoveli/config-audit": "workspace:*",
+    "@zoveli/core": "workspace:*",
     "@zoveli/diagnostics": "workspace:*",
     "@zoveli/host": "workspace:*",
     "@zoveli/math-intelligence": "workspace:*",

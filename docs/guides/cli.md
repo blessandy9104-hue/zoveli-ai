@@ -28,6 +28,10 @@ pnpm start
 node apps/cli/dist/cli.js
 ```
 
+`assistant --version` prints the product version; `assistant --help` lists the
+one-shot commands. See [Upgrading](upgrading.md) for the upgrade/rollback flow
+and `pnpm release:check` (maintainers).
+
 ## Everyday flows
 
 - **Verified math:** `/math solve x^2 - 5x + 6 = 0` → `VERIFIED` + certificate,

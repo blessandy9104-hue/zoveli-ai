@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release metadata
+        run: pnpm run release:check
+
       - name: Run oxlint
         run: pnpm run lint
 
@@ -359,6 +362,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify release metadata
+        run: pnpm run release:check -- --release --tag
 
       - name: Build packages
         run: pnpm run build

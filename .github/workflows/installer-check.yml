@@ -70,7 +70,8 @@ jobs:
           test -d apps/cli/dist
           source .venv/bin/activate
           python -c "import mathcore; print('mathcore OK')"
-          node apps/cli/dist/cli.js --help || pnpm start -- --help || true
+          node apps/cli/dist/cli.js --version
+          node apps/cli/dist/cli.js --help
 
   powershell-syntax:
     name: PowerShell Syntax (.ps1)

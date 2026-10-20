@@ -2,6 +2,7 @@ import { definePlugin } from '@deepseek-ai/dsh-core';
 import { mathcoreTools } from './mathcore-tools';
 import { memoryTools } from './memory-tools';
 import { zoveliPrompt } from './system-prompt';
+import { ZOVELI_VERSION } from './version';
 
 export const zoveliCore = definePlugin({
   name: 'zoveli-core',
@@ -24,12 +25,13 @@ function enhanceWithContext(input: any) {
     ...input,
     metadata: {
       ...input.metadata,
-      zoveliVersion: '0.1.0',
+      zoveliVersion: ZOVELI_VERSION,
       capabilities: ['verified-math', 'persistent-memory', 'skill-system']
     }
   };
 }
 
+export { ZOVELI_VERSION } from './version';
 export { zoveliPrompt } from './system-prompt';
 export { promptSectionsText } from './system-prompt';
 export { mathcoreTools } from './mathcore-tools';

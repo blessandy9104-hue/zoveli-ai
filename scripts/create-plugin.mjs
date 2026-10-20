@@ -17,6 +17,16 @@ const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, '..');
 
 export const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,30}$/;
 
+/** New packages share the product version so `release:check` stays green. */
+export function rootVersion(rootDir = DEFAULT_ROOT) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
+    return typeof pkg.version === 'string' ? pkg.version : '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
+}
+
 export function validatePluginName(name) {
   if (!name) throw new Error('plugin name is required (example: pnpm create:plugin daily-brief)');
   if (!SLUG_PATTERN.test(name)) {
@@ -38,12 +48,12 @@ function quote(text) {
   return `'${String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 }
 
-function packageJsonTemplate(slug, description) {
+function packageJsonTemplate(slug, description, version) {
   return (
     JSON.stringify(
       {
         name: `@zoveli/${slug}`,
-        version: '0.1.0',
+        version,
         description,
         main: 'dist/index.js',
         types: 'dist/index.d.ts',
@@ -188,6 +198,7 @@ export function generatePlugin(options) {
   const rootDir = path.resolve(options.rootDir ?? DEFAULT_ROOT);
   const slug = validatePluginName(options.name);
   const description = options.description ?? `Zoveli plugin ${slug} (scaffolded)`;
+  const version = options.version ?? rootVersion(rootDir);
   const mount = options.mount === true;
   const force = options.force === true;
   const title = titleCase(slug);
@@ -207,7 +218,7 @@ export function generatePlugin(options) {
   const files = [
     {
       file: path.join(packageDir, 'package.json'),
-      content: packageJsonTemplate(slug, description),
+      content: packageJsonTemplate(slug, description, version),
     },
     { file: path.join(packageDir, 'tsconfig.json'), content: tsconfigTemplate() },
     {

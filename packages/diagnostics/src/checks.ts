@@ -5,6 +5,7 @@ import {
   type AuditOptions,
   type AuditReport,
 } from '@zoveli/config-audit';
+import { ZOVELI_VERSION } from '@zoveli/core';
 import { MathcoreClient, type MathcoreStatus } from '@zoveli/math-intelligence';
 
 export type HealthLevel = 'ok' | 'info' | 'warn' | 'fail';
@@ -89,7 +90,7 @@ export function runtimeCheck(now: number = Date.now()): HealthCheck {
     id: 'runtime',
     title: 'Runtime',
     level: 'ok',
-    summary: `Node ${process.version} on ${process.platform}/${process.arch}; pid ${process.pid}`,
+    summary: `Zoveli ${ZOVELI_VERSION} · Node ${process.version} on ${process.platform}/${process.arch}; pid ${process.pid}`,
     details: [
       `process uptime: ${formatDuration(process.uptime())}`,
       `memory: heap ${heapMb} MB, rss ${rssMb} MB`,

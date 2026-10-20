@@ -14,6 +14,7 @@
   "dependencies": {
     "@deepseek-ai/dsh-core": "workspace:*",
     "@zoveli/config-audit": "workspace:*",
+    "@zoveli/core": "workspace:*",
     "@zoveli/math-intelligence": "workspace:*",
     "@zoveli/memory-store": "workspace:*"
   },
