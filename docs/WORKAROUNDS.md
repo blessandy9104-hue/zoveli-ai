@@ -14,7 +14,7 @@ This document provides practical workarounds for all identified negative consequ
 ### Negative: Cordis Learning Curve
 **Workaround:**
 - **Interactive Tutorial**: 📋 `docs/tutorials/cordis-basics.md` (not created yet)
-- **Plugin Generator**: 📋 `pnpm run create:plugin <name>` (`scripts/create-plugin.ts` does not exist yet)
+- **Plugin Generator**: ✅ `pnpm create:plugin <name> [--description "…"] [--mount]` (`scripts/create-plugin.mjs`) generates a workspace package + unit test, and mounts host/package.json/tsconfig with `--mount`
 - **VS Code Extension**: 📋 Cordis snippets, hover docs, go-to-definition for ctx keys
 - **Mentor Program**: 📋 pair new contributors with experienced plugin authors
 - **Decision**: Document "Cordis Mental Model" - think of it as React hooks for backend services
@@ -174,7 +174,7 @@ This document provides practical workarounds for all identified negative consequ
 | In-Memory Search Index | ✅ Implemented | `packages/memory-store/` (SQLite FTS5, transactional; replaced the TF index in `packages/search/`, now a delegate) |
 | mathcore Binary Build | 📋 Planned | `scripts/build-mathcore-binary.sh` (not created yet) |
 | Connection Pooling | ✅ Persistent stdio MCP process | `packages/math-intelligence/src/transport.ts`; multi-server pool 📋 |
-| Plugin Generator | 📋 Planned | `scripts/create-plugin.ts` (not created yet) |
+| Plugin Generator | ✅ Implemented | `scripts/create-plugin.mjs` (`pnpm create:plugin`, `--mount` wires host + tsconfig) |
 | Capability Health Probes | ✅ Implemented | `packages/capability/src/scanner.ts` (`verifyCapabilities`) |
 | Vault Migration System | ✅ Implemented | `PRAGMA user_version` + `MIGRATIONS`; `pnpm migrate:vault` (Markdown import) |
 | Vault Backup / Verify / Restore | ✅ Implemented | `packages/memory-store/src/maintenance.ts`; `pnpm vault:backup/verify/restore` |
