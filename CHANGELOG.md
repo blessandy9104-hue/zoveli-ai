@@ -38,6 +38,11 @@ the new section **before** running `pnpm release:check --release`.
   network failures are not persisted, local history restores VERIFIED badges and
   reply metadata, tools render as a list, and the composer wraps on narrow
   screens.
+- First-run onboarding: CLI startup reports missing mathcore/chat with exact
+  fixes, the desktop UI shows a readiness line and Finish setup panel
+  (`GET /api/onboarding`), and setup replies are not persisted. New
+  [first-run guide](docs/guides/onboarding.md) covers install, verification,
+  expected output and troubleshooting.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

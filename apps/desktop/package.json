@@ -16,6 +16,7 @@
     "@zoveli/auth": "workspace:*",
     "@zoveli/core": "workspace:*",
     "@zoveli/host": "workspace:*",
+    "@zoveli/math-intelligence": "workspace:*",
     "@zoveli/secscan": "workspace:*"
   },
   "devDependencies": {

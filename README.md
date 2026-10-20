@@ -37,6 +37,8 @@ pnpm start                  # then type: /math solve x^2 - 5x + 6 = 0
 ```
 
 No account, no API key needed — local tools (math, memory, sysinfo, …) work fully offline.
+New here? Follow the [first-run guide](docs/guides/onboarding.md) for the install
+check, expected output, and exact fixes for a missing chat or math backend.
 
 ## Download & install
 
@@ -148,7 +150,7 @@ Try: `/math solve x^2 - 5x + 6 = 0` · `/sys` · `/tools`.
 - [Upgrading](docs/guides/upgrading.md) · [Changelog](CHANGELOG.md)
 - [ADRs](docs/adr/)
 - [Security policy](SECURITY.md)
-- [Desktop guide](docs/guides/desktop.md) · [CLI guide](docs/guides/cli.md)
+- [First-run guide](docs/guides/onboarding.md) · [Desktop guide](docs/guides/desktop.md) · [CLI guide](docs/guides/cli.md)
 
 ## Contributing
 

@@ -87,6 +87,9 @@ importers:
       '@zoveli/host':
         specifier: workspace:*
         version: link:../../packages/host
+      '@zoveli/math-intelligence':
+        specifier: workspace:*
+        version: link:../../packages/math-intelligence
       '@zoveli/secscan':
         specifier: workspace:*
         version: link:../../packages/secscan

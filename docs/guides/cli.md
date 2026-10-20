@@ -1,5 +1,8 @@
 # Zoveli CLI Guide
 
+New to Zoveli? Start with the [first-run guide](onboarding.md), then use this
+page as the command reference.
+
 ## Install
 
 ```bash

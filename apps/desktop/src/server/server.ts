@@ -7,6 +7,8 @@ import {
   deliverCode,
 } from '@zoveli/auth';
 import { redactSecrets } from '@zoveli/secscan';
+import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
+import { onboardingMarkup, type OnboardingMarkup } from './onboarding.js';
 import {
   withSecurityHeaders,
   isHostAllowed,
@@ -101,7 +103,8 @@ function readBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
-const PAGE = `<!doctype html>
+function pageHTML(onboarding: OnboardingMarkup): string {
+  return `<!doctype html>
 <html lang="en" data-theme="daylight" data-testid="app-root">
 <head>
 <meta charset="utf-8" />
@@ -127,6 +130,13 @@ ${themeHeadScript()}
   #starters button { font-size: 0.85rem; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); color: var(--fg); }
   #tools { font-size: 0.85rem; color: var(--muted); }
   #tools ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .onboard-status { font-size: .85rem; color: var(--muted); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .75rem; }
+  .onboard-status a { color: var(--accent); }
+  .setup { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: 0 0 1rem; background: var(--panel); }
+  .setup h2 { font-size: 1.1rem; margin-top: 0; }
+  .setup ul { margin: .5rem 0; padding-left: 1.25rem; }
+  .setup li { margin-bottom: .5rem; }
+  .setup code { font-size: .9em; overflow-wrap: anywhere; }
   a { color: var(--accent); }
   @media (max-width: 480px) { body { margin: 1rem auto; padding: 0 .75rem; } }
 </style>
@@ -138,8 +148,10 @@ ${themeHeadScript()}
 <h1>Zoveli AI</h1>
 <p>Local-first assistant. Math is verified by mathcore; everything runs on your machine. <a href="/login" data-testid="login-link">Log in / sign up</a> with any email address, including your @proton.me address — we send a login code, no password needed.</p>
 <p>No account needed for local tools. Math answers carry a <span class="badge">VERIFIED</span> badge — anything unverified is withheld, never guessed.</p>
+${onboarding.status}
 </header>
 <main id="main" tabindex="-1">
+${onboarding.panel}
 <h2 class="sr-only">Conversation</h2>
 <div id="starters" data-testid="suggestion-chips" role="group" aria-label="Example questions">
   <button type="button" data-testid="suggestion-chip" data-q="2+2">2+2</button>
@@ -268,7 +280,7 @@ form.addEventListener('submit', async (e) => {
   const text = input.value.trim();
   if (!text || sending) return;
   input.value = '';
-  addMsg('user', text, false);
+  addMsg('user', text, false, '', false);
   setSending(true);
   try {
     const res = await fetch('/api/chat', {
@@ -279,12 +291,17 @@ form.addEventListener('submit', async (e) => {
     let data = {};
     try { data = await res.json(); } catch (err) {}
     if (!res.ok) {
+      saveChat('user', text, false, '');
       addMsg('assistant', (data && (data.error || data.reason)) || ('Request failed (' + res.status + ').'), false, '', false);
       return;
     }
     const meta = data.model ? ('via ' + data.model + (data.local === false ? '' : ' · stays on this machine')) : '';
-    addMsg('assistant', data.reply || data.error || '(empty reply)', !!data.verified, meta, !!data.reply);
+    const keep = !!data.reply && !data.setup;
+    if (keep) saveChat('user', text, false, '');
+    addMsg('assistant', data.reply || data.error || '(empty reply)', !!data.verified, meta, keep);
+    if (data.setup) chatStatus.textContent = 'Chat model not configured. Local tools still work.';
   } catch (err) {
+    saveChat('user', text, false, '');
     addMsg('assistant', 'I could not reach the local server. Check that Zoveli is still running, then try again.', false, '', false);
   } finally {
     setSending(false);
@@ -322,6 +339,7 @@ document.getElementById('clear-chats').addEventListener('click', () => {
 </script>
 </body>
 </html>`;
+}
 
 async function main(): Promise<void> {
   const host = new ZoveliHost();
@@ -330,6 +348,11 @@ async function main(): Promise<void> {
   // Any API key wins; otherwise a free local Ollama server when one answers;
   // otherwise tools-only offline mode (probe refuses instantly when absent).
   const chatCfg = await resolveChatConfig();
+  const mathReady = mathcoreCommandAvailable();
+  const onboarding = onboardingMarkup({
+    chat: { ready: !!chatCfg, provider: chatCfg?.provider, model: chatCfg?.model },
+    math: { ready: mathReady },
+  });
   const baseSystem = [
     'You are Zoveli, a personal helper that shows its work in math and remembers what matters to you.',
     'For any arithmetic, algebra, calculus, linear algebra, number theory, logic, statistics or unit conversion: do not compute in your head. Call the mathcore tools and state only verified values. If a result is WITHHELD, say so; never guess.',
@@ -356,7 +379,7 @@ async function main(): Promise<void> {
         ) => origWriteHead(status, { ...hsts, ...headers })) as never;
       }
       if (req.method === 'GET' && url.pathname === '/') {
-        const text = PAGE;
+        const text = pageHTML(onboarding);
         res.writeHead(200, withSecurityHeaders({
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': String(Buffer.byteLength(text)),
@@ -495,6 +518,19 @@ ${themeBootScript(unicornProjectId())}
         );
         return;
       }
+      if (req.method === 'GET' && url.pathname === '/api/onboarding') {
+        json(res, 200, {
+          ok: true,
+          chat: {
+            ready: !!chatCfg,
+            provider: chatCfg?.provider || null,
+            model: chatCfg?.model || null,
+          },
+          math: { ready: mathReady },
+          tools: host.tools().length,
+        });
+        return;
+      }
       // Vendored Lenis runtime (same origin, pinned; missing file → 404 and
       // pages fall back to native scroll via the window.Lenis guard).
       if (req.method === 'GET' && url.pathname === '/vendor/lenis.min.js') {
@@ -585,8 +621,11 @@ ${themeBootScript(unicornProjectId())}
           json(res, 200, {
             ok: true,
             verified: false,
+            setup: true,
             reply:
-              'Chat needs a model (set any API key: OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY or ZOVELI_API_KEY — or run local Ollama for free: ollama pull qwen3:4b). Meanwhile I can run tools: try /api/run, e.g. {"tool":"sysinfo_snapshot"}.',
+              'Chat is not configured yet. Local tools and verified math work now. ' +
+              'For free offline chat, install Ollama (https://ollama.com), run ' +
+              'ollama pull qwen3:4b, then restart Zoveli. Any OpenAI-compatible API key also works.',
           });
           return;
         }

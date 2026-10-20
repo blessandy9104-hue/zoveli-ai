@@ -10,7 +10,8 @@ pnpm --filter @zoveli/desktop start
 
 The shell spawns the local web app, waits for `/health`, then opens
 it in a window. No remote servers, no accounts. Set `ZOVELI_DESKTOP_PORT`
-to change the port (default 3080).
+to change the port (default 3080). See the [first-run guide](onboarding.md)
+for setup checks and the readiness panel (`GET /api/onboarding`).
 
 ## Verify without a window
 

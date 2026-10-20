@@ -23,6 +23,41 @@ function looksLikeMath(text: string): boolean {
   return /^[0-9\s+\-*/^().!%]+$/.test(t) && /\d/.test(t) && /[+\-*/^!%]/.test(t);
 }
 
+export interface StartupFacts {
+  chat: { provider?: string; model: string } | null;
+  mathReady: boolean;
+}
+
+/**
+ * First-run guidance printed at REPL startup. Keeps the exact fixes next to
+ * the failure, so a fresh clone never has to read the docs to recover.
+ */
+export function startupGuidance(facts: StartupFacts): string[] {
+  const lines: string[] = [];
+  if (!facts.chat) {
+    lines.push(
+      'No chat model found: all local tools work (math, memory, sysinfo, languages, search, scheduler, ...). ' +
+        'For free offline chat install Ollama (https://ollama.com) and run: ollama pull qwen3:4b. ' +
+        'Or set any API key: OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, ' +
+        'GROQ_API_KEY, TOGETHER_API_KEY or ZOVELI_API_KEY.'
+    );
+  } else if (facts.chat.provider === 'ollama') {
+    lines.push(
+      `Local Ollama detected: free offline chat enabled (model ${facts.chat.model}), no API key needed.`
+    );
+  } else {
+    lines.push(`Chat enabled via ${facts.chat.provider || 'custom'} (model ${facts.chat.model}).`);
+  }
+  if (!facts.mathReady) {
+    lines.push(
+      'Verified math is not ready: mathcore-mcp was not found. From the repo root, activate a ' +
+        'Python 3.11+ venv and run: python -m pip install -e ./mathcore — or set ' +
+        'MATHCORE_MCP_COMMAND to the full binary path. Then verify with: pnpm run doctor'
+    );
+  }
+  return lines;
+}
+
 const HELP = `zoveli commands:
   /help                 show this help
   /tools                list available tools
@@ -50,8 +85,9 @@ export function shouldPrewarmMathcore(
 }
 
 export async function runRepl(host: ZoveliHost, agent: { systemSections: string[] }): Promise<void> {
+  const mathReady = mathcoreCommandAvailable();
   // Overlap the ~5-10s Python/MCP startup with chat detection and typing.
-  if (shouldPrewarmMathcore()) void mathcore.warmup();
+  if (shouldPrewarmMathcore(process.env, !!process.stdin.isTTY, mathReady)) void mathcore.warmup();
   const chatCfg = await resolveChatConfig();
   const baseSystem = [
     'You are Zoveli, a personal helper that shows its work in math and remembers what matters to you.',
@@ -61,21 +97,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
   ].join('\n\n');
 
   console.log('zoveli — local-first assistant. Type /help for commands, /quit to exit.'); // banner: keep 'local-first assistant' substring (e2e asserts it)
-  if (!chatCfg) {
-    console.log(
-      'No chat model found: all local tools work ' +
-        '(math, memory, sysinfo, languages, search, scheduler, ...). ' +
-        'For free offline chat set any API key (OPENAI_API_KEY, DEEPSEEK_API_KEY, ' +
-        'OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY or ZOVELI_API_KEY), or ' +
-        'install Ollama (https://ollama.com) and run: ollama pull qwen3:4b'
-    );
-  } else if (chatCfg.provider === 'ollama') {
-    console.log(
-      `Local Ollama detected: free offline chat enabled (model ${chatCfg.model}), no API key needed.`
-    );
-  } else {
-    console.log(`Chat enabled via ${chatCfg.provider} (model ${chatCfg.model}).`);
-  }
+  for (const line of startupGuidance({ chat: chatCfg, mathReady })) console.log(line);
   // First-30-seconds starters (TTY only, so piped/batch output stays
   // byte-identical for scripts and tests): show what to try first.
   if (process.stdin.isTTY) {
@@ -83,6 +105,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
     console.log('  /math solve x^2 - 5x + 6 = 0   proven answer + certificate');
     console.log('  /sys                           this machine: OS/CPU/RAM/disk/GPU');
     console.log('  /tools                         every local tool (~63), no API key needed');
+    console.log('  /health                        re-check config, vault, mathcore and capabilities');
   }
 
   // Created lazily in TTY mode only: an Interface starts consuming stdin
