@@ -81,4 +81,15 @@ describe('mathcore-mcp resolution', () => {
     });
     expect(commandParts('')).toEqual({ command: MATHCORE_MCP_BINARY_NAME, args: [] });
   });
+
+  it('unquotes double-quoted tokens for paths with spaces', () => {
+    expect(commandParts('"C:\\Program Files\\Python311\\python.exe" -m mathcore.mcp_server')).toEqual({
+      command: 'C:\\Program Files\\Python311\\python.exe',
+      args: ['-m', 'mathcore.mcp_server'],
+    });
+    expect(commandParts('"/opt/my tools/mathcore-mcp"')).toEqual({
+      command: '/opt/my tools/mathcore-mcp',
+      args: [],
+    });
+  });
 });

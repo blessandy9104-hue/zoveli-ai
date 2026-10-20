@@ -112,6 +112,11 @@ before `.venv`/PATH), `MATHCORE_AUDIT` (audit path),
 - **Verified or withheld:** independent methods must agree or the answer is
   WITHHELD/MISMATCH — the model never guesses numbers.
 - **Transport never computes:** the TS client only carries JSON-RPC.
+- **Supervised pool:** one persistent child reused across calls; a crash or
+  failed spawn restarts it with exponential backoff (0.5s → 30s cap) instead of
+  spawning per request, and late exit events from old children are ignored.
+  `mathcore_status` (or `/mcp`) reports pid, spawns, restarts, pending calls,
+  last error and `retryInMs`.
 - **Proofs accumulate:** VERIFIED results are upserted to the memory store;
   WITHHELD/MISMATCH only bump counters (no DB spam).
 - **Install once:** `python -m pip install -e ./mathcore` inside `.venv`

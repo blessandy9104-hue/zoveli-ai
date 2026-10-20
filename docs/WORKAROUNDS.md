@@ -79,7 +79,7 @@ This document provides practical workarounds for all identified negative consequ
 
 ### Negative: MCP Latency
 **Workaround (partial):**
-- **Connection Pooling**: ✅ one persistent stdio MCP process per server (reused across calls); a multi-server pool is 📋 planned
+- **Connection Pooling**: ✅ one supervised persistent stdio MCP process per server (reused across calls; crash restart with exponential backoff; `mathcore_status` / `/mcp` expose pid, spawns, restarts and last error); a multi-server pool is 📋 planned
 - **Batch Operations**: 📋 no `mathcore_compute_batch` tool yet
 - **Async Pipeline**: ✅ calls are async and time-bounded by `MATHCORE_TIMEOUT_MS`
 - **Cache Results**: ✅ verified results are memorized and recalled (`math_recall`; disable with `ZOVELI_MATH_MEMORIZE=0`)
@@ -173,7 +173,7 @@ This document provides practical workarounds for all identified negative consequ
 | Visual Trace Viewer | ❌ Removed | no `/debug/events` routes; removed with `event-logger` |
 | In-Memory Search Index | ✅ Implemented | `packages/memory-store/` (SQLite FTS5, transactional; replaced the TF index in `packages/search/`, now a delegate) |
 | mathcore Binary Build | 📋 Planned | `scripts/build-mathcore-binary.sh` (not created yet) |
-| Connection Pooling | ✅ Persistent stdio MCP process | `packages/math-intelligence/src/transport.ts`; multi-server pool 📋 |
+| Connection Pooling | ✅ Supervised persistent stdio MCP process (restart backoff + status) | `packages/math-intelligence/src/transport.ts`; multi-server pool 📋 |
 | Plugin Generator | ✅ Implemented | `scripts/create-plugin.mjs` (`pnpm create:plugin`, `--mount` wires host + tsconfig) |
 | Capability Health Probes | ✅ Implemented | `packages/capability/src/scanner.ts` (`verifyCapabilities`) |
 | Vault Migration System | ✅ Implemented | `PRAGMA user_version` + `MIGRATIONS`; `pnpm migrate:vault` (Markdown import) |

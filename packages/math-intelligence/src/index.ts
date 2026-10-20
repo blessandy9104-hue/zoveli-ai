@@ -21,6 +21,7 @@ export {
   mathcoreServerConfig,
 };
 export { mathcore, MathcoreClient };
+export type { MathcoreClientOptions, MathcoreStatus } from './transport.js';
 export { resolveMathcoreCommand, commandParts };
 export type { ResolveMathcoreOptions } from './resolve.js';
 export { mathcoreTools, mathIntelligenceTools };

@@ -36,9 +36,10 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Audit an answer:** `/check integrate x^2 from 0 to 3 ;; the answer is 9`
   → `MATCH` (wrong answers get `MISMATCH`, never a silent guess)
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
+- **MCP pool:** `/mcp` → mathcore pid, spawns, restarts, pending calls, last error (`mathcore_status` does the same from chat)
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all ~61 local tools
+- **Tool list:** `/tools` → all ~62 local tools
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 

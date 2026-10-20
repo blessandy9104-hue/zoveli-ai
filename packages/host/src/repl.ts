@@ -26,6 +26,7 @@ const HELP = `zoveli commands:
   /help                 show this help
   /tools                list available tools
   /math <expression>    verified computation (mathcore, offline)
+  /mcp                  mathcore MCP pool status (pid, restarts, last error)
   /check <q> ;; <a>     audit a proposed answer against mathcore
   /sys                  host snapshot (OS/CPU/RAM/disk/GPU)
   /caps                 capability summary
@@ -64,7 +65,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
     console.log('Try in 30 seconds (all offline, math is verified or withheld):');
     console.log('  /math solve x^2 - 5x + 6 = 0   proven answer + certificate');
     console.log('  /sys                           this machine: OS/CPU/RAM/disk/GPU');
-    console.log('  /tools                         every local tool (~61), no API key needed');
+    console.log('  /tools                         every local tool (~62), no API key needed');
   }
 
   // Created lazily in TTY mode only: an Interface starts consuming stdin
@@ -134,6 +135,13 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
         console.log(JSON.stringify(await host.runTool('sysinfo_snapshot', {}), null, 2).slice(0, 2000));
       } else if (text.startsWith('/math ')) {
         console.log(await host.runTool('mathcore_compute', { expression: text.slice(6) }));
+      } else if (text === '/mcp') {
+        const s = mathcore.status();
+        console.log(
+          `mathcore MCP: ${s.running ? `running (pid ${s.pid})` : 'stopped'} · ` +
+            `spawns ${s.spawns} · restarts ${s.restarts} · pending ${s.pending}` +
+            (s.lastError ? ` · last error: ${s.lastError}` : '')
+        );
       } else if (text.startsWith('/check ')) {
         const rest = text.slice(7);
         const sep = rest.indexOf(';;');

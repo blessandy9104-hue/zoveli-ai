@@ -77,16 +77,41 @@ export function resolveMathcoreCommand(options: ResolveMathcoreOptions = {}): st
   return findOnPath(MATHCORE_MCP_BINARY_NAME, options) ?? MATHCORE_MCP_BINARY_NAME;
 }
 
+/** Whitespace split that honors double-quoted segments (paths with spaces). */
+export function splitCommandLine(commandLine: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let quoted = false;
+  for (const ch of commandLine) {
+    if (ch === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && /\s/.test(ch)) {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
+      continue;
+    }
+    current += ch;
+  }
+  if (current) parts.push(current);
+  return parts;
+}
+
 /**
  * Split a command line into a spawnable command + argv. An existing file path
  * (even with spaces) is never split; otherwise whitespace separates tokens so
- * `python -m mathcore.mcp_server` works as MATHCORE_MCP_COMMAND.
+ * `python -m mathcore.mcp_server` works as MATHCORE_MCP_COMMAND, and
+ * double-quoted tokens keep paths like `"C:\Program Files\...\python.exe"` whole.
  */
 export function commandParts(commandLine: string): { command: string; args: string[] } {
   const trimmed = (commandLine ?? '').trim();
   if (!trimmed) return { command: MATHCORE_MCP_BINARY_NAME, args: [] };
   if (isFile(trimmed)) return { command: trimmed, args: [] };
-  const parts = trimmed.split(/\s+/);
+  const parts = splitCommandLine(trimmed);
+  if (parts.length === 0) return { command: MATHCORE_MCP_BINARY_NAME, args: [] };
   if (parts.length === 1) return { command: parts[0], args: [] };
   return { command: parts[0], args: parts.slice(1) };
 }

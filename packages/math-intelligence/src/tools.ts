@@ -56,6 +56,14 @@ export const mathcoreTools: Tool[] = [
       return { mcpTools: tools.map((t: any) => t.name), status: 'ok' };
     }
   },
+  {
+    name: 'mathcore_status',
+    description: 'MCP pool diagnostics for mathcore: process state, restarts, last error, pending calls',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      return mathcore.status();
+    }
+  },
 ];
 
 export const mathIntelligenceTools: Tool[] = [
