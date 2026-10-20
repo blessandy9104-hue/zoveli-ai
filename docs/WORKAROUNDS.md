@@ -157,11 +157,11 @@ This document provides practical workarounds for all identified negative consequ
 - **Permission Model**: 📋 no install-time consent flow
 
 ### Configuration Drift
-**Workaround (📋):**
+**Workaround (partial):**
 - **Config as Code**: 📋 profiles are local config, not yet Git-managed
-- **Drift Detection**: 📋 `scripts/config-diff.ts` does not exist yet
+- **Drift Detection**: ✅ `pnpm config:check` (`packages/config-audit/`) reports typo-ed/unknown/obsolete env vars, values that are silently ignored (bad numbers, non-`0`/`1` toggles, short secrets, unresolvable `MATHCORE_MCP_COMMAND`) and vault schema drift (`user_version` older/newer than supported); `--json` for scripting
 - **Immutable Profiles**: 📋 profiles are read at startup but not frozen/enforced
-- **Schema Validation**: 📋 no JSON Schema for config files yet
+- **Schema Validation**: partial — env vars are validated against the registry in `packages/config-audit/src/registry.ts`; no JSON Schema for config files yet
 
 ---
 
@@ -179,7 +179,7 @@ This document provides practical workarounds for all identified negative consequ
 | Vault Migration System | ✅ Implemented | `PRAGMA user_version` + `MIGRATIONS`; `pnpm migrate:vault` (Markdown import) |
 | Vault Backup / Verify / Restore | ✅ Implemented | `packages/memory-store/src/maintenance.ts`; `pnpm vault:backup/verify/restore` |
 | Git Auto-Commit Hooks | 📋 Planned | no `.husky/` yet |
-| Config Drift Detection | 📋 Planned | `scripts/config-diff.ts` (not created yet) |
+| Config Drift Detection | ✅ Implemented | `packages/config-audit/` (env registry + vault schema audit); `pnpm config:check` |
 | Programming Languages Fallbacks | ✅ Implemented | `packages/languages/` (native → deterministic fallback) |
 | Knowledge Graph Export | ✅ Implemented | `packages/graph/` (JSON + DOT) |
 | Security Secret Patterns | ✅ Implemented | `packages/secscan/` (7 pattern families) |

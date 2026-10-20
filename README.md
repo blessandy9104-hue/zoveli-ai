@@ -69,7 +69,8 @@ python -m pip install -e .\mathcore
 pnpm install
 pnpm run build
 pnpm test
-pnpm run doctor   # Node/pnpm/python/mathcore/Ollama report
+pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
+pnpm config:check      # env + vault drift (typos, ignored values, schema)
 ```
 
 **macOS / Linux:**
@@ -92,7 +93,8 @@ python -m pip install -e ./mathcore
 pnpm install
 pnpm run build
 pnpm test
-pnpm run doctor   # Node/pnpm/python/mathcore/Ollama report
+pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
+pnpm config:check      # env + vault drift (typos, ignored values, schema)
 ```
 
 ## Launch it

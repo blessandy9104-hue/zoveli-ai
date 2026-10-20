@@ -1,0 +1,24 @@
+{
+  "name": "@zoveli/config-audit",
+  "version": "0.1.0",
+  "description": "Environment and vault configuration drift detection for Zoveli",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run --passWithNoTests",
+    "lint": "oxlint",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@zoveli/memory-store": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "^0.3.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "oxlint": "catalog:",
+    "@types/node": "^20.10.0"
+  }
+}

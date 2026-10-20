@@ -44,9 +44,15 @@ importers:
 
   apps/cli:
     dependencies:
+      '@zoveli/config-audit':
+        specifier: workspace:*
+        version: link:../../packages/config-audit
       '@zoveli/host':
         specifier: workspace:*
         version: link:../../packages/host
+      '@zoveli/math-intelligence':
+        specifier: workspace:*
+        version: link:../../packages/math-intelligence
       '@zoveli/memory-store':
         specifier: workspace:*
         version: link:../../packages/memory-store
@@ -141,6 +147,28 @@ importers:
       '@deepseek-ai/dsh-core':
         specifier: workspace:*
         version: link:../shim-dsh-core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.43
+      oxlint:
+        specifier: 'catalog:'
+        version: 0.18.1
+      tsdown:
+        specifier: ^0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 1.6.1(@types/node@20.19.43)(@vitest/ui@1.6.1)(happy-dom@20.14.6)
+
+  packages/config-audit:
+    dependencies:
+      '@zoveli/memory-store':
+        specifier: workspace:*
+        version: link:../memory-store
     devDependencies:
       '@types/node':
         specifier: ^20.10.0

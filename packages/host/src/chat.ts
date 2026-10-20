@@ -46,6 +46,9 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'together', envKey: 'TOGETHER_API_KEY', baseUrl: 'https://api.together.xyz/v1', model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
 ];
 
+/** Provider key names in precedence order (after the ZOVELI_API_KEY override). */
+export const CHAT_PROVIDER_ENV_KEYS: readonly string[] = PROVIDERS.map((p) => p.envKey);
+
 function stripCompletionsSuffix(url: string): string {
   return url.replace(/\/chat\/completions\/?$/, '');
 }

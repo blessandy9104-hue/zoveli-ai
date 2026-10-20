@@ -37,6 +37,7 @@
     { "path": "./packages/host" },
     { "path": "./packages/persona" },
     { "path": "./packages/webresearch" },
-    { "path": "./packages/auth" }
+    { "path": "./packages/auth" },
+    { "path": "./packages/config-audit" }
   ]
 }

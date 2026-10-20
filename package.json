@@ -19,6 +19,7 @@
     "vault:verify": "pnpm run build:core && node apps/cli/dist/cli.js verify",
     "vault:restore": "pnpm run build:core && node apps/cli/dist/cli.js restore",
     "migrate:vault": "pnpm run build:core && node apps/cli/dist/cli.js migrate",
+    "config:check": "pnpm run build:core && node apps/cli/dist/cli.js config-check",
     "test": "vitest run",
     "lint": "oxlint packages apps tests scripts --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\" --ignore-pattern \"**/coverage/**\"",
     "create:plugin": "node scripts/create-plugin.mjs",

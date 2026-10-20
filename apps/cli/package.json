@@ -12,7 +12,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@zoveli/config-audit": "workspace:*",
     "@zoveli/host": "workspace:*",
+    "@zoveli/math-intelligence": "workspace:*",
     "@zoveli/memory-store": "workspace:*"
   },
   "devDependencies": {
