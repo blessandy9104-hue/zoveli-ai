@@ -41,7 +41,7 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
   → `MATCH` (wrong answers get `MISMATCH`, never a silent guess)
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
 - **MCP pool:** `/mcp` → mathcore pid, spawns, restarts, pending calls, last error (`mathcore_status` does the same from chat)
-- **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures and timings
+- **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures, timings and JSONL log status
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
 - **Tool list:** `/tools` → all ~63 local tools
@@ -127,12 +127,34 @@ shows recent tool calls with durations and redacted errors
 (`ZOVELI_TRACE=1` mirrors the trace to stderr). The tool is also available to
 chat as `health_report`.
 
+## Structured trace log
+
+`/trace` keeps the last 200 tool calls in memory. To keep a durable audit
+trail, opt in to the JSONL sink:
+
+```bash
+ZOVELI_TRACE_LOG="$HOME/.zoveli/tool-calls.jsonl" pnpm start
+```
+
+Each line is one event: `schema` (`zoveli.tool_call.v1`), `seq`, `at`, `tool`,
+`registration`, `durationMs`, `ok` and (on failure) the redacted `error`. The
+same event is emitted as `tool/call` on the host event bus for in-process
+listeners.
+
+Rotation defaults to 5 MB with three backups. Tune it with
+`ZOVELI_TRACE_LOG_MAX_BYTES` and `ZOVELI_TRACE_LOG_KEEP` (`0` truncates
+instead of rotating). Missing parent directories are created on first write;
+the config check warns when the parent is missing so typos surface early. If a
+write fails, the sink disables itself with one stderr note and tool calls keep
+working.
+
 ## Env
 
 `ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`,
 `ZOVELI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_MODEL`,
-`ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`.
+`ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`, `ZOVELI_TRACE`, `ZOVELI_TRACE_LOG`,
+`ZOVELI_TRACE_LOG_MAX_BYTES`, `ZOVELI_TRACE_LOG_KEEP`.
 `ZOVELI_PERSONA` pins a persona (friend, tutor, engineer, coach);
 `ZOVELI_TEMPERATURE` sets chat sampling (default 0.7, clamped 0–2);
 `ZOVELI_MEMORY_BRIEF=0` disables the private memory brief in chat, and

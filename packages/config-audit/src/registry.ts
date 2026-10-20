@@ -17,7 +17,7 @@ export type EnvKind =
 
 export interface EnvSpec {
   name: string;
-  group: 'Chat' | 'Math' | 'Memory' | 'Auth' | 'Desktop';
+  group: 'Chat' | 'Math' | 'Memory' | 'Auth' | 'Desktop' | 'Observability';
   kind: EnvKind;
   description: string;
   default?: string;
@@ -200,6 +200,42 @@ export const ENV_REGISTRY: EnvSpec[] = [
     literalOnly: true,
     description: 'set 0 to stop writing the Markdown mirror',
     default: 'enabled',
+  },
+  // Observability
+  {
+    name: 'ZOVELI_TRACE',
+    group: 'Observability',
+    kind: 'boolean01',
+    toggle: 'enable',
+    literalOnly: true,
+    description: 'set 1 to mirror tool calls to stderr',
+    default: 'off',
+  },
+  {
+    name: 'ZOVELI_TRACE_LOG',
+    group: 'Observability',
+    kind: 'path-file',
+    description: 'opt-in JSONL tool-call log (rotated; parent directories created on first write)',
+    default: 'off',
+  },
+  {
+    name: 'ZOVELI_TRACE_LOG_MAX_BYTES',
+    group: 'Observability',
+    kind: 'number',
+    parse: 'int',
+    min: 1024,
+    description: 'rotate the JSONL log before it grows past this size',
+    default: '5000000',
+  },
+  {
+    name: 'ZOVELI_TRACE_LOG_KEEP',
+    group: 'Observability',
+    kind: 'number',
+    parse: 'int',
+    min: 0,
+    max: 20,
+    description: 'rotated JSONL backups to keep (0 truncates on overflow)',
+    default: '3',
   },
   // Auth
   {

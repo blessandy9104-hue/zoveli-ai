@@ -25,7 +25,7 @@ This document provides practical workarounds for all identified negative consequ
 - **Visual Trace Viewer**: 📋 proposed `/debug/events`; not implemented
 - **Correlation IDs**: 📋 proposed; no `x-correlation-id` propagation today
 - **Replay Tool**: 📋 proposed; no `replay:event` script
-- **Structured Logging**: partial — ✅ bounded tool-call trace with durations/failures (`/trace`, `ZOVELI_TRACE=1`), errors redacted before they reach the trace; 📋 no JSONL/event-bus export yet
+- **Structured Logging**: ✅ bounded in-memory tool-call trace (`/trace`, `ZOVELI_TRACE=1`) plus opt-in JSONL event export with size rotation (`ZOVELI_TRACE_LOG`), `tool/call` events on the host bus; errors are redacted before they reach either sink
 
 ### Negative: Service Lookup Overhead
 **Workaround (guidance):**

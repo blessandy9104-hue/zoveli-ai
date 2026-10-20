@@ -16,6 +16,8 @@ the new section **before** running `pnpm release:check --release`.
   capability availability (`--json`/`--offline` supported).
 - Bounded tool-call trace with durations, failure counts and redacted errors:
   REPL `/trace`, `ZOVELI_TRACE=1`.
+- Opt-in JSONL tool-call export (`ZOVELI_TRACE_LOG`) with size rotation,
+  `tool/call` host events, and the same secret redaction as the in-memory trace.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

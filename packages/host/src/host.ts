@@ -1,6 +1,11 @@
 import type { ZoveliContext, ZoveliPlugin, Tool } from '@deepseek-ai/dsh-core';
 import { checkToolCall, defaultPolicy } from '@zoveli/guard';
 import { redactSecrets } from '@zoveli/secscan';
+import {
+  StructuredLogSink,
+  resolveStructuredLog,
+  type StructuredLogStats,
+} from './structured-log.js';
 
 export interface HostTool extends Tool {
   plugin: string;
@@ -24,6 +29,11 @@ export interface ToolCallStats {
 }
 
 const MAX_TRACE_ENTRIES = 200;
+
+export interface HostOptions {
+  /** Inject a sink for tests; `undefined` reads ZOVELI_TRACE_LOG from env. */
+  eventLog?: StructuredLogSink | null;
+}
 
 interface AgentLike {
   inject: (msg: { type: string; content: string }) => void;
@@ -52,10 +62,18 @@ export class ZoveliHost {
   private failureCount = 0;
   private totalMs = 0;
   private lastError: string | null = null;
+  private eventLog: StructuredLogSink | null;
 
   readonly ctx: ZoveliContext;
 
-  constructor() {
+  constructor(options: HostOptions = {}) {
+    this.eventLog =
+      options.eventLog === undefined
+        ? (() => {
+            const config = resolveStructuredLog();
+            return config ? new StructuredLogSink(config) : null;
+          })()
+        : options.eventLog;
     this.ctx = {
       register: (key: string, value?: any) => {
         const arr = this.registrations.get(key) ?? [];
@@ -183,6 +201,11 @@ export class ZoveliHost {
     };
   }
 
+  /** Opt-in JSONL sink status; null when ZOVELI_TRACE_LOG is unset. */
+  logStatus(): StructuredLogStats | null {
+    return this.eventLog?.stats() ?? null;
+  }
+
   private recordToolCall(tool: HostTool, durationMs: number, error?: unknown): void {
     this.callCount += 1;
     this.totalMs += durationMs;
@@ -204,6 +227,15 @@ export class ZoveliHost {
     if (message !== undefined) entry.error = message;
     this.trace.push(entry);
     if (this.trace.length > MAX_TRACE_ENTRIES) this.trace.shift();
+    const event = { schema: 'zoveli.tool_call.v1', seq: this.callCount, ...entry };
+    this.eventLog?.write(event);
+    try {
+      this.ctx.emit?.('tool/call', event);
+    } catch (e) {
+      // A listener must never break a tool call; surface it redacted instead.
+      const message = redactSecrets(e instanceof Error ? e.message : String(e));
+      console.error(`[zoveli] tool/call listener failed: ${message}`);
+    }
     if (process.env.ZOVELI_TRACE === '1') {
       const outcome = message === undefined ? 'ok' : `error: ${message}`;
       console.error(`[trace] ${tool.name} ${outcome} ${durationMs}ms`);

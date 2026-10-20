@@ -157,6 +157,13 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
           `tool calls: ${stats.calls} · failures: ${stats.failures} · avg ${avg}ms` +
             (stats.lastError ? ` · last error: ${stats.lastError}` : '')
         );
+        const log = host.logStatus();
+        console.log(
+          log
+            ? `log: ${log.file} · written ${log.written} · rotations ${log.rotations}` +
+                (log.lastError ? ` · error: ${log.lastError}` : '')
+            : 'log: off (set ZOVELI_TRACE_LOG to write JSONL events)'
+        );
         for (const call of stats.recent) {
           const outcome = call.ok ? 'ok  ' : 'FAIL';
           const error = call.error ? ` — ${call.error}` : '';
