@@ -21,6 +21,54 @@ function loadDatabaseSync(): typeof import('node:sqlite')['DatabaseSync'] {
 }
 const DatabaseSync = loadDatabaseSync();
 
+/**
+ * Current on-disk schema. Bump this and add a migration below whenever the
+ * notes/tags/links layout changes. `PRAGMA user_version` records the applied
+ * version; opening a newer database with an older binary is refused instead
+ * of silently corrupting it.
+ */
+export const SCHEMA_VERSION = 1;
+
+interface Migration {
+  version: number;
+  description: string;
+  up: (db: DatabaseSyncType) => void;
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    description: 'baseline notes, tags, links schema',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS notes(
+          title TEXT PRIMARY KEY,
+          body TEXT NOT NULL DEFAULT '',
+          created TEXT NOT NULL,
+          updated TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS tags(
+          note_title TEXT NOT NULL REFERENCES notes(title) ON DELETE CASCADE ON UPDATE CASCADE,
+          tag TEXT NOT NULL,
+          PRIMARY KEY(note_title, tag)
+        );
+        CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag);
+        CREATE TABLE IF NOT EXISTS links(
+          from_title TEXT NOT NULL REFERENCES notes(title) ON DELETE CASCADE ON UPDATE CASCADE,
+          to_title TEXT NOT NULL,
+          PRIMARY KEY(from_title, to_title)
+        );
+        CREATE INDEX IF NOT EXISTS idx_links_to ON links(to_title);
+      `);
+    },
+  },
+];
+
+/** Open a raw node:sqlite connection (used by maintenance code and tests). */
+export function openDatabaseSync(dbPath: string, options?: { readOnly?: boolean }): DatabaseSyncType {
+  return options ? new DatabaseSync(dbPath, options) : new DatabaseSync(dbPath);
+}
+
 export interface CreateNoteInput {
   title: string;
   content: string;
@@ -69,6 +117,28 @@ export interface GraphResult {
   edges: { from: string; to: string }[];
   orphans: string[];
   hubs: { id: string; degree: number }[];
+}
+
+export interface ImportReport {
+  scanned: number;
+  imported: number;
+  skippedExisting: number;
+  failed: { file: string; error: string }[];
+}
+
+export interface IntegrityReport {
+  ok: boolean;
+  schemaVersion: number;
+  notes: number;
+  ftsAvailable: boolean;
+  ftsRows: number | null;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface MemoryStoreOptions {
+  /** Set false when the caller wants an explicit, reported import. */
+  importVault?: boolean;
 }
 
 export function resolveDbPath(): string {
@@ -137,10 +207,21 @@ function sentenceHighlights(body: string, query: string, max = 3): string[] {
     .filter(Boolean);
 }
 
-function parseMarkdownFile(content: string, fallbackTitle: string): { title: string; body: string; tags: string[] } {
+function parseTimestamp(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const clean = value.trim().replace(/^["']|["']$/g, '');
+  return Number.isNaN(Date.parse(clean)) ? undefined : clean;
+}
+
+function parseMarkdownFile(
+  content: string,
+  fallbackTitle: string
+): { title: string; body: string; tags: string[]; created?: string; updated?: string } {
   const fm = content.match(/^---\n([\s\S]*?)\n---/);
   let title = fallbackTitle;
   let tags: string[] = [];
+  let created: string | undefined;
+  let updated: string | undefined;
   let body = content;
   if (fm) {
     const yaml = fm[1];
@@ -153,6 +234,8 @@ function parseMarkdownFile(content: string, fallbackTitle: string): { title: str
         .map((t) => t.trim().replace(/"/g, '').replace(/^#+/, ''))
         .filter(Boolean);
     }
+    created = parseTimestamp(yaml.match(/^created:\s*(.+)$/m)?.[1]);
+    updated = parseTimestamp(yaml.match(/^updated:\s*(.+)$/m)?.[1]);
     body = content.slice(fm[0].length).trim();
   } else {
     const h1 = content.match(/^#\s+(.+)$/m);
@@ -161,14 +244,23 @@ function parseMarkdownFile(content: string, fallbackTitle: string): { title: str
   // Collect #hashtags in body as well (graph parity).
   const hashTags = [...body.matchAll(/#([\w-]+)/g)].map((m) => m[1]).slice(0, 20);
   const merged = [...new Set([...tags, ...hashTags])];
-  return { title, body, tags: merged };
+  return { title, body, tags: merged, created, updated };
 }
 
-function toMarkdownFile(title: string, body: string, tags: string[], links: string[]): string {
+function toMarkdownFile(
+  title: string,
+  body: string,
+  tags: string[],
+  links: string[],
+  created: string,
+  updated: string
+): string {
   const frontmatter = [
     '---',
     `title: "${title.replace(/"/g, "'")}"`,
-    `created: ${new Date().toISOString()}`,
+    `created: ${created}`,
+    `updated: ${updated}`,
+    `schema: ${SCHEMA_VERSION}`,
     `tags: [${tags.map((t) => `"${t}"`).join(', ')}]`,
     '---',
     '',
@@ -187,7 +279,11 @@ export class MemoryStore {
   readonly dbPath: string;
   readonly vaultPath: string;
 
-  constructor(dbPath = resolveDbPath(), vaultPath = resolveVaultPath()) {
+  constructor(
+    dbPath = resolveDbPath(),
+    vaultPath = resolveVaultPath(),
+    options: MemoryStoreOptions = {}
+  ) {
     this.dbPath = dbPath;
     this.vaultPath = vaultPath;
     if (dbPath !== ':memory:') {
@@ -205,35 +301,53 @@ export class MemoryStore {
     }
     this.db.exec('PRAGMA journal_mode=WAL;');
     this.db.exec('PRAGMA foreign_keys=ON;');
-    this.initSchema();
+    try {
+      this.runMigrations();
+    } catch (e) {
+      try {
+        this.db.close();
+      } catch {
+        // ignore close failure; surface the migration error
+      }
+      throw e;
+    }
     this.ftsAvailable = this.detectFts();
     if (!this.ftsAvailable) {
       // Recreate FTS as plain table? No — just use LIKE fallback at query time.
     }
-    this.maybeImportVault();
+    if (options.importVault !== false) this.maybeImportVault();
   }
 
-  private initSchema(): void {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS notes(
-        title TEXT PRIMARY KEY,
-        body TEXT NOT NULL DEFAULT '',
-        created TEXT NOT NULL,
-        updated TEXT NOT NULL
+  private runMigrations(): void {
+    const row = this.db.prepare('PRAGMA user_version').get() as { user_version: number } | undefined;
+    let current = Number(row?.user_version ?? 0);
+    if (current > SCHEMA_VERSION) {
+      throw new Error(
+        `memory database schema v${current} is newer than supported v${SCHEMA_VERSION}; upgrade Zoveli`
       );
-      CREATE TABLE IF NOT EXISTS tags(
-        note_title TEXT NOT NULL REFERENCES notes(title) ON DELETE CASCADE ON UPDATE CASCADE,
-        tag TEXT NOT NULL,
-        PRIMARY KEY(note_title, tag)
-      );
-      CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag);
-      CREATE TABLE IF NOT EXISTS links(
-        from_title TEXT NOT NULL REFERENCES notes(title) ON DELETE CASCADE ON UPDATE CASCADE,
-        to_title TEXT NOT NULL,
-        PRIMARY KEY(from_title, to_title)
-      );
-      CREATE INDEX IF NOT EXISTS idx_links_to ON links(to_title);
-    `);
+    }
+    for (const migration of MIGRATIONS) {
+      if (migration.version <= current) continue;
+      this.db.exec('BEGIN IMMEDIATE');
+      try {
+        migration.up(this.db);
+        this.db.exec(`PRAGMA user_version = ${migration.version}`);
+        this.db.exec('COMMIT');
+        current = migration.version;
+      } catch (e) {
+        try {
+          this.db.exec('ROLLBACK');
+        } catch {
+          // ignore rollback failure; surface the original error
+        }
+        throw e;
+      }
+    }
+  }
+
+  schemaVersion(): number {
+    const row = this.db.prepare('PRAGMA user_version').get() as { user_version: number } | undefined;
+    return Number(row?.user_version ?? 0);
   }
 
   private detectFts(): boolean {
@@ -251,21 +365,95 @@ export class MemoryStore {
       if (count > 0) return;
       const files = this.findMarkdownFiles(this.vaultPath);
       if (files.length === 0) return;
-      for (const f of files) {
-        try {
-          const raw = fs.readFileSync(f, 'utf-8');
-          const fallback = path.basename(f, '.md');
-          const parsed = parseMarkdownFile(raw, fallback);
-          const wiki = extractWikiLinks(raw);
-          // Seed without re-exporting (file already exists).
-          this.insertNoteRow(parsed.title, parsed.body, parsed.tags, wiki, false);
-        } catch {
-          // Skip unreadable files during import.
-        }
-      }
+      // Seed without re-exporting (files already exist). Best-effort on boot;
+      // `migrate` uses importMarkdownFiles directly for a full report.
+      this.importMarkdownFiles(this.vaultPath);
     } catch {
       // Import is best-effort; DB remains usable.
     }
+  }
+
+  /**
+   * Import Markdown files from a legacy vault into SQLite. Existing titles
+   * are skipped (never overwritten). Timestamps come from frontmatter when
+   * present, otherwise from the file mtime.
+   */
+  importMarkdownFiles(dir: string): ImportReport {
+    const files = this.findMarkdownFiles(dir);
+    const report: ImportReport = { scanned: files.length, imported: 0, skippedExisting: 0, failed: [] };
+    for (const file of files) {
+      try {
+        const raw = fs.readFileSync(file, 'utf-8');
+        const parsed = parseMarkdownFile(raw, path.basename(file, '.md'));
+        const title = parsed.title.trim();
+        if (!title) throw new Error('empty note title');
+        const existing = this.db.prepare('SELECT title FROM notes WHERE title = ?').get(title) as
+          | { title: string }
+          | undefined;
+        if (existing) {
+          report.skippedExisting += 1;
+          continue;
+        }
+        const stat = fs.statSync(file);
+        const created = parsed.created ?? stat.mtime.toISOString();
+        const updated = parsed.updated ?? created;
+        const links = extractWikiLinks(raw);
+        this.insertNoteRow(title, parsed.body, parsed.tags, links, false, { created, updated });
+        report.imported += 1;
+      } catch (e) {
+        report.failed.push({
+          file,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+    return report;
+  }
+
+  /** Run SQLite integrity checks and compare the FTS index with the notes table. */
+  checkIntegrity(): IntegrityReport {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    let notes = 0;
+    try {
+      notes = this.count();
+    } catch (e) {
+      errors.push(`notes count failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+      const rows = this.db.prepare('PRAGMA integrity_check').all() as { integrity_check: string }[];
+      for (const row of rows) {
+        if (row.integrity_check !== 'ok') errors.push(`integrity_check: ${row.integrity_check}`);
+      }
+    } catch (e) {
+      errors.push(`integrity_check failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+      const rows = this.db.prepare('PRAGMA foreign_key_check').all() as unknown[];
+      if (rows.length > 0) errors.push(`${rows.length} foreign key violation(s)`);
+    } catch (e) {
+      errors.push(`foreign_key_check failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    let ftsRows: number | null = null;
+    if (this.ftsAvailable) {
+      try {
+        ftsRows = (this.db.prepare('SELECT COUNT(*) AS c FROM notes_fts').get() as { c: number }).c;
+        if (ftsRows !== notes) {
+          warnings.push(`FTS index has ${ftsRows} row(s) but notes has ${notes}`);
+        }
+      } catch (e) {
+        warnings.push(`FTS check failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    return {
+      ok: errors.length === 0,
+      schemaVersion: this.schemaVersion(),
+      notes,
+      ftsAvailable: this.ftsAvailable,
+      ftsRows,
+      errors,
+      warnings,
+    };
   }
 
   private findMarkdownFiles(dir: string): string[] {
@@ -292,9 +480,13 @@ export class MemoryStore {
     if (!exportEnabled()) return;
     if (this.dbPath === ':memory:') return;
     try {
+      const row = this.db
+        .prepare('SELECT created, updated FROM notes WHERE title = ?')
+        .get(title) as { created: string; updated: string } | undefined;
+      if (!row) return;
       fs.mkdirSync(this.vaultPath, { recursive: true });
       const file = path.join(this.vaultPath, sanitizeFilename(title) + '.md');
-      fs.writeFileSync(file, toMarkdownFile(title, body, tags, links), 'utf-8');
+      fs.writeFileSync(file, toMarkdownFile(title, body, tags, links, row.created, row.updated), 'utf-8');
     } catch {
       // Export is best-effort.
     }
@@ -320,8 +512,17 @@ export class MemoryStore {
     }
   }
 
-  private insertNoteRow(title: string, body: string, tags: string[], links: string[], doExport = true): void {
+  private insertNoteRow(
+    title: string,
+    body: string,
+    tags: string[],
+    links: string[],
+    doExport = true,
+    timestamps?: { created?: string; updated?: string }
+  ): void {
     const now = new Date().toISOString();
+    const created = timestamps?.created ?? now;
+    const updated = timestamps?.updated ?? created;
     const cleanTags = normalizeTags(tags);
     const wiki = extractWikiLinks(body);
     const allLinks = [...new Set([...(links || []).map(String).map((s) => s.trim()).filter(Boolean), ...wiki])];
@@ -329,7 +530,7 @@ export class MemoryStore {
     // Export stays outside the txn (best-effort file write, never rolls back DB).
     this.db.exec('BEGIN IMMEDIATE');
     try {
-      const info = this.db.prepare('INSERT INTO notes(title, body, created, updated) VALUES(?, ?, ?, ?)').run(title, body, now, now) as unknown as { lastInsertRowid: number | bigint };
+      const info = this.db.prepare('INSERT INTO notes(title, body, created, updated) VALUES(?, ?, ?, ?)').run(title, body, created, updated) as unknown as { lastInsertRowid: number | bigint };
       if (this.ftsAvailable && info && info.lastInsertRowid !== undefined) {
         this.db.prepare('INSERT INTO notes_fts(rowid, title, body) VALUES(?, ?, ?)').run(Number(info.lastInsertRowid), title, body);
       }

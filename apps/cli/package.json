@@ -12,7 +12,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@zoveli/host": "workspace:*"
+    "@zoveli/host": "workspace:*",
+    "@zoveli/memory-store": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.3.0",

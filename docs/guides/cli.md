@@ -54,6 +54,26 @@ docker compose --profile cli up --build
 `ZOVELI_OLLAMA_URL` overrides the Ollama address (default
 `http://localhost:11434`; Docker Compose sets it to `http://ollama:11434`).
 
+## Data maintenance
+
+```bash
+# WAL-safe backup with a SHA-256 manifest (safe while Zoveli runs)
+pnpm vault:backup -- --out ./backups/2026-10-19
+
+# Verify checksums, SQLite integrity/foreign keys, note count, schema
+pnpm vault:verify -- ./backups/2026-10-19
+
+# Stop Zoveli first; --force is required to overwrite existing data
+pnpm vault:restore -- ./backups/2026-10-19 --force
+
+# Import legacy Markdown; existing titles are skipped, never overwritten
+pnpm migrate:vault -- --db ./memory.db --vault ./knowledge-vault
+```
+
+`--db`, `--vault`, `--auth-dir` and `--audit` override the default paths.
+`node apps/cli/dist/cli.js backup --help` prints the full usage. See
+`docs/runbooks/backup-restore.md` and `docs/runbooks/vault-corruption.md`.
+
 ## Env
 
 `ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`,

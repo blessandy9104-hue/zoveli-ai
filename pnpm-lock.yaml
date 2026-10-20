@@ -47,6 +47,9 @@ importers:
       '@zoveli/host':
         specifier: workspace:*
         version: link:../../packages/host
+      '@zoveli/memory-store':
+        specifier: workspace:*
+        version: link:../../packages/memory-store
     devDependencies:
       oxlint:
         specifier: 'catalog:'

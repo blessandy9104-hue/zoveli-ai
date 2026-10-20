@@ -125,7 +125,7 @@ This document describes the threat model for Zoveli using the STRIDE methodology
 ### Corrective
 - **Auto-rollback**: Failed deployments revert automatically
 - **Circuit Breakers**: Failing services isolated
-- **Backup/Restore**: Vault git backup, session export
+- **Backup/Restore**: `pnpm vault:backup` (WAL-safe DB + vault/auth/audit with SHA-256 manifest), verified by `pnpm vault:verify` before `pnpm vault:restore`
 - **Incident Response**: Runbooks for common scenarios
 
 ## Risk Assessment

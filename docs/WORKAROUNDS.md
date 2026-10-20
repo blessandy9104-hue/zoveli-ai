@@ -2,96 +2,101 @@
 
 This document provides practical workarounds for all identified negative consequences in the Zoveli architecture.
 
+> **Status key:** ✅ implemented in this repo · 📋 proposed/planned · ❌ removed
+> or obsolete. The [implementation checklist](#implementation-checklist) is
+> authoritative; prose bullets without a status are design guidance, not
+> shipped features.
+
 ---
 
 ## ADR 001: Cordis Plugin Architecture
 
 ### Negative: Cordis Learning Curve
 **Workaround:**
-- **Interactive Tutorial**: `docs/tutorials/cordis-basics.md` with runnable examples
-- **Plugin Generator**: `pnpm run create:plugin <name>` scaffolds boilerplate
-- **VS Code Extension**: Cordis snippets, hover docs, go-to-definition for ctx keys
-- **Mentor Program**: Pair new contributors with experienced plugin authors
+- **Interactive Tutorial**: 📋 `docs/tutorials/cordis-basics.md` (not created yet)
+- **Plugin Generator**: 📋 `pnpm run create:plugin <name>` (`scripts/create-plugin.ts` does not exist yet)
+- **VS Code Extension**: 📋 Cordis snippets, hover docs, go-to-definition for ctx keys
+- **Mentor Program**: 📋 pair new contributors with experienced plugin authors
 - **Decision**: Document "Cordis Mental Model" - think of it as React hooks for backend services
 
 ### Negative: Event-Driven Debugging Difficulty
-**Workaround:**
-- **Event Logger Plugin**: `event-logger` captures all events with timestamps, correlation IDs
-- **Visual Trace Viewer**: Web UI at `/debug/events` shows event flow as sequence diagram
-- **Correlation IDs**: Every request gets `x-correlation-id` propagated through all events
-- **Replay Tool**: `pnpm run replay:event <correlation-id>` reproduces event sequence
-- **Structured Logging**: All events emit JSON with `event`, `plugin`, `duration`, `result`
+**Workaround (mostly 📋):**
+- **Event Logger Plugin**: ❌ removed — there is no `packages/event-logger/` in this repo
+- **Visual Trace Viewer**: 📋 proposed `/debug/events`; not implemented
+- **Correlation IDs**: 📋 proposed; no `x-correlation-id` propagation today
+- **Replay Tool**: 📋 proposed; no `replay:event` script
+- **Structured Logging**: partial — tool errors are surfaced by name, but there is no event bus trace
 
 ### Negative: Service Lookup Overhead
-**Workaround:**
-- **Service Cache**: Plugins memoize `ctx.get('service')` on first access
-- **Direct Injection**: Critical paths use `ctx.provide('api', implementation)` for direct access
-- **Benchmark**: Overhead measured at <0.1ms per lookup (negligible vs LLM latency)
-- **Tree Shaking**: Build-time analysis removes unused service registrations
+**Workaround (guidance):**
+- **Service Cache**: memoize `ctx.get('service')` in a plugin when a hot path needs it
+- **Direct Injection**: critical paths can use `ctx.provide('api', implementation)` (supported)
+- **Benchmark**: 📋 no committed benchmark; treat sub-millisecond targets as unverified
+- **Tree Shaking**: 📋 build-time removal of unused registrations is not implemented
 
 ### Negative: Bundle Size
-**Workaround:**
-- **Profile-Specific Bundles**: `pnpm run build:cli` only includes CLI-required plugins
-- **Dynamic Imports**: Heavy plugins (browser, sandbox) loaded on-demand via `import()`
-- **Plugin Manifest**: `plugin.json` declares `optional: true` for tree-shaking
-- **Size Budget**: CI fails if bundle exceeds 50MB (current: ~12MB CLI, ~25MB Web)
+**Workaround (📋):**
+- **Profile-Specific Bundles**: 📋 no `build:cli` script yet; `pnpm run build` compiles all workspaces
+- **Dynamic Imports**: 📋 heavy plugins are not yet split on demand
+- **Plugin Manifest**: 📋 no tree-shaking manifest exists
+- **Size Budget**: 📋 no CI size gate exists
 
 ---
 
 ## ADR 002: Capability Awareness System
 
 ### Negative: Scanning Overhead
-**Workaround:**
-- **Incremental Scanning**: Only re-scan changed sources (file watchers, MCP health checks)
-- **Cache with TTL**: 5-minute cache, invalidated on plugin load/unload
-- **Background Worker**: Scanning runs in separate worker thread, non-blocking
-- **Priority Scanning**: Critical capabilities scanned first, optional deferred
+**Workaround (partial):**
+- **Incremental Scanning**: 📋 not implemented; scans rebuild the in-memory cache
+- **Cache**: ✅ `CapabilityScanner` keeps a `Map` cache and clears it on rescan (`packages/capability/src/scanner.ts`); no TTL yet
+- **Background Worker**: 📋 proposed; scanning is synchronous today
+- **Priority Scanning**: 📋 proposed
 
 ### Negative: System Complexity
 **Workaround:**
-- **Unified API**: Single `ctx.capability` object with `scan()`, `check()`, `adapt()`, `report()`
-- **Auto-Configuration**: Sensible defaults, zero-config for 90% of use cases
-- **Documentation**: Capability catalog at `docs/capabilities/` with examples
-- **Migration Path**: Legacy `tool_*` calls auto-mapped to capability checks
+- **Unified API**: partial — `CapabilityScanner.scan()/report()` plus `verifyCapabilities`; adapters are per-capability
+- **Auto-Configuration**: ✅ sensible defaults; no config needed for the built-ins
+- **Documentation**: ✅ `docs/capabilities/` + `capability:report`
+- **Migration Path**: 📋 legacy `tool_*` auto-mapping is not implemented
 
 ### Negative: False Positives
 **Workaround:**
-- **Health Verification**: Active probe on first use (not just registration)
-- **Degraded State**: Capability moves to `degraded` after 3 failures, auto-recovers on success
-- **User Override**: `capability_check` tool accepts `force: true` to bypass cache
-- **Telemetry**: False positive rate tracked, alerting if >5%
+- **Health Verification**: ✅ `verifyCapabilities` probes registered MCP tools (`packages/capability/src/scanner.ts`)
+- **Degraded State**: 📋 no 3-failure/auto-recovery state machine yet
+- **User Override**: 📋 `capability_check` has no `force` flag yet
+- **Telemetry**: 📋 no false-positive tracking
 
 ---
 
 ## ADR 003: mathcore Integration
 
 ### Negative: Python Dependency
-**Workaround:**
-- **Bundled Python**: Docker images include Python + mathcore pre-installed
-- **Standalone Binary**: PyInstaller builds `mathcore-mcp` executable (no Python needed)
-- **Fallback Calculator**: Built-in JS math for basic ops when mathcore unavailable
-- **Install Script**: `scripts/install-mathcore.sh` handles all platforms
+**Workaround (partial):**
+- **Bundled Python**: ✅ Docker images install Python + the vendored mathcore package
+- **Standalone Binary**: 📋 `scripts/build-mathcore-binary.sh` is not created yet; `mathcore-mcp` requires Python today
+- **Fallback Calculator**: partial — tools-only mode continues to work when mathcore is absent, but arbitrary math is withheld rather than silently approximated
+- **Install**: ✅ `pnpm install:mathcore` (equivalent to `pip install -e ./mathcore`)
 
 ### Negative: MCP Latency
-**Workaround:**
-- **Connection Pooling**: Reuse stdio connection across calls (single process)
-- **Batch Operations**: `mathcore_compute_batch` for multiple expressions
-- **Async Pipeline**: Non-blocking, agent continues while mathcore computes
-- **Cache Results**: Deterministic expressions cached (e.g., `2+2` always `4`)
+**Workaround (partial):**
+- **Connection Pooling**: ✅ one persistent stdio MCP process per server (reused across calls); a multi-server pool is 📋 planned
+- **Batch Operations**: 📋 no `mathcore_compute_batch` tool yet
+- **Async Pipeline**: ✅ calls are async and time-bounded by `MATHCORE_TIMEOUT_MS`
+- **Cache Results**: ✅ verified results are memorized and recalled (`math_recall`; disable with `ZOVELI_MATH_MEMORIZE=0`)
 
 ### Negative: Limited Coverage
-**Workaround:**
-- **Domain Extensions**: Plugin system for custom math domains
-- **Hybrid Mode**: LLM reasoning + mathcore verification for unsupported ops
-- **Community Registry**: `mathcore-contrib` for user-contributed operations
+**Workaround (📋):**
+- **Domain Extensions**: 📋 plugin system for custom math domains
+- **Hybrid Mode**: partial — LLM can reason, but only mathcore results are labeled VERIFIED
+- **Community Registry**: 📋 `mathcore-contrib` does not exist
 - **Feature Requests**: GitHub Issues template for new operation requests
 
 ### Negative: Maintenance Burden
 **Workaround:**
-- **Automated Testing**: CI runs mathcore test suite on every PR
-- **Version Pinning**: `mathcore==1.2.*` in requirements, auto-updates via Dependabot
-- **Compatibility Layer**: Adapter handles mathcore API changes
-- **Fallback Mode**: Graceful degradation to LLM-only with warning
+- **Automated Testing**: ✅ repo CI runs the TypeScript test suite; mathcore is vendored in-tree
+- **Version Pinning**: ✅ vendored editable install (`mathcore/pyproject.toml`), not a floating PyPI range
+- **Compatibility Layer**: partial — the MCP adapter is the only boundary
+- **Fallback Mode**: ✅ tools-only mode with an explicit warning instead of fabricated answers
 
 ---
 
@@ -114,49 +119,49 @@ This document provides practical workarounds for all identified negative consequ
 
 ### Negative: Schema Evolution
 **Workaround:**
-- **Schema in code**: `MemoryStore` DDL is versioned with the package; export Markdown stays backward compatible
-- **Migration Scripts**: `pnpm run migrate:vault` applies transformations
-- **Backward Compatibility**: Readers handle missing/extra fields gracefully
-- **Schema Registry**: Central `vault-schema.json` with validation
+- **Schema in code**: ✅ `PRAGMA user_version` + transactional `MIGRATIONS` in `packages/memory-store/src/store.ts`; newer databases are refused
+- **Migration Scripts**: ✅ `pnpm run migrate:vault` imports legacy Markdown (timestamps, tags, links) and skips existing titles
+- **Backward Compatibility**: ✅ readers tolerate missing/extra frontmatter fields
+- **Schema Registry**: 📋 no central `vault-schema.json` yet
 
 ### Negative: Binary Files
-**Workaround:**
-- **Attachment Store**: Separate `attachments/` dir with content-addressable storage
-- **References in Notes**: `![image](attachment:sha256:abc123)`
-- **Preview Generation**: Thumbnails for images, text extraction for PDFs
-- **Git LFS**: Optional Git LFS for large attachments
+**Workaround (📋):**
+- **Attachment Store**: 📋 no `attachments/` content-addressable store yet
+- **References in Notes**: 📋 `attachment:sha256:` references are not supported
+- **Preview Generation**: 📋 thumbnails/text extraction not implemented
+- **Git LFS**: optional; the vault mirror is plain Markdown today
 
 ---
 
 ## General Architecture Workarounds
 
 ### Local Model Performance Gap
-**Workaround:**
-- **Hybrid Mode**: Local for privacy-sensitive, cloud for complex reasoning
-- **Model Router**: Automatic selection based on task complexity
-- **Quantization**: 4-bit GGUF models via llama.cpp for speed
-- **Speculative Decoding**: Small draft model + large verify model
+**Workaround (📋):**
+- **Hybrid Mode**: 📋 no automatic local/cloud routing; provider choice is explicit
+- **Model Router**: 📋 planned
+- **Quantization**: user-managed via Ollama model choice
+- **Speculative Decoding**: 📋 planned
 
 ### Vault Corruption Risk
 **Workaround:**
-- **SQLite backup**: scheduled copy of `~/.zoveli/memory.db` (single file) to encrypted remote
-- **Markdown mirror in git**: `knowledge-vault/` export mirror committed; legacy notes re-import on demand
-- **Integrity Checks**: SHA-256 manifest, `pnpm run vault:verify`
-- **Recovery Tool**: restore DB backup, or rebuild from the git mirror via one-time import
+- **SQLite backup**: ✅ `pnpm vault:backup` uses WAL-safe `VACUUM INTO`; scheduling/encryption is left to the operator
+- **Markdown mirror in git**: ✅ `knowledge-vault/` export mirror can be committed; legacy notes re-import on demand
+- **Integrity Checks**: ✅ SHA-256 manifest + SQLite integrity/foreign-key checks via `pnpm vault:verify`
+- **Recovery Tool**: ✅ `pnpm vault:restore` (verified, refuses overwrite without `--force`), or `pnpm migrate:vault` into a fresh DB
 
 ### Plugin Supply Chain
-**Workaround:**
-- **Signed Plugins**: Cosign verification for all installed plugins
-- **Trusted Registry**: Official plugins from `registry.zoveli.dev`
-- **Sandbox Execution**: Untrusted plugins run in gVisor/Firecracker
-- **Permission Model**: Explicit user consent for new capabilities
+**Workaround (📋):**
+- **Signed Plugins**: 📋 no Cosign verification yet
+- **Trusted Registry**: 📋 no `registry.zoveli.dev`
+- **Sandbox Execution**: 📋 plugins run in-process today
+- **Permission Model**: 📋 no install-time consent flow
 
 ### Configuration Drift
-**Workaround:**
-- **Config as Code**: All profiles in Git, no runtime mutation
-- **Drift Detection**: `pnpm run config:diff` compares running vs stored
-- **Immutable Profiles**: Profiles frozen at startup, changes require restart
-- **Schema Validation**: JSON Schema for all config files
+**Workaround (📋):**
+- **Config as Code**: 📋 profiles are local config, not yet Git-managed
+- **Drift Detection**: 📋 `scripts/config-diff.ts` does not exist yet
+- **Immutable Profiles**: 📋 profiles are read at startup but not frozen/enforced
+- **Schema Validation**: 📋 no JSON Schema for config files yet
 
 ---
 
@@ -164,20 +169,21 @@ This document provides practical workarounds for all identified negative consequ
 
 | Workaround | Status | Location |
 |------------|--------|----------|
-| Event Logger Plugin | ✅ Implemented | `packages/event-logger/` |
-| Visual Trace Viewer | ✅ Implemented | `/debug/events` routes in `packages/event-logger/src/index.ts` |
+| Event Logger Plugin | ❌ Removed | no `packages/event-logger/` in this repo |
+| Visual Trace Viewer | ❌ Removed | no `/debug/events` routes; removed with `event-logger` |
 | In-Memory Search Index | ✅ Implemented | `packages/memory-store/` (SQLite FTS5, transactional; replaced the TF index in `packages/search/`, now a delegate) |
 | mathcore Binary Build | 📋 Planned | `scripts/build-mathcore-binary.sh` (not created yet) |
-| Connection Pooling | 📋 Planned | single stdio MCP connection per server today; pool extraction pending |
+| Connection Pooling | ✅ Persistent stdio MCP process | `packages/math-intelligence/src/transport.ts`; multi-server pool 📋 |
 | Plugin Generator | 📋 Planned | `scripts/create-plugin.ts` (not created yet) |
 | Capability Health Probes | ✅ Implemented | `packages/capability/src/scanner.ts` (`verifyCapabilities`) |
-| Vault Migration System | 📋 Planned | schema-versioned frontmatter; no migrator yet |
+| Vault Migration System | ✅ Implemented | `PRAGMA user_version` + `MIGRATIONS`; `pnpm migrate:vault` (Markdown import) |
+| Vault Backup / Verify / Restore | ✅ Implemented | `packages/memory-store/src/maintenance.ts`; `pnpm vault:backup/verify/restore` |
 | Git Auto-Commit Hooks | 📋 Planned | no `.husky/` yet |
 | Config Drift Detection | 📋 Planned | `scripts/config-diff.ts` (not created yet) |
 | Programming Languages Fallbacks | ✅ Implemented | `packages/languages/` (native → deterministic fallback) |
 | Knowledge Graph Export | ✅ Implemented | `packages/graph/` (JSON + DOT) |
 | Security Secret Patterns | ✅ Implemented | `packages/secscan/` (7 pattern families) |
-| Telemetry Fallback Meters | ✅ Implemented | `packages/otel/` (in-memory + lazy OTel) |
+| Telemetry Fallback Meters | ❌ Removed | no `packages/otel/` in this repo |
 
 ---
 

@@ -33,6 +33,9 @@ Callers              CLI /tools, web /api/tools, agent loop, REPL
   (insert/update/delete keep FTS in sync; LIKE fallback when FTS missing)
 - `tags(note_title, tag)` + `idx_tags_tag`; `links(from_title, to_title)` +
   `idx_links_to` (`to_title` dangling by design, like `[[missing]]`)
+- `PRAGMA user_version = 1` (schema version). Migrations live in `MIGRATIONS`
+  and run inside one transaction on open; a database from a newer schema is
+  refused instead of being silently downgraded.
 
 ## Environment
 
@@ -60,6 +63,37 @@ it would shadow the graph plugin's `vaultPath`-aware implementation.
   no per-call file walk; `vault_graph` accepts the vault path it should read.
 - **Obsidian interop kept:** every write exports frontmatter Markdown;
   first boot with an empty DB imports existing `*.md` (migration).
+- **Schema evolution is explicit:** `PRAGMA user_version` tracks the schema;
+  migrations are transactional and future databases are rejected.
+
+## Backup, verify, restore
+
+`@zoveli/memory-store/maintenance` (also exposed as CLI subcommands) uses
+SQLite `VACUUM INTO` for the database, so a backup is consistent even while
+Zoveli is running. A manifest records the schema version, note count, source
+paths and a SHA-256 checksum for every file.
+
+```bash
+pnpm vault:backup -- --out ./backups/2026-10-19
+pnpm vault:verify -- ./backups/2026-10-19
+pnpm vault:restore -- ./backups/2026-10-19 --force   # stop Zoveli first
+pnpm migrate:vault -- --db ./memory.db --vault ./knowledge-vault
+```
+
+- Backup includes `memory.db`, the Markdown mirror, `auth.json` +
+  `.session-secret`, and `audit.jsonl` when present. Default target is
+  `~/.zoveli/backups/zoveli-<UTC timestamp>`; `--out` must be empty and
+  outside the vault.
+- `verify` checks checksums, sizes, SQLite `integrity_check`,
+  `foreign_key_check`, the note count and schema compatibility. It never
+  modifies the backup.
+- `restore` refuses to overwrite existing database/vault/auth/audit files
+  without `--force`, removes stale `-wal`/`-shm`/`-journal` sidecars before
+  copying the database, and verifies the backup first.
+- `migrate:vault` imports legacy Markdown (honoring frontmatter
+  `created`/`updated` and extracting `[[links]]`), skips titles that already
+  exist, and reports per-file failures. Run it against a fresh `--db` to
+  rebuild a damaged store without touching the vault.
 
 ## Tests
 
@@ -67,5 +101,9 @@ it would shadow the graph plugin's `vaultPath`-aware implementation.
   tags sorted, tool-name contract + delegation. Regression: `vault_graph`
   resolves to `graph-tools` and reads the requested `vaultPath`, not the
   default vault.
+- `tests/unit/vault-maintenance.test.ts` — schema version + future-DB
+  refusal, WAL-safe backup manifest/checksums, tamper detection, restore
+  force/refusal + sidecar removal, legacy import with timestamps/links and
+  idempotency.
 - E2E: `/tools` lists `vault_graph`; host smoke: create→search→graph→
   update→read→delete + legacy `.md` import.

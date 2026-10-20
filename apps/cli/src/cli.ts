@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
 import { boot } from '@zoveli/host';
+import { isMaintenanceCommand, runMaintenanceCommand } from './maintenance.js';
 
 async function main() {
+  const argv = process.argv.slice(2);
+  if (isMaintenanceCommand(argv[0])) {
+    process.exitCode = await runMaintenanceCommand(argv);
+    return;
+  }
   // SIGINT lifecycle is owned by the REPL (stops mathcore, closes readline).
   await boot();
 }
