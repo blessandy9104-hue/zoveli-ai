@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { MATHCORE_MCP_COMMAND } from './constants.js';
+import { commandParts, resolveMathcoreCommand } from './resolve.js';
 
 /**
  * Persistent stdio JSON-RPC client for the `mathcore-mcp` server binary.
@@ -28,7 +29,7 @@ export class MathcoreClient {
   private startError: Error | null = null;
 
   constructor(
-    private readonly command = process.env.MATHCORE_MCP_COMMAND || MATHCORE_MCP_COMMAND,
+    private readonly command = resolveMathcoreCommand(),
     private readonly timeoutMs = parseInt(
       process.env.MATHCORE_TIMEOUT_MS || '120000',
       10
@@ -42,24 +43,39 @@ export class MathcoreClient {
   private ensureStarted(): void {
     if (this.running) return;
     if (this.startError && !this.proc) throw this.startError;
+    const { command, args } = commandParts(this.command);
     try {
-      this.proc = spawn(this.command, [], {
+      this.proc = spawn(command, args, {
         stdio: ['pipe', 'pipe', 'inherit'],
       });
     } catch (e) {
       this.startError =
-        e instanceof Error ? e : new Error(`failed to spawn ${this.command}`);
+        e instanceof Error ? e : new Error(`failed to spawn ${command}`);
       throw new Error(
         `${MATHCORE_MCP_COMMAND} server is not available (${this.startError.message}). ` +
-          `Install it with: pip install -e ./mathcore`
+          `Install the vendored engine with "python -m pip install -e ./mathcore" ` +
+          `(activate .venv first), check it with "pnpm run doctor", or set ` +
+          `MATHCORE_MCP_COMMAND to the full mathcore-mcp path.`
       );
     }
     this.buffer = '';
     this.proc.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
-    this.proc.on('error', (err) => this.onDeath(err));
+    this.proc.on('error', (err) => this.onDeath(this.describeStartFailure(err, command)));
     this.proc.on('exit', (code) =>
       this.onDeath(new Error(`${MATHCORE_MCP_COMMAND} exited with code ${code}`))
     );
+  }
+
+  private describeStartFailure(err: Error, command: string): Error {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return new Error(
+        `${MATHCORE_MCP_COMMAND} was not found (tried "${command}"). ` +
+          `Install the vendored engine with "python -m pip install -e ./mathcore" ` +
+          `(activate .venv first), check it with "pnpm run doctor", or set ` +
+          `MATHCORE_MCP_COMMAND to the full mathcore-mcp path.`
+      );
+    }
+    return err;
   }
 
   private onData(chunk: Buffer): void {

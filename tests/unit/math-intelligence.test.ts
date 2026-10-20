@@ -12,6 +12,8 @@ import {
   getMathStats,
   resetMathStatsForTests,
   zoveliMathIntelligence,
+  resolveMathcoreCommand,
+  commandParts,
 } from '../../packages/math-intelligence/src/index';
 import { mathcore as coreMathcore } from '../../packages/core/src/index';
 import { mathcoreTools as coreTools } from '../../packages/core/src/mathcore-tools';
@@ -39,13 +41,15 @@ describe('one AI math intelligence subsystem (single source of truth)', () => {
     expect(MATHCORE_MCP_COMMAND).toBe('mathcore-mcp');
     expect(MATHCORE_MCP_SERVER_ID).toBe('mathcore');
     expect(MATH_RULES).toContain('DO NOT compute in your head');
-    expect(mathcoreServerConfig().config.command).toBe(MATHCORE_MCP_COMMAND);
+    expect(mathcoreServerConfig().config.command).toBe(
+      commandParts(resolveMathcoreCommand()).command
+    );
     expect(mathcoreServerConfig().config.serverName).toBe(MATHCORE_MCP_SERVER_ID);
   });
 
-  it('transport singleton defaults to the canonical command', () => {
-    expect((mathcore as any).command).toBe(MATHCORE_MCP_COMMAND);
-    expect((coreMathcore as any).command).toBe(MATHCORE_MCP_COMMAND);
+  it('transport singleton defaults to the resolved command', () => {
+    expect((mathcore as any).command).toBe(resolveMathcoreCommand());
+    expect((coreMathcore as any).command).toBe(resolveMathcoreCommand());
     expect(typeof coreMathcore.compute).toBe('function');
   });
 

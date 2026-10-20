@@ -2,10 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { zoveliCore } from '../../packages/core/src/index';
 import { zoveliMath } from '../../packages/math-intelligence/src/index';
 import {
-  MATHCORE_MCP_COMMAND,
   MATHCORE_MCP_SERVER_ID,
   MATH_RULES,
   mathcoreServerConfig,
+  resolveMathcoreCommand,
+  commandParts,
 } from '../../packages/math-intelligence/src/index';
 import { mathcore } from '../../packages/core/src/index';
 import { zoveliMemory } from '../../packages/memory/src/index';
@@ -61,7 +62,7 @@ describe('zoveli math', () => {
     
     const mcpCall = ctx.register.mock.calls.find(c => c[0] === 'mathcore-mcp-client');
     expect(mcpCall).toBeDefined();
-    expect(mcpCall[1].config.command).toBe('mathcore-mcp');
+    expect(mcpCall[1].config.command).toBe(commandParts(resolveMathcoreCommand()).command);
   });
 
   it('should inject math rules on agent creation', () => {
@@ -91,12 +92,12 @@ describe('one math subsystem (single source of truth)', () => {
     const mcpCall = ctx.register.mock.calls.find((c: any) => c[0] === 'mathcore-mcp-client');
     expect(mcpCall).toBeDefined();
     expect(mcpCall[1]).toEqual(mathcoreServerConfig());
-    expect(mcpCall[1].config.command).toBe(MATHCORE_MCP_COMMAND);
+    expect(mcpCall[1].config.command).toBe(commandParts(resolveMathcoreCommand()).command);
     expect(mcpCall[1].config.serverName).toBe(MATHCORE_MCP_SERVER_ID);
   });
 
-  it('transport singleton defaults to the canonical command', () => {
-    expect((mathcore as any).command).toBe(MATHCORE_MCP_COMMAND);
+  it('transport singleton defaults to the resolved command', () => {
+    expect((mathcore as any).command).toBe(resolveMathcoreCommand());
   });
 
   it('injected agent rules are the canonical MATH_RULES verbatim', () => {

@@ -75,7 +75,7 @@ This document provides practical workarounds for all identified negative consequ
 - **Bundled Python**: ✅ Docker images install Python + the vendored mathcore package
 - **Standalone Binary**: 📋 `scripts/build-mathcore-binary.sh` is not created yet; `mathcore-mcp` requires Python today
 - **Fallback Calculator**: partial — tools-only mode continues to work when mathcore is absent, but arbitrary math is withheld rather than silently approximated
-- **Install**: ✅ `pnpm install:mathcore` (equivalent to `pip install -e ./mathcore`)
+- **Install**: ✅ `python -m pip install -e ./mathcore` inside `.venv` (or `pnpm install:mathcore`); `pnpm run doctor` reports the importable mathcore version and the resolved `mathcore-mcp` path (MATHCORE_MCP_COMMAND → `.venv` → PATH)
 
 ### Negative: MCP Latency
 **Workaround (partial):**

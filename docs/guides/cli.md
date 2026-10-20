@@ -3,9 +3,22 @@
 ## Install
 
 ```bash
-pip install -e ./mathcore   # vendored verified-math backend
+# 1. Verified-math backend (vendored). A venv avoids PATH surprises:
+python -m venv .venv
+# Windows: .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -e ./mathcore
+
+# 2. App
 pnpm install && pnpm run build
+
+# 3. Confirm Node/pnpm/python/mathcore/Ollama (add --json for scripting)
+pnpm run doctor
 ```
+
+`mathcore-mcp` is resolved from `MATHCORE_MCP_COMMAND`, then `.venv`, then
+`PATH` (PATHEXT-aware on Windows). `MATHCORE_MCP_COMMAND` may include args,
+e.g. `MATHCORE_MCP_COMMAND="python -m mathcore.mcp_server"`.
 
 ## Run
 
@@ -89,6 +102,11 @@ pnpm migrate:vault -- --db ./memory.db --vault ./knowledge-vault
 
 ## Troubleshooting
 
-- mathcore missing → `pip install -e ./mathcore`; verify `mathcore "2+2"`.
+- Run `pnpm run doctor` first: it reports Node/pnpm, Python, the importable
+  mathcore version, the resolved `mathcore-mcp` path and Ollama.
+- `mathcore-mcp not found` → activate your `.venv` (or `python -m pip install
+  -e ./mathcore`), then re-run doctor; alternatively set
+  `MATHCORE_MCP_COMMAND` to the full path. Verify with `mathcore "2+2"`.
 - No capabilities → `capability_scan`; see `docs/runbooks/capability-scan-failures.md`.
 - Slow search → search is SQLite FTS5 (instant); check `ZOVELI_MEMORY_DB` is writable.
+- MCP disconnect symptoms → `docs/runbooks/mcp-disconnect.md`.

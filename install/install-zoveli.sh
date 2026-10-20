@@ -236,6 +236,7 @@ cat <<EOF
 
 Run it:
   cd $TARGET_DIR && source .venv/bin/activate
+  pnpm run doctor       # confirm Node/pnpm/python/mathcore/Ollama
   pnpm start            # CLI assistant (works fully offline, Windows/macOS/Linux)
   pnpm run desktop      # Electron desktop shell (dev mode)
 

@@ -61,12 +61,15 @@ git clone https://github.com/blessandy9104-hue/zoveli-ai.git
 cd zoveli-ai
 
 # 3. Verified-math backend (vendored in ./mathcore, optional but recommended)
-pip install -e .\mathcore
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .\mathcore
 
 # 4. Install + build + verify
 pnpm install
 pnpm run build
 pnpm test
+pnpm run doctor   # Node/pnpm/python/mathcore/Ollama report
 ```
 
 **macOS / Linux:**
@@ -81,12 +84,15 @@ git clone https://github.com/blessandy9104-hue/zoveli-ai.git
 cd zoveli-ai
 
 # 3. Verified-math backend (vendored in ./mathcore, optional but recommended)
-pip install -e ./mathcore
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ./mathcore
 
 # 4. Install + build + verify
 pnpm install
 pnpm run build
 pnpm test
+pnpm run doctor   # Node/pnpm/python/mathcore/Ollama report
 ```
 
 ## Launch it

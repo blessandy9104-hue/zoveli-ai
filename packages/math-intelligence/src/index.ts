@@ -10,6 +10,7 @@ import {
 import { mathcore, MathcoreClient } from './transport.js';
 import { mathcoreTools, mathIntelligenceTools } from './tools.js';
 import { getMathStats } from './intelligence.js';
+import { commandParts, resolveMathcoreCommand } from './resolve.js';
 
 export {
   MATHCORE_MCP_COMMAND,
@@ -20,6 +21,8 @@ export {
   mathcoreServerConfig,
 };
 export { mathcore, MathcoreClient };
+export { resolveMathcoreCommand, commandParts };
+export type { ResolveMathcoreOptions } from './resolve.js';
 export { mathcoreTools, mathIntelligenceTools };
 export { memorizeVerified, recallSimilar, getMathStats, resetMathStatsForTests, recordRecall, recordMismatch, recordWithheld } from './intelligence.js';
 export { recallSemantic, cosine, keywordScore } from './semantic.js';

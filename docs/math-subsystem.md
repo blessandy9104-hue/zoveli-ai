@@ -53,7 +53,12 @@ All in `packages/math-intelligence/src/`:
   `buildCommand()` (op id → parser-compatible surface head; `stat`/`trig`/
   `probability` pass through), `domainMemoryTag()` / `domainTitlePrefix()` (proof-memory
   namespacing).
-- `transport.ts`: `MathcoreClient` + `mathcore` singleton.
+- `resolve.ts`: `resolveMathcoreCommand()` (MATHCORE_MCP_COMMAND → project
+  `.venv` → PATH/PATHEXT → bare name) and `commandParts()` (path-with-spaces
+  stays intact; command lines with args like `python -m mathcore.mcp_server`
+  split for spawn). The transport, MCP config and `pnpm run doctor` all use it.
+- `transport.ts`: `MathcoreClient` + `mathcore` singleton; spawn failures name
+  the resolved command and print the fix.
 - `tools.ts`: `mathcoreTools` (3, names frozen) + `mathIntelligenceTools`
   (`math_recall` with `domain` filter, `math_route`, `math_memorize`,
   `math_stats`, `math_recall_semantic`).
@@ -96,7 +101,8 @@ deterministic keyword overlap (`mode: 'keyword'`). Never throws, never hangs
 
 ## Environment
 
-`MATHCORE_MCP_COMMAND` (override the binary), `MATHCORE_AUDIT` (audit path),
+`MATHCORE_MCP_COMMAND` (full path, or a command line with args; checked
+before `.venv`/PATH), `MATHCORE_AUDIT` (audit path),
 `MATHCORE_TIMEOUT_MS` (per-request timeout, default 120000),
 `ZOVELI_MATH_MEMORIZE=0` disables proof auto-memorize,
 `ZOVELI_OLLAMA_URL` is unrelated (chat models, see `docs/guides/cli.md`).
@@ -108,12 +114,16 @@ deterministic keyword overlap (`mode: 'keyword'`). Never throws, never hangs
 - **Transport never computes:** the TS client only carries JSON-RPC.
 - **Proofs accumulate:** VERIFIED results are upserted to the memory store;
   WITHHELD/MISMATCH only bump counters (no DB spam).
-- **Install once:** `pip install -e ./mathcore` (vendored). Docker images
-  build the z3 wheel with ephemeral `build-base` + `cmake`, then remove them.
+- **Install once:** `python -m pip install -e ./mathcore` inside `.venv`
+  (vendored). `pnpm run doctor` verifies the interpreter import and the
+  resolved `mathcore-mcp` path; Docker images build the z3 wheel with
+  ephemeral `build-base` + `cmake`, then remove them.
 
 ## Tests
 
 - Python: `python -m pytest mathcore/tests/test_known_answers.py mathcore/tests/test_cli.py -q`
+- Resolver: `tests/unit/mathcore-resolve.test.ts` (override > venv > PATH >
+  fallback; existing paths with spaces vs command lines with args)
 - TS unity: `tests/unit/math-intelligence.test.ts` → "one AI math intelligence
   subsystem" (constants, shim drift, transport default, tool names, memorize/
   recall, withheld opt-out, plugin contract); `tests/unit/math-domains.test.ts`

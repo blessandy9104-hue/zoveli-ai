@@ -1,5 +1,6 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { commandParts, resolveMathcoreCommand } from './resolve.js';
 
 // ---------------------------------------------------------------------------
 // ONE AI math intelligence subsystem: every value below is the single source
@@ -31,15 +32,19 @@ export const MATH_RULES = `MATH RULES: For any arithmetic, algebra, calculus, li
 export const MATH_INTELLIGENCE_RULES = `MATH INTELLIGENCE: Before computing, CALL math_recall with the question to reuse verified proofs from memory. After a VERIFIED result, it is memorized automatically (disable with ZOVELI_MATH_MEMORIZE=0). Never state UNVERIFIED numbers as verified.`;
 
 /** The one stdio config for spawning the mathcore server. Shape is frozen:
- * tests assert config.command, and downstream registrations read serverName. */
+ * tests assert config.command, and downstream registrations read serverName.
+ * The command comes from `resolveMathcoreCommand()` so PATH/venv/.env
+ * resolution matches the persistent transport. */
 export function mathcoreServerConfig() {
+  const { command, args } = commandParts(resolveMathcoreCommand());
   return {
     id: 'mathcore-mcp',
     name: '@deepseek-ai/dsh-mcp-client',
     config: {
       serverName: MATHCORE_MCP_SERVER_ID,
       transport: 'stdio',
-      command: MATHCORE_MCP_COMMAND,
+      command,
+      args,
       cwd: process.cwd(),
       env: {
         MATHCORE_AUDIT: defaultMathcoreAuditPath(),
