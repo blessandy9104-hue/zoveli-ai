@@ -1,10 +1,6 @@
 #!/usr/bin/env node
 
-import { boot } from '@zoveli/host';
-import { ZOVELI_VERSION } from '@zoveli/core';
-import { isMaintenanceCommand, runMaintenanceCommand } from './maintenance.js';
-import { runConfigCheck } from './config-check.js';
-import { runHealth } from './health.js';
+import { ZOVELI_VERSION } from '@zoveli/core/version';
 
 function printHelp(): void {
   console.log(`zoveli ${ZOVELI_VERSION} — local-first AI assistant
@@ -30,18 +26,24 @@ async function main() {
     printHelp();
     return;
   }
+  // Command modules load lazily: --version/--help never import the host, and
+  // each subcommand pays only for the graph it needs.
   if (argv[0] === 'config-check') {
+    const { runConfigCheck } = await import('./config-check.js');
     process.exitCode = await runConfigCheck(argv.slice(1));
     return;
   }
   if (argv[0] === 'health') {
+    const { runHealth } = await import('./health.js');
     process.exitCode = await runHealth(argv.slice(1));
     return;
   }
-  if (isMaintenanceCommand(argv[0])) {
-    process.exitCode = await runMaintenanceCommand(argv);
+  const maintenance = await import('./maintenance.js');
+  if (maintenance.isMaintenanceCommand(argv[0])) {
+    process.exitCode = await maintenance.runMaintenanceCommand(argv);
     return;
   }
+  const { boot } = await import('@zoveli/host');
   // SIGINT lifecycle is owned by the REPL (stops mathcore, closes readline).
   await boot();
 }

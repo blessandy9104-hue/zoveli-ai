@@ -10,7 +10,7 @@ import {
 import { mathcore, MathcoreClient } from './transport.js';
 import { mathcoreTools, mathIntelligenceTools } from './tools.js';
 import { getMathStats } from './intelligence.js';
-import { commandParts, resolveMathcoreCommand } from './resolve.js';
+import { commandParts, mathcoreCommandAvailable, resolveMathcoreCommand } from './resolve.js';
 
 export {
   MATHCORE_MCP_COMMAND,
@@ -22,7 +22,7 @@ export {
 };
 export { mathcore, MathcoreClient };
 export type { MathcoreClientOptions, MathcoreStatus } from './transport.js';
-export { resolveMathcoreCommand, commandParts };
+export { resolveMathcoreCommand, commandParts, mathcoreCommandAvailable };
 export type { ResolveMathcoreOptions } from './resolve.js';
 export { mathcoreTools, mathIntelligenceTools };
 export { memorizeVerified, recallSimilar, getMathStats, resetMathStatsForTests, recordRecall, recordMismatch, recordWithheld } from './intelligence.js';

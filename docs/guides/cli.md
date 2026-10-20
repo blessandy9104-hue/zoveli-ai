@@ -148,9 +148,21 @@ the config check warns when the parent is missing so typos surface early. If a
 write fails, the sink disables itself with one stderr note and tool calls keep
 working.
 
+## Startup and warm math
+
+`assistant --version`, `--help` and the subcommands load only what they need;
+the full plugin host is imported when the interactive assistant starts. In a
+TTY, the REPL starts mathcore in the background at launch when the resolved
+binary exists, so the first `/math` call does not pay the Python startup
+(batch/scripted stdin never warms). Opt out with `ZOVELI_MATHCORE_PREWARM=0`.
+The REPL health probe (`/health`) reuses a live mathcore pool instead of
+spawning a second interpreter; `assistant health` runs a one-shot probe in its
+own process. Add `--offline` to skip the MCP probe entirely. `pnpm run perf:check`
+prints CLI/mount/tool-call metrics and enforces regression budgets.
+
 ## Env
 
-`ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`,
+`ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`, `ZOVELI_MATHCORE_PREWARM`,
 `ZOVELI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_MODEL`,
 `ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`, `ZOVELI_TRACE`, `ZOVELI_TRACE_LOG`,

@@ -171,6 +171,15 @@ export const ENV_REGISTRY: EnvSpec[] = [
     default: 'enabled',
   },
   {
+    name: 'ZOVELI_MATHCORE_PREWARM',
+    group: 'Math',
+    kind: 'boolean01',
+    toggle: 'disable',
+    literalOnly: true,
+    description: 'set 0 to stop warming mathcore when the interactive REPL opens',
+    default: 'enabled',
+  },
+  {
     name: 'ZOVELI_EMBED_MODEL',
     group: 'Math',
     kind: 'string',

@@ -14,6 +14,11 @@
       "types": "./dist/mathcore-mcp.d.ts",
       "import": "./dist/mathcore-mcp.js",
       "require": "./dist/mathcore-mcp.js"
+    },
+    "./version": {
+      "types": "./dist/version.d.ts",
+      "import": "./dist/version.js",
+      "require": "./dist/version.js"
     }
   },
   "scripts": {

@@ -18,6 +18,12 @@ the new section **before** running `pnpm release:check --release`.
   REPL `/trace`, `ZOVELI_TRACE=1`.
 - Opt-in JSONL tool-call export (`ZOVELI_TRACE_LOG`) with size rotation,
   `tool/call` host events, and the same secret redaction as the in-memory trace.
+- Interactive REPL warms the mathcore pool in the background when the binary
+  resolves (`ZOVELI_MATHCORE_PREWARM=0` opts out); the health probe (`/health`)
+  reuses a live pool instead of spawning a second interpreter.
+- Performance budgets: `pnpm perf:check` reports CLI startup, host import,
+  plugin mount and tool-dispatch cost, with `--version`/`--help` fast paths and
+  lazy subcommand imports.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

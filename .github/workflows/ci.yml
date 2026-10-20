@@ -55,6 +55,9 @@ jobs:
       - name: Run TypeScript type check
         run: pnpm run typecheck
 
+      - name: Performance budgets
+        run: node scripts/perf-check.mjs
+
   unit-tests:
     name: Unit Tests
     # Windows leg exists because dev happens on Windows and platform bugs

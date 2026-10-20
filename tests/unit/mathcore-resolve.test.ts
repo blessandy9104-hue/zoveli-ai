@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   MATHCORE_MCP_BINARY_NAME,
   commandParts,
+  mathcoreCommandAvailable,
   resolveMathcoreCommand,
   venvMathcoreCandidates,
 } from '../../packages/math-intelligence/src/resolve';
@@ -91,5 +92,38 @@ describe('mathcore-mcp resolution', () => {
       command: '/opt/my tools/mathcore-mcp',
       args: [],
     });
+  });
+
+  it('detects whether the resolved command exists before warming up', () => {
+    const platform = process.platform;
+    const base = tempDir();
+    const emptyPath = tempDir();
+    expect(
+      mathcoreCommandAvailable({ env: { PATH: emptyPath }, cwd: base, platform })
+    ).toBe(false);
+
+    const [candidate] = venvMathcoreCandidates(base, platform);
+    mkdirSync(join(candidate, '..'), { recursive: true });
+    writeFileSync(candidate, '');
+    expect(mathcoreCommandAvailable({ env: {}, cwd: base, platform })).toBe(true);
+
+    const dir = join(base, 'my tools');
+    mkdirSync(dir, { recursive: true });
+    const exe = join(dir, 'mathcore mcp.exe');
+    writeFileSync(exe, '');
+    expect(
+      mathcoreCommandAvailable({
+        env: { MATHCORE_MCP_COMMAND: `"${exe}" --transport stdio`, PATH: emptyPath },
+        cwd: tempDir(),
+        platform,
+      })
+    ).toBe(true);
+    expect(
+      mathcoreCommandAvailable({
+        env: { MATHCORE_MCP_COMMAND: 'missing-command --flag', PATH: emptyPath },
+        cwd: tempDir(),
+        platform,
+      })
+    ).toBe(false);
   });
 });

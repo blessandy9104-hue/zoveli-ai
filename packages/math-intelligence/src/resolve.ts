@@ -77,6 +77,17 @@ export function resolveMathcoreCommand(options: ResolveMathcoreOptions = {}): st
   return findOnPath(MATHCORE_MCP_BINARY_NAME, options) ?? MATHCORE_MCP_BINARY_NAME;
 }
 
+/**
+ * True when the resolved command (or its executable) exists on this machine.
+ * Used to skip speculative warmups instead of triggering a failed spawn.
+ */
+export function mathcoreCommandAvailable(options: ResolveMathcoreOptions = {}): boolean {
+  const { command } = commandParts(resolveMathcoreCommand(options));
+  if (isFile(command)) return true;
+  if (/[\\/]/.test(command) || /^[A-Za-z]:/.test(command)) return false;
+  return !!findOnPath(command, options);
+}
+
 /** Whitespace split that honors double-quoted segments (paths with spaces). */
 export function splitCommandLine(commandLine: string): string[] {
   const parts: string[] = [];

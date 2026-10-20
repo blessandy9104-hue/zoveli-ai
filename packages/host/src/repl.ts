@@ -2,6 +2,7 @@ import * as readline from 'node:readline';
 import type { ZoveliHost } from './host.js';
 import { resolveChatConfig, chat } from './chat.js';
 import { mathcore } from '@zoveli/core/mathcore-mcp';
+import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
 import { promptSectionsText } from '@zoveli/core';
 
 /** True for the error Node throws when piped stdin ends mid-session. */
@@ -36,7 +37,21 @@ const HELP = `zoveli commands:
   /quit                 exit
 Anything else: chat (any API key, or free local Ollama) or math when it looks like math.`;
 
+/**
+ * Warm the mathcore pool only for interactive sessions with a real binary.
+ * Batch/scripted runs stay quiet, and `ZOVELI_MATHCORE_PREWARM=0` opts out.
+ */
+export function shouldPrewarmMathcore(
+  env: NodeJS.ProcessEnv = process.env,
+  isTTY = !!process.stdin.isTTY,
+  available = mathcoreCommandAvailable()
+): boolean {
+  return isTTY && env.ZOVELI_MATHCORE_PREWARM !== '0' && available;
+}
+
 export async function runRepl(host: ZoveliHost, agent: { systemSections: string[] }): Promise<void> {
+  // Overlap the ~5-10s Python/MCP startup with chat detection and typing.
+  if (shouldPrewarmMathcore()) void mathcore.warmup();
   const chatCfg = await resolveChatConfig();
   const baseSystem = [
     'You are Zoveli, a personal helper that shows its work in math and remembers what matters to you.',

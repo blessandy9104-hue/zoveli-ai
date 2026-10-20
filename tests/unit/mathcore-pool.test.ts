@@ -184,6 +184,35 @@ describe('mathcore MCP pool', () => {
     expect(client.status().spawns).toBe(2);
   });
 
+  it('warms up without throwing and reuses the started pool', async () => {
+    const log = path.join(tempDir(), 'spawns.log');
+    const client = clientFor({ FAKE_MCP_LOG: log });
+
+    await expect(client.warmup()).resolves.toBe(true);
+    expect(client.status().running).toBe(true);
+    expect(client.status().spawns).toBe(1);
+
+    await expect(client.warmup()).resolves.toBe(true);
+    expect(client.status().spawns).toBe(1);
+    expect(readLog(log)).toHaveLength(1);
+
+    await expect(client.compute('1+1')).resolves.toBe('fake:compute:1+1');
+    expect(client.status().spawns).toBe(1);
+  });
+
+  it('reports a failed warmup instead of throwing', async () => {
+    const client = new MathcoreClient('zoveli-definitely-missing-mathcore-binary', 500, {
+      restartBaseMs: 60,
+      restartMaxMs: 60,
+      env: { ...process.env, PATH: tempDir() },
+    });
+    cleanups.push(() => client.stop());
+
+    await expect(client.warmup()).resolves.toBe(false);
+    expect(client.status().running).toBe(false);
+    expect(client.status().lastError).toMatch(/was not found/);
+  });
+
   it('exposes pool status through the mathcore_status tool', async () => {
     const tool = mathcoreTools.find((t) => t.name === 'mathcore_status');
     expect(tool).toBeDefined();

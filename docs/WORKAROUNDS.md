@@ -80,6 +80,7 @@ This document provides practical workarounds for all identified negative consequ
 ### Negative: MCP Latency
 **Workaround (partial):**
 - **Connection Pooling**: ✅ one supervised persistent stdio MCP process per server (reused across calls; crash restart with exponential backoff; `mathcore_status` / `/mcp` expose pid, spawns, restarts and last error); a multi-server pool is 📋 planned
+- **Warm Start**: ✅ interactive REPL warms mathcore in the background when the binary resolves (`ZOVELI_MATHCORE_PREWARM=0` opts out); the health probe reuses a live pool instead of spawning a second interpreter
 - **Batch Operations**: 📋 no `mathcore_compute_batch` tool yet
 - **Async Pipeline**: ✅ calls are async and time-bounded by `MATHCORE_TIMEOUT_MS`
 - **Cache Results**: ✅ verified results are memorized and recalled (`math_recall`; disable with `ZOVELI_MATH_MEMORIZE=0`)

@@ -73,6 +73,7 @@ pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
 pnpm release:check     # version/tsconfig/changelog consistency
+pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
 **macOS / Linux:**
@@ -99,6 +100,7 @@ pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
 pnpm release:check     # version/tsconfig/changelog consistency
+pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
 ## Launch it

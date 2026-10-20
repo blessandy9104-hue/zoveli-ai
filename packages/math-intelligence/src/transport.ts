@@ -241,6 +241,20 @@ export class MathcoreClient {
     return res?.tools ?? [];
   }
 
+  /**
+   * Start the pool and complete the MCP handshake without a user call.
+   * Best-effort: never throws, so callers can fire-and-forget it.
+   */
+  async warmup(): Promise<boolean> {
+    if (this.running) return true;
+    try {
+      await this.listTools();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private static unwrap(result: any): string {
     const text = result?.content?.[0]?.text;
     if (typeof text !== 'string') {

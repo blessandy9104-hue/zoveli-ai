@@ -1,5 +1,5 @@
 import { configAuditReport } from '@zoveli/config-audit';
-import { chatConfigFromEnv } from '@zoveli/host';
+import { chatConfigFromEnv } from '@zoveli/host/chat';
 import { resolveMathcoreCommand } from '@zoveli/math-intelligence';
 import { exportEnabled, resolveDbPath, resolveVaultPath } from '@zoveli/memory-store';
 

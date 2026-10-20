@@ -6,7 +6,7 @@ import {
   type AuditReport,
 } from '@zoveli/config-audit';
 import { ZOVELI_VERSION } from '@zoveli/core';
-import { MathcoreClient, type MathcoreStatus } from '@zoveli/math-intelligence';
+import { MathcoreClient, mathcore, type MathcoreStatus } from '@zoveli/math-intelligence';
 
 export type HealthLevel = 'ok' | 'info' | 'warn' | 'fail';
 export type HealthStatus = 'ok' | 'degraded' | 'fail';
@@ -168,7 +168,10 @@ export type MathcoreProbe = () => Promise<MathcoreProbeResult>;
 /** Spawn mathcore, run tools/list, stop it: verifies the full MCP path. */
 export const probeMathcore: MathcoreProbe = async () => {
   const startedAt = Date.now();
-  const client = new MathcoreClient(undefined, 30000);
+  // Reuse a live pool (e.g. /health after a math call) instead of spawning a
+  // second interpreter; a one-shot probe client is only needed when idle.
+  const shared = mathcore.running;
+  const client = shared ? mathcore : new MathcoreClient(undefined, 30000);
   try {
     const tools = await client.listTools();
     return {
@@ -184,7 +187,7 @@ export const probeMathcore: MathcoreProbe = async () => {
       durationMs: Date.now() - startedAt,
     };
   } finally {
-    client.stop();
+    if (!shared) client.stop();
   }
 };
 
