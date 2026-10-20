@@ -30,6 +30,14 @@ the new section **before** running `pnpm release:check --release`.
   responses fail pending calls and restart the pool; the vault waits on SQLite
   locks (5s) and reports corrupt files with recovery steps; SIGTERM shuts down
   like SIGINT.
+- Web/desktop accessibility: landmarks, labeled controls, live regions and skip
+  links; WCAG AA text and 3:1 control borders across every theme; native
+  `color-scheme` switching; reduced motion skips smooth scrolling and the
+  animated Unicorn backdrop.
+- Web/desktop UX: chat and login show announced loading/error states, transient
+  network failures are not persisted, local history restores VERIFIED badges and
+  reply metadata, tools render as a list, and the composer wraps on narrow
+  screens.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

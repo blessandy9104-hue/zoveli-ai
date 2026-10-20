@@ -19,6 +19,18 @@ ZOVELI_DESKTOP_SMOKE=1 pnpm --filter @zoveli/desktop start
 # → "zoveli desktop smoke OK: server healthy on 127.0.0.1:3080"
 ```
 
+## Accessibility
+
+- Every page has landmarks, a skip link, labeled controls and visible keyboard
+  focus; the chat log is a polite live region, so replies and errors are
+  announced.
+- Themes declare a native light/dark `color-scheme`, and text plus control
+  borders meet WCAG AA contrast (verified by unit tests).
+- `prefers-reduced-motion: reduce` disables smooth scrolling and skips loading
+  the animated Unicorn backdrop; the static gradient remains.
+- Chat history stays in this browser. Transient network errors are shown but not
+  persisted; reloading restores VERIFIED badges and reply metadata.
+
 ## Packaged installers
 
 Not shipped: `.exe`/`.dmg`/`.AppImage` builds require OS code-signing

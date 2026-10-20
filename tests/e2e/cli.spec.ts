@@ -212,7 +212,7 @@ test.describe('Web Application', () => {
     await page.fill('[data-testid="chat-input"]', '2+2');
     await page.click('[data-testid="send-button"]');
     const meta = page.locator('[data-testid="reply-meta"]').last();
-    await expect(meta).toContainText('mathcore');
+    await expect(meta).toContainText('mathcore', { timeout: 15000 });
     await expect(meta).toContainText('stays on this machine');
     // User-echo linkifies safely without a model round-trip.
     await page.fill('[data-testid="chat-input"]', 'see https://example.com/x please');

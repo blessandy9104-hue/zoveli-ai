@@ -317,14 +317,14 @@ describe('chat transport', () => {
             apiKey: 'test',
             baseUrl: `http://127.0.0.1:${port}/v1`,
             model: 'test',
-            timeoutMs: 120,
+            timeoutMs: 1000,
           },
           'system',
           [],
           'hello',
           () => {}
         )
-      ).rejects.toThrow(/timed out after 120ms/);
+      ).rejects.toThrow(/timed out after 1000ms/);
       expect(hits).toBe(1);
       expect(Date.now() - startedAt).toBeLessThan(3000);
     } finally {
