@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Zoveli plugin scaffolder: `pnpm create:plugin <name> [--description "…"] [--mount]`.
  *
