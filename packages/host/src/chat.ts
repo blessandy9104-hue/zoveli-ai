@@ -19,6 +19,8 @@ export interface ChatConfig {
   maxSteps?: number;
   /** Which provider this config talks to ('ollama' = free local, no key). */
   provider?: string;
+  /** Per-request HTTP timeout; defaults to ZOVELI_CHAT_TIMEOUT_MS or 120s. */
+  timeoutMs?: number;
 }
 
 /** Default local chat model: pulled with `ollama pull qwen3:4b`. */
@@ -155,6 +157,25 @@ export function chatTemperature(): number {
   return Math.min(2, Math.max(0, raw));
 }
 
+/** Per-request chat timeout: env-tunable, clamped to 1s..10min, default 120s. */
+export function chatTimeoutMs(raw = process.env.ZOVELI_CHAT_TIMEOUT_MS): number {
+  const parsed = parseInt(raw || '', 10);
+  if (!Number.isFinite(parsed)) return 120_000;
+  return Math.min(600_000, Math.max(1_000, parsed));
+}
+
+function isTimeoutError(e: unknown): boolean {
+  return e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+}
+
+function timeoutError(baseUrl: string, timeoutMs: number): Error {
+  return new Error(
+    `chat request timed out after ${timeoutMs}ms with no response from ${baseUrl}. ` +
+      `Check your connection or that the local server is running; ` +
+      `raise ZOVELI_CHAT_TIMEOUT_MS if the model is just slow to start.`
+  );
+}
+
 /**
  * True for providers that never leave the machine. Memory briefs (private
  * notes) ride along only for local providers — or for cloud providers with
@@ -246,6 +267,7 @@ export async function chat(
   ];
   const steps = cfg.maxSteps ?? 10;
   const temperature = chatTemperature();
+  const timeoutMs = cfg.timeoutMs ?? chatTimeoutMs();
 
   for (let step = 0; step < steps; step++) {
     const postChat = () =>
@@ -255,6 +277,7 @@ export async function chat(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${cfg.apiKey}`,
         },
+        signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
         model: cfg.model,
         messages,
@@ -265,10 +288,18 @@ export async function chat(
     let res: Response;
     try {
       res = await postChat();
-    } catch {
+    } catch (e) {
+      // A timeout means the endpoint is wedged or unreachable; retrying would
+      // double the wait, so surface it immediately and actionably.
+      if (isTimeoutError(e)) throw timeoutError(cfg.baseUrl, timeoutMs);
       // Transport-level flake (e.g. local server dropping a connection while
       // paging a model in): exactly one retry. HTTP errors are NOT retried.
-      res = await postChat();
+      try {
+        res = await postChat();
+      } catch (retryError) {
+        if (isTimeoutError(retryError)) throw timeoutError(cfg.baseUrl, timeoutMs);
+        throw retryError;
+      }
     }
     if (!res.ok) {
       const body = await res.text().catch(() => '');

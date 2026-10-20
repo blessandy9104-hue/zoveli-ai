@@ -24,6 +24,12 @@ the new section **before** running `pnpm release:check --release`.
 - Performance budgets: `pnpm perf:check` reports CLI startup, host import,
   plugin mount and tool-dispatch cost, with `--version`/`--help` fast paths and
   lazy subcommand imports.
+- Failure-mode hardening: unknown CLI commands/options exit 2 with a usage hint
+  instead of booting; chat HTTP requests time out once (`ZOVELI_CHAT_TIMEOUT_MS`)
+  with an actionable error; broken MCP stdin and oversized unterminated
+  responses fail pending calls and restart the pool; the vault waits on SQLite
+  locks (5s) and reports corrupt files with recovery steps; SIGTERM shuts down
+  like SIGINT.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

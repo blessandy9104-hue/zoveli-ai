@@ -298,6 +298,41 @@ describe('probeOllama / resolveChatConfig', () => {
 });
 
 describe('chat transport', () => {
+  it('times out a wedged endpoint once, without retrying', async () => {
+    let hits = 0;
+    const server = http.createServer(() => {
+      hits += 1;
+      // Accept the request and never answer: a wedged model/server.
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    try {
+      const host = new ZoveliHost();
+      host.mount([]);
+      const startedAt = Date.now();
+      await expect(
+        chat(
+          host,
+          {
+            apiKey: 'test',
+            baseUrl: `http://127.0.0.1:${port}/v1`,
+            model: 'test',
+            timeoutMs: 120,
+          },
+          'system',
+          [],
+          'hello',
+          () => {}
+        )
+      ).rejects.toThrow(/timed out after 120ms/);
+      expect(hits).toBe(1);
+      expect(Date.now() - startedAt).toBeLessThan(3000);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it('retries once on a transport-level failure, then delivers the reply', async () => {
     const origFetch = globalThis.fetch;
     let calls = 0;

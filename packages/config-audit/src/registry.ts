@@ -113,6 +113,16 @@ export const ENV_REGISTRY: EnvSpec[] = [
     default: '0.7',
   },
   {
+    name: 'ZOVELI_CHAT_TIMEOUT_MS',
+    group: 'Chat',
+    kind: 'number',
+    parse: 'int',
+    min: 1000,
+    max: 600000,
+    description: 'per-request chat HTTP timeout in milliseconds (clamped)',
+    default: '120000',
+  },
+  {
     name: 'ZOVELI_MEMORY_BRIEF',
     group: 'Chat',
     kind: 'boolean01',

@@ -166,9 +166,11 @@ prints CLI/mount/tool-call metrics and enforces regression budgets.
 `ZOVELI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_MODEL`,
 `ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`, `ZOVELI_TRACE`, `ZOVELI_TRACE_LOG`,
-`ZOVELI_TRACE_LOG_MAX_BYTES`, `ZOVELI_TRACE_LOG_KEEP`.
+`ZOVELI_TRACE_LOG_MAX_BYTES`, `ZOVELI_TRACE_LOG_KEEP`, `ZOVELI_CHAT_TIMEOUT_MS`.
 `ZOVELI_PERSONA` pins a persona (friend, tutor, engineer, coach);
 `ZOVELI_TEMPERATURE` sets chat sampling (default 0.7, clamped 0–2);
+`ZOVELI_CHAT_TIMEOUT_MS` bounds each chat HTTP request (default 120000,
+clamped 1000–600000); timeouts fail once, without a second wait.
 `ZOVELI_MEMORY_BRIEF=0` disables the private memory brief in chat, and
 `ZOVELI_MEMORY_TO_CLOUD=1` explicitly allows it for cloud providers
 (local providers only by default).
@@ -185,6 +187,13 @@ variables — the old telemetry vars (`TELEMETRY_ENABLED`, `OTLP_ENDPOINT`,
 - `mathcore-mcp not found` → activate your `.venv` (or `python -m pip install
   -e ./mathcore`), then re-run doctor; alternatively set
   `MATHCORE_MCP_COMMAND` to the full path. Verify with `mathcore "2+2"`.
+- Chat hangs or "chat request timed out" → check the endpoint/Ollama is running;
+  raise `ZOVELI_CHAT_TIMEOUT_MS` for slow first tokens. Timeouts are not retried.
+- A typo such as `zoveli healt` now exits with code 2 and a usage hint instead
+  of silently opening the REPL.
+- `cannot open memory database ... corrupt` → restore from a verified backup
+  (`zoveli restore --help`) or move the file aside; concurrent processes wait up
+  to 5s on the SQLite busy timeout instead of failing at once.
 - No capabilities → `capability_scan`; see `docs/runbooks/capability-scan-failures.md`.
 - Slow search → search is SQLite FTS5 (instant); check `ZOVELI_MEMORY_DB` is writable.
 - MCP disconnect symptoms → `docs/runbooks/mcp-disconnect.md`.

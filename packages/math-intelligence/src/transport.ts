@@ -27,6 +27,7 @@ import { commandParts, resolveMathcoreCommand } from './resolve.js';
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_RESTART_BASE_MS = 500;
 const DEFAULT_RESTART_MAX_MS = 30000;
+const DEFAULT_MAX_LINE_BYTES = 16 * 1024 * 1024;
 
 interface PendingCall {
   resolve: (value: any) => void;
@@ -41,6 +42,8 @@ export interface MathcoreClientOptions {
   restartMaxMs?: number;
   /** Environment for the child (tests inject fake-server knobs). */
   env?: NodeJS.ProcessEnv;
+  /** Reject absurd unterminated stdout lines instead of buffering forever. */
+  maxLineBytes?: number;
 }
 
 export interface MathcoreStatus {
@@ -79,6 +82,10 @@ export class MathcoreClient {
 
   get running(): boolean {
     return !!this.proc && this.proc.exitCode === null;
+  }
+
+  private get maxLineBytes(): number {
+    return this.options.maxLineBytes ?? DEFAULT_MAX_LINE_BYTES;
   }
 
   status(): MathcoreStatus {
@@ -132,6 +139,14 @@ export class MathcoreClient {
     child.stdout?.on('data', (chunk: Buffer) => {
       if (this.proc === child) this.onData(chunk);
     });
+    child.stdin?.on('error', (err: Error) => {
+      if (this.proc !== child) return;
+      this.failAndKill(
+        new Error(
+          `${MATHCORE_MCP_COMMAND} stdin closed (${err.message}); restarting the MCP pool`
+        )
+      );
+    });
     child.on('error', (err) =>
       this.onDeath(child, this.describeStartFailure(err, command))
     );
@@ -182,6 +197,14 @@ export class MathcoreClient {
         call.resolve(msg.result);
       }
     }
+    if (this.buffer.length > this.maxLineBytes) {
+      this.failAndKill(
+        new Error(
+          `mathcore sent an unterminated response longer than ${this.maxLineBytes} bytes; ` +
+            `restarting the MCP pool`
+        )
+      );
+    }
   }
 
   private recordFailure(err: Error): void {
@@ -191,6 +214,21 @@ export class MathcoreClient {
     const max = this.options.restartMaxMs ?? DEFAULT_RESTART_MAX_MS;
     const delay = Math.min(max, base * 2 ** Math.min(this.failures - 1, 16));
     this.retryAt = Date.now() + delay;
+  }
+
+  /** Tear down a broken pool now, fail in-flight calls, and start backoff. */
+  private failAndKill(err: Error): void {
+    const child = this.proc;
+    this.proc = null;
+    this.startedAt = null;
+    this.buffer = '';
+    this.recordFailure(err);
+    this.rejectPending(err);
+    try {
+      child?.kill();
+    } catch {
+      // already gone
+    }
   }
 
   private onDeath(child: ChildProcess, err: Error, exitCode?: number | null): void {

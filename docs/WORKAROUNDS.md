@@ -81,6 +81,7 @@ This document provides practical workarounds for all identified negative consequ
 **Workaround (partial):**
 - **Connection Pooling**: ✅ one supervised persistent stdio MCP process per server (reused across calls; crash restart with exponential backoff; `mathcore_status` / `/mcp` expose pid, spawns, restarts and last error); a multi-server pool is 📋 planned
 - **Warm Start**: ✅ interactive REPL warms mathcore in the background when the binary resolves (`ZOVELI_MATHCORE_PREWARM=0` opts out); the health probe reuses a live pool instead of spawning a second interpreter
+- **MCP protocol guards**: ✅ broken child stdin fails pending calls and restarts with backoff; unterminated stdout lines over 16MB are rejected instead of buffered forever
 - **Batch Operations**: 📋 no `mathcore_compute_batch` tool yet
 - **Async Pipeline**: ✅ calls are async and time-bounded by `MATHCORE_TIMEOUT_MS`
 - **Cache Results**: ✅ verified results are memorized and recalled (`math_recall`; disable with `ZOVELI_MATH_MEMORIZE=0`)
@@ -115,6 +116,7 @@ This document provides practical workarounds for all identified negative consequ
 ### Negative: Concurrency Issues
 **Workaround (store era):**
 - **ACID**: single-writer SQLite with WAL mode; no file races
+- **Busy timeout**: ✅ every connection waits up to 5s for a writer instead of failing immediately with `SQLITE_BUSY`; corrupt/locked files fail with a restore-or-move-aside hint
 - **Multi-User**: Not supported (single-user design), document clearly
 - **Legacy note (vault era)**: `flock()` on note files, write-to-temp + atomic rename, last-write-wins with `.bak`
 

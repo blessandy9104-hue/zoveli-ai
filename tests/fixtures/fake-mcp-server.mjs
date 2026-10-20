@@ -24,6 +24,11 @@ function respond(id, result) {
 }
 
 function handle(line) {
+  if (process.env.FAKE_MCP_BIG_LINE === '1') {
+    // Unterminated junk larger than the client's configured line cap.
+    process.stdout.write('x'.repeat(1024));
+    return;
+  }
   if (crashOn && line.includes(crashOn)) {
     process.exit(7);
   }

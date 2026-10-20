@@ -43,6 +43,18 @@ async function main() {
     process.exitCode = await maintenance.runMaintenanceCommand(argv);
     return;
   }
+  // Unknown first tokens used to fall through and open the REPL, which made
+  // typos look like a successful launch. Usage errors are exit code 2.
+  if (argv.length > 0) {
+    const first = argv[0];
+    console.error(
+      first.startsWith('-')
+        ? `zoveli: unknown option '${first}' (run zoveli --help)`
+        : `zoveli: unknown command '${first}' (run zoveli --help)`
+    );
+    process.exitCode = 2;
+    return;
+  }
   const { boot } = await import('@zoveli/host');
   // SIGINT lifecycle is owned by the REPL (stops mathcore, closes readline).
   await boot();

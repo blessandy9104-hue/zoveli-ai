@@ -38,4 +38,19 @@ describe.skipIf(!READY)('CLI fast paths', () => {
     expect(run.stdout).toContain('"ready"');
     expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
   });
+
+  it('rejects unknown commands with a usage error instead of booting', () => {
+    const run = runCli('healt');
+    expect(run.status).toBe(2);
+    expect(run.stderr).toContain("unknown command 'healt'");
+    expect(run.stdout).not.toContain('local-first assistant');
+    expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
+  });
+
+  it('rejects unknown options with a usage error', () => {
+    const run = runCli('--watch');
+    expect(run.status).toBe(2);
+    expect(run.stderr).toContain("unknown option '--watch'");
+    expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
+  });
 });

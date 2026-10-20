@@ -66,7 +66,23 @@ const MIGRATIONS: Migration[] = [
 
 /** Open a raw node:sqlite connection (used by maintenance code and tests). */
 export function openDatabaseSync(dbPath: string, options?: { readOnly?: boolean }): DatabaseSyncType {
-  return options ? new DatabaseSync(dbPath, options) : new DatabaseSync(dbPath);
+  const db = options ? new DatabaseSync(dbPath, options) : new DatabaseSync(dbPath);
+  // A REPL, a CLI health check and a backup may touch the vault at once;
+  // wait for the writer instead of failing immediately with SQLITE_BUSY.
+  try {
+    db.exec('PRAGMA busy_timeout = 5000;');
+    // Touch the schema so a corrupt/truncated file fails here, not halfway
+    // through boot. Callers can then show one actionable recovery message.
+    db.prepare('PRAGMA schema_version').get();
+  } catch (e) {
+    try {
+      db.close();
+    } catch {
+      // ignore close failure; surface the original open error
+    }
+    throw e;
+  }
+  return db;
 }
 
 export interface CreateNoteInput {
@@ -289,7 +305,17 @@ export class MemoryStore {
     if (dbPath !== ':memory:') {
       fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     }
-    this.db = new DatabaseSync(dbPath);
+    try {
+      this.db = openDatabaseSync(dbPath);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `cannot open memory database at ${dbPath}: ${detail}. ` +
+          `If another Zoveli process is writing, close it and retry. ` +
+          `If the file is corrupt, restore a backup (zoveli restore --help) ` +
+          `or move it aside to start fresh.`
+      );
+    }
     // Owner-only DB file: memory holds personal notes and proof history.
     // Best-effort (no-op on Windows ACLs, harmless if it fails).
     if (dbPath !== ':memory:') {

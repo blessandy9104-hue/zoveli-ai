@@ -164,6 +164,29 @@ describe('mathcore MCP pool', () => {
     expect(client.status().pending).toBe(0);
   });
 
+  it('rejects in-flight calls when the child stdin breaks', async () => {
+    const client = clientFor({ FAKE_MCP_DELAY_MS: '500' });
+    const pending = client.compute('slow');
+    await sleep(60);
+    const proc = (client as any).proc;
+    expect(proc).toBeTruthy();
+
+    proc.stdin.emit('error', new Error('EPIPE'));
+    await expect(pending).rejects.toThrow(/stdin closed.*EPIPE/);
+    expect(client.status().running).toBe(false);
+    expect(client.status().pending).toBe(0);
+    expect(client.status().lastError).toMatch(/stdin closed/);
+  });
+
+  it('kills a pool that floods an unterminated response line', async () => {
+    const client = clientFor({ FAKE_MCP_BIG_LINE: '1' }, { maxLineBytes: 256 });
+
+    await expect(client.compute('1+1')).rejects.toThrow(/unterminated response/);
+    expect(client.status().running).toBe(false);
+    expect(client.status().pending).toBe(0);
+    expect(client.status().lastError).toMatch(/unterminated response/);
+  });
+
   it('reports a missing binary actionably and backs off instead of respawning per call', async () => {
     const client = new MathcoreClient('zoveli-definitely-missing-mathcore-binary', 500, {
       restartBaseMs: 300,

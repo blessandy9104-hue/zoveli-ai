@@ -88,7 +88,10 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
   // Created lazily in TTY mode only: an Interface starts consuming stdin
   // immediately, which would steal bytes from batch mode below.
   let rl: readline.Interface | null = null;
+  let shuttingDown = false;
   const shutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     try {
       mathcore.stop();
     } catch {
@@ -110,10 +113,13 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
       }
     }
   };
-  process.once('SIGINT', () => {
+  // Containers and supervisors usually send SIGTERM; Ctrl+C sends SIGINT.
+  const exitOnSignal = () => {
     shutdown();
     process.exit(0);
-  });
+  };
+  process.once('SIGINT', exitOnSignal);
+  process.once('SIGTERM', exitOnSignal);
 
   let history: any[] = [];
 

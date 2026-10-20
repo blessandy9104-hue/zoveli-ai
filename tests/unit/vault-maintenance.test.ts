@@ -53,6 +53,25 @@ describe('vault safety (schema, backup, restore, migration)', () => {
     expect(() => new MemoryStore(db, join(base, 'vault'))).toThrow(/newer than supported/);
   });
 
+  it('waits on a busy vault instead of failing immediately', () => {
+    const raw = openDatabaseSync(':memory:');
+    try {
+      const row = raw.prepare('PRAGMA busy_timeout').get() as Record<string, unknown>;
+      expect(Object.values(row)[0]).toBe(5000);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('explains how to recover from an unreadable database file', () => {
+    const base = tempDir();
+    const db = join(base, 'broken.db');
+    writeFileSync(db, 'this is not a sqlite database');
+    expect(() => new MemoryStore(db, join(base, 'vault'))).toThrow(
+      /cannot open memory database[\s\S]*restore a backup/i
+    );
+  });
+
   it('upgrades a pre-versioned vault without losing notes', () => {
     const base = tempDir();
     const db = join(base, 'legacy.db');
