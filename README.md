@@ -42,16 +42,34 @@ check, expected output, and exact fixes for a missing chat or math backend.
 
 ## Download & install
 
-> One-line install (opencode-style, review before running):
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.sh | bash -s -- --yes
-> ```
-> Windows PowerShell: `irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.ps1 | iex`
-> See [`install/install-zoveli.sh`](install/install-zoveli.sh) (idempotent, `--yes/--dir/--branch` flags, no telemetry).
+Portable install (no Git, Node, Python, compiler, or pnpm required):
 
-Prerequisites: Node.js 22.16+, Python 3.11+, pnpm 11.7.0+.
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
+```
 
-**Windows (PowerShell):**
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
+```
+
+The installer downloads the matching prebuilt archive, verifies its SHA-256,
+and installs to `~/.local/share/zoveli` (Linux/macOS) or
+`%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli`
+(`%USERPROFILE%\.zoveli` on Windows: vault mirror and memory database) and
+survives upgrades. CI currently publishes Linux x64,
+Windows x64, and macOS arm64 archives; other targets use the source install
+below. Review
+[`install/install-zoveli-runtime.sh`](install/install-zoveli-runtime.sh) and
+[`install/install-zoveli-runtime.ps1`](install/install-zoveli-runtime.ps1)
+before running; both are source-visible and telemetry-free. No release archive
+yet? Use the developer source install below.
+
+Developers installing from a source checkout need Node.js 22.16+, Python 3.11+,
+pnpm 11.7.0+, and Git.
+
+**Windows (source checkout, PowerShell):**
 
 ```powershell
 # 1. Toolchain
@@ -79,7 +97,7 @@ pnpm plugin:check      # plugin contract, naming and tool collisions
 pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
-**macOS / Linux:**
+**macOS / Linux (source checkout):**
 
 ```bash
 # 1. Toolchain (macOS shown; apt/dnf equivalents on Linux)
@@ -108,6 +126,12 @@ pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
 ## Launch it
+
+Portable install: `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows). If the
+installer did not link it into `~/.local/bin`, run the launcher from the
+install directory printed at the end.
+
+Source checkout:
 
 ```bash
 pnpm start            # CLI assistant (works fully offline, Windows/macOS/Linux terminals)

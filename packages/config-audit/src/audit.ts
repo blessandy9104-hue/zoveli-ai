@@ -76,7 +76,9 @@ function splitCommandLine(command: string): string {
 }
 
 function defaultCommandResolves(command: string): boolean {
-  const program = splitCommandLine(command);
+  const trimmed = command.trim();
+  if (trimmed && fs.existsSync(trimmed)) return true;
+  const program = splitCommandLine(trimmed);
   if (!program) return false;
   if (program.includes('/') || program.includes('\\') || program.startsWith('.')) {
     return fs.existsSync(program);

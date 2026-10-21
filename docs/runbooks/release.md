@@ -1,7 +1,7 @@
 # Release runbook
 
-Cut a release only from a green `main`. The release workflow re-checks metadata
-and publishes the Docker image, SBOM and GitHub release.
+Cut a release only from a green `main`. CI re-checks metadata and publishes the
+Docker image, SBOM, prebuilt runtime archives, and GitHub release.
 
 ## 1. Prepare the version
 
@@ -36,6 +36,20 @@ node apps/cli/dist/cli.js --version   # must print the new version
 CI runs the same gate plus Docker, SBOM, e2e, and security scans. Do not tag
 with any check red.
 
+The `Runtime Artifacts` workflow builds the portable archives on Linux, macOS,
+and Windows, runs `scripts/smoke-runtime.mjs` against each archive, and installs
+each archive through the portable installer. Locally, after building mathcore:
+
+```bash
+python -m pip install pyinstaller -e ./mathcore
+node scripts/build-mathcore-runtime.mjs
+node scripts/build-runtime.mjs
+node scripts/smoke-runtime.mjs
+```
+
+Do not publish unless the archive smoke and portable-installer steps are green.
+Archives are checksummed but not yet code-signed or notarized.
+
 ## 3. Tag and publish
 
 ```bash
@@ -49,13 +63,19 @@ gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes
 
 `--release` requires the changelog entry and a clean tree; `--tag` requires
 `vX.Y.Z` to point at HEAD. Publishing the GitHub release triggers the release
-job (image push to GHCR, SBOM attachment, release notes).
+job (image push to GHCR, SBOM attachment, release notes) and the runtime
+artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
 
 ## 4. Confirm
 
 - CI/release workflow is green.
 - `docker pull ghcr.io/blessandy9104-hue/zoveli-ai:X.Y.Z` works.
 - Installer smoke (`Installer Check` workflow) passes.
+- `Runtime Artifacts` passes on Linux, macOS, and Windows.
+- The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
+  matching `.sha256` files where the runner supports that architecture.
+- Download one archive on a clean machine (or clean container), run the
+  portable installer, and verify `zoveli --version` and `zoveli health`.
 - Update the release draft if release-drafter left stale entries.
 
 ## Hotfixes

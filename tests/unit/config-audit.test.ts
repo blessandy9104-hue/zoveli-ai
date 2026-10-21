@@ -131,6 +131,13 @@ describe('config audit: environment drift', () => {
     expect(issueFor(ok, 'env MATHCORE_MCP_COMMAND')).toBeUndefined();
   });
 
+  it('accepts an existing math command path containing spaces', () => {
+    const command = join(tempDir(), 'math core.exe');
+    writeFileSync(command, '');
+    const issues = auditEnv({ MATHCORE_MCP_COMMAND: command });
+    expect(issueFor(issues, 'env MATHCORE_MCP_COMMAND')).toBeUndefined();
+  });
+
   it('validates path kinds with injectable filesystem facts', () => {
     const dir = tempDir();
     const asDir = (p: string) => p === dir;

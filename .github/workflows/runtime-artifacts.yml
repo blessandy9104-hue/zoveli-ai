@@ -1,0 +1,130 @@
+name: Runtime Artifacts
+
+on:
+  workflow_dispatch: {}
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - 'install/**'
+      - 'apps/cli/**'
+      - 'packages/**'
+      - 'mathcore/**'
+      - 'scripts/build-runtime.mjs'
+      - 'scripts/build-mathcore-runtime.mjs'
+      - 'scripts/smoke-runtime.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/runtime-artifacts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'install/**'
+      - 'apps/cli/**'
+      - 'packages/**'
+      - 'mathcore/**'
+      - 'scripts/build-runtime.mjs'
+      - 'scripts/build-mathcore-runtime.mjs'
+      - 'scripts/smoke-runtime.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/runtime-artifacts.yml'
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.11'
+  PNPM_VERSION: '11.7.0'
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Install packaging tools
+        run: python -m pip install --disable-pip-version-check pyinstaller -e ./mathcore
+
+      - name: Build mathcore runtime
+        run: node scripts/build-mathcore-runtime.mjs
+
+      - name: Build application runtime
+        run: node scripts/build-runtime.mjs
+
+      - name: Smoke test runtime
+        run: node scripts/smoke-runtime.mjs
+        shell: bash
+
+      - name: Install runtime with installer (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          ARCHIVE=$(find release -maxdepth 1 -name '*.tar.gz' | head -n 1)
+          bash install/install-zoveli-runtime.sh --yes --archive "$ARCHIVE" --dir "$RUNNER_TEMP/zoveli-install"
+          "$RUNNER_TEMP/zoveli-install/zoveli" --version
+
+      - name: Install runtime with installer (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
+          & install/install-zoveli-runtime.ps1 -Yes -Archive $archive -Dir "$env:RUNNER_TEMP\zoveli-install"
+          & "$env:RUNNER_TEMP\zoveli-install\zoveli.cmd" --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zoveli-runtime-${{ matrix.os }}
+          path: |
+            release/*.tar.gz
+            release/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Attach runtime artifacts
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zoveli-runtime-*
+          path: release-assets
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-assets/*.tar.gz
+            release-assets/*.sha256

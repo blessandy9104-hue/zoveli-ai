@@ -24,6 +24,9 @@
     "release:check": "node scripts/release-check.mjs",
     "plugin:check": "node scripts/plugin-check.mjs",
     "perf:check": "pnpm run build:core && node scripts/perf-check.mjs",
+    "package:mathcore": "node scripts/build-mathcore-runtime.mjs",
+    "package:runtime": "node scripts/build-runtime.mjs",
+    "smoke:runtime": "node scripts/smoke-runtime.mjs",
     "test": "vitest run",
     "lint": "oxlint packages apps tests scripts --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\" --ignore-pattern \"**/coverage/**\"",
     "create:plugin": "node scripts/create-plugin.mjs",
@@ -32,9 +35,10 @@
     "capability:report": "node scripts/capability-report.js"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
     "@playwright/test": "^1.64.1",
+    "@types/node": "^20.10.0",
     "@vitest/ui": "^1.6.0",
+    "esbuild": "^0.28.2",
     "oxlint": "^0.18.1",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"

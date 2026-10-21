@@ -5,6 +5,14 @@ page as the command reference.
 
 ## Install
 
+Portable install (no Node/Python/pnpm toolchain): see
+[`install/install-zoveli-runtime.sh`](../../install/install-zoveli-runtime.sh)
+or [`install/install-zoveli-runtime.ps1`](../../install/install-zoveli-runtime.ps1).
+Run `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows) from the printed install
+directory.
+
+Source checkout:
+
 ```bash
 # 1. Verified-math backend (vendored). A venv avoids PATH surprises:
 python -m venv .venv

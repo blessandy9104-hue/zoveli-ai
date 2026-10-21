@@ -11,6 +11,14 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- Prebuilt runtime archives for Linux, macOS and Windows: `app.cjs` plus a
+  matching Node runtime and a PyInstaller mathcore sidecar, so target machines
+  need no Git/Node/pnpm/Python/compiler toolchain.
+- Portable installers (`install/install-zoveli-runtime.sh` and `.ps1`) that
+  download the matching release archive, verify its SHA-256, and install
+  without changing system packages.
+- `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
+  and mathcore health probe, and exercises the portable installer.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and
   `pnpm health:check` cover runtime, env drift, vault schema, MCP pool and
   capability availability (`--json`/`--offline` supported).
@@ -73,6 +81,8 @@ the new section **before** running `pnpm release:check --release`.
 
 - Mathcore command lines with quoted paths containing spaces (for example
   `"C:\Program Files\...\python.exe" -m mathcore.mcp_server`).
+- `config-check` now accepts an existing unquoted mathcore path containing
+  spaces, matching how the runtime resolves `MATHCORE_MCP_COMMAND`.
 - Crash storms after a failed mathcore spawn: calls share backoff instead of
   restarting per request.
 - Plugin scaffolding no longer emits a shebang that breaks Windows checkouts

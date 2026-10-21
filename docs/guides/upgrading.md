@@ -8,7 +8,7 @@ This guide covers a safe upgrade and rollback.
 
 | Surface | Guarantee |
 | --- | --- |
-| Node.js | 22.16+ (the memory store needs `node:sqlite` FTS5) |
+| Node.js | 22.16+ for source checkouts; bundled in prebuilt runtimes (the memory store needs `node:sqlite` FTS5) |
 | Vault schema | Forward migrations only; a database written by a newer Zoveli is refused with "upgrade Zoveli" |
 | Configuration | Unknown/removed env vars, typos and invalid values are reported by `pnpm config:check`; defaults keep working |
 | Plugins | The `@deepseek-ai/dsh-core` shim keeps plugin APIs stable across point releases; plugin packages share the product version |
@@ -19,18 +19,26 @@ This guide covers a safe upgrade and rollback.
 1. Stop the assistant (Ctrl+C in the REPL or `docker compose down`).
 2. Back up and verify:
    ```bash
-   pnpm vault:backup
-   pnpm vault:verify <backup-dir>
+   zoveli backup                     # portable
+   zoveli verify <backup-dir>
+   # or: pnpm vault:backup && pnpm vault:verify <backup-dir>
    ```
 3. Record the current health baseline:
    ```bash
-   pnpm health:check -- --json > health-before.json
+   zoveli health --json > health-before.json   # portable
+   # or: pnpm health:check -- --json > health-before.json
    ```
 
 ## Upgrade
 
+Portable install: stop Zoveli, back up with `zoveli backup`, copy the current
+install directory somewhere safe, then rerun `install-zoveli-runtime.sh` or
+`install-zoveli-runtime.ps1`. The installer replaces only the runtime; the
+vault and configuration under your home directory are untouched.
+
+Source checkout:
+
 ```bash
-# One-line installer / git checkout
 git pull --ff-only
 pnpm install --frozen-lockfile
 pnpm run build
@@ -42,7 +50,17 @@ If you use the vendor mathcore backend, refresh it in the same venv:
 python -m pip install -e ./mathcore
 ```
 
-Then validate before using the vault:
+Then validate before using the vault.
+
+Portable install:
+
+```bash
+zoveli config-check      # environment drift; exit 1 only on blocking issues
+zoveli migrate           # explicit forward migration + report (also runs on open)
+zoveli health            # runtime/config/vault/MCP/capability rollup
+```
+
+Source checkout:
 
 ```bash
 pnpm config:check        # environment drift; exit 1 only on blocking issues
@@ -60,27 +78,31 @@ newer Zoveli version that wrote it, or restore the backup taken before the
 downgrade:
 
 ```bash
-pnpm vault:restore <backup-dir> --force
+zoveli restore <backup-dir> --force   # portable
+pnpm vault:restore <backup-dir> --force   # source
 ```
 
 ### If configuration drifted
 
-`pnpm config:check` names the variable and suggests the intended one. Update
+`zoveli config-check` (portable) or `pnpm config:check` (source) names the
+variable and suggests the intended one. Update
 your shell profile, `.env`, or Docker Compose file, then re-run it. Nothing is
 rewritten automatically.
 
 ## Rollback
 
 1. Stop the app.
-2. Reinstall/check out the previous version (`git checkout v<previous>` or the
-   previous installer target) and rebuild.
+2. Restore the copied runtime directory, or install the previous release
+   archive with `--archive <previous.tar.gz>`. Source checkouts can use
+   `git checkout v<previous>` and rebuild.
 3. Restore the pre-upgrade backup if the older binary cannot read the migrated
    vault:
    ```bash
-   pnpm vault:restore <backup-dir> --force
+   zoveli restore <backup-dir> --force   # portable
+   pnpm vault:restore <backup-dir> --force   # source
    ```
-4. Run `pnpm health:check --offline` and confirm the baseline matches
-   `health-before.json`.
+4. Run `zoveli health` (portable) or `pnpm health:check --offline` (source) and
+   confirm the baseline matches `health-before.json`.
 
 ## Release verification (maintainers)
 

@@ -5,29 +5,32 @@ account, API key, or network connection is required for local tools.
 
 ## 1. Prerequisites
 
-- Node.js 22.16+ (the memory store uses `node:sqlite` with FTS5)
-- pnpm 11.7.0 (`npm install -g pnpm@11.7.0`)
-- Python 3.11+ for the vendored verified-math backend
-- Git
+Portable install (recommended): currently Linux x64, Windows x64, and macOS
+arm64; network access for the one-time download. Git, Node.js, Python, pnpm,
+and a compiler are bundled in the archive and are not required. Other
+architectures use the source install.
 
-Windows: `winget install OpenJS.NodeJS.LTS Python.Python.3.11 Git.Git` then
-install pnpm. macOS: `brew install node@22 python@3.11 git`.
+Source checkout: Node.js 22.16+ (the memory store uses `node:sqlite` with
+FTS5), pnpm 11.7.0, Python 3.11+ for the vendored verified-math backend, and
+Git. Windows: `winget install OpenJS.NodeJS.LTS Python.Python.3.11 Git.Git`
+then install pnpm. macOS: `brew install node@22 python@3.11 git`.
 
 ## 2. Install
 
-One-line installer (review the script before piping it to a shell):
+Portable installer (review the script before piping it to a shell). It verifies
+the published SHA-256 before extraction:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.sh | bash -s -- --yes
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
 ```
 
 PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.ps1 | iex
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
-Or from a manual clone:
+Source install (developers), from a manual clone:
 
 ```bash
 git clone https://github.com/blessandy9104-hue/zoveli-ai.git
@@ -42,13 +45,27 @@ pnpm run build
 
 ## 3. Confirm readiness
 
+Portable install:
+
+```bash
+zoveli health          # or zoveli.cmd health on Windows
+zoveli config-check
+```
+
+If the installer did not create a `~/.local/bin/zoveli` link, run the launcher
+from the install directory printed at the end of the install.
+
+Source checkout:
+
 ```bash
 pnpm run doctor
 ```
 
 `doctor` is read-only. It checks Node, pnpm, Git, Python, the mathcore package,
 the resolved `mathcore-mcp` binary, and whether a local Ollama server answers.
-Blocking failures exit non-zero; optional pieces are warnings with an exact fix.
+The portable `health` command checks the same runtime path without requiring
+the development toolchain. Blocking failures exit non-zero; optional pieces are
+warnings with an exact fix.
 
 ```text
 [ok  ] Node.js 22.x — meets >= 22 floor (node:sqlite, FTS5)
