@@ -90,6 +90,7 @@ jobs:
         run: |
           ARCHIVE=$(find release -maxdepth 1 -name '*.tar.gz' | head -n 1)
           bash install/install-zoveli-runtime.sh --yes --archive "$ARCHIVE" --dir "$RUNNER_TEMP/zoveli-install"
+          bash install/install-zoveli-runtime.sh --yes --archive "$ARCHIVE" --dir "$RUNNER_TEMP/zoveli-install"
           "$RUNNER_TEMP/zoveli-install/zoveli" --version
 
       - name: Install runtime with installer (Windows)
@@ -97,6 +98,7 @@ jobs:
         shell: pwsh
         run: |
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
+          & install/install-zoveli-runtime.ps1 -Yes -Archive $archive -Dir "$env:RUNNER_TEMP\zoveli-install"
           & install/install-zoveli-runtime.ps1 -Yes -Archive $archive -Dir "$env:RUNNER_TEMP\zoveli-install"
           & "$env:RUNNER_TEMP\zoveli-install\zoveli.cmd" --version
 

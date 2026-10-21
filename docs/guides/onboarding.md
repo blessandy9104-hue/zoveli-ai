@@ -30,6 +30,10 @@ PowerShell:
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
+Re-running the installer upgrades in place and first writes a verified backup
+under `~/.zoveli/backups`; it stops without changing the runtime if the backup
+cannot be verified.
+
 Source install (developers), from a manual clone:
 
 ```bash

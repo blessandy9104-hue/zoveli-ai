@@ -169,7 +169,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 - **Markdown mirror in git**: `[done]` `knowledge-vault/` export mirror can be committed.
 - **Integrity Checks**: `[done]` SHA-256 manifest + SQLite integrity/foreign-key checks via `pnpm vault:verify`.
 - **Recovery Tool**: `[done]` `pnpm vault:restore` is verified and refuses overwrite without `--force`.
-- **Automatic pre-upgrade backup**: `[planned]` upgrades do not yet force a backup or run a restore drill.
+- **Automatic pre-upgrade backup**: `[partial]` portable installers create and verify a backup before replacing an existing runtime; source upgrades are still manual and there is no scheduled backup/restore drill.
 
 ### Plugin Supply Chain
 **Workaround:**
@@ -200,7 +200,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 | Clean-Machine Runtime CI | Done | `.github/workflows/runtime-artifacts.yml` |
 | Signed / Notarized Installers | Planned | no signing/notarization pipeline |
 | Updater / Rollback | Planned | no update channel |
-| Automatic Pre-Upgrade Backup | Planned | manual `vault:backup` only |
+| Automatic Pre-Upgrade Backup | Partial | portable installers run `backup` + `verify`; source upgrades stay manual |
 | Connection Pooling | Done | `packages/math-intelligence/src/transport.ts`; multi-server pool planned |
 | Plugin Generator | Done | `scripts/create-plugin.mjs` |
 | Capability Health Probes | Done | `packages/capability/src/scanner.ts` |

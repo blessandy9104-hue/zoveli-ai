@@ -4,8 +4,9 @@
 
 .DESCRIPTION
   Downloads the matching GitHub release archive, verifies its SHA-256
-  checksum, and extracts it. No Git, Node, pnpm, Python, or compiler
-  toolchain is required on the target machine.
+  checksum, and extracts it. Upgrades first create and verify a backup of the
+  existing vault under ~/.zoveli/backups. No Git, Node, pnpm, Python, or
+  compiler toolchain is required on the target machine.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
@@ -21,7 +22,8 @@ param(
   [string]$Archive = '',
   [string]$Url = $env:ZOVELI_RUNTIME_URL,
   [switch]$NoVerify,
-  [switch]$Force
+  [switch]$Force,
+  [switch]$SkipBackup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +43,32 @@ function Test-SafeTarget($path) {
     [System.IO.Path]::GetFullPath($(if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $HOME })).TrimEnd('\')
   )
   return ($protected -notcontains $full)
+}
+
+function Backup-ExistingRuntime($dir) {
+  if (-not (Test-Path -LiteralPath (Join-Path $dir 'runtime.json'))) { return }
+  if ($SkipBackup) {
+    Warn 'Skipping the pre-upgrade backup (-SkipBackup).'
+    return
+  }
+  $launcher = Join-Path $dir 'zoveli.cmd'
+  if (-not (Test-Path -LiteralPath $launcher)) {
+    Fail "Existing runtime has no zoveli.cmd; create a manual backup or pass -SkipBackup: $dir"
+  }
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $suffix = [guid]::NewGuid().ToString('N').Substring(0, 8)
+  $homeDir = $(if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME })
+  $backupDir = Join-Path (Join-Path $homeDir '.zoveli\backups') "pre-upgrade-$stamp-$suffix"
+  Info "Backing up existing data to $backupDir ..."
+  $backupOutput = & $launcher backup --out $backupDir --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Fail "Pre-upgrade backup failed; the existing runtime was not changed.`n$($backupOutput -join "`n")"
+  }
+  $verifyOutput = & $launcher verify $backupDir --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Fail "Pre-upgrade backup failed verification; the existing runtime was not changed.`n$($verifyOutput -join "`n")"
+  }
+  Info "Backup verified: $backupDir"
 }
 
 if (-not $Yes) {
@@ -102,6 +130,8 @@ try {
       Fail "$Dir is not a Zoveli runtime; use -Dir or -Force."
     }
   }
+
+  Backup-ExistingRuntime $Dir
 
   New-Item -ItemType Directory -Path $Dir -Force | Out-Null
   Get-ChildItem -LiteralPath $Dir -Force | Remove-Item -Recurse -Force

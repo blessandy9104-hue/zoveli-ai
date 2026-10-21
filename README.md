@@ -58,7 +58,9 @@ The installer downloads the matching prebuilt archive, verifies its SHA-256,
 and installs to `~/.local/share/zoveli` (Linux/macOS) or
 `%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli`
 (`%USERPROFILE%\.zoveli` on Windows: vault mirror and memory database) and
-survives upgrades. CI currently publishes Linux x64,
+survives upgrades. Re-running the installer first creates and verifies a
+pre-upgrade backup under `~/.zoveli/backups`; it aborts without changing the
+runtime if that backup fails. CI currently publishes Linux x64,
 Windows x64, and macOS arm64 archives; other targets use the source install
 below. Review
 [`install/install-zoveli-runtime.sh`](install/install-zoveli-runtime.sh) and

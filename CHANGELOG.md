@@ -16,7 +16,8 @@ the new section **before** running `pnpm release:check --release`.
   need no Git/Node/pnpm/Python/compiler toolchain.
 - Portable installers (`install/install-zoveli-runtime.sh` and `.ps1`) that
   download the matching release archive, verify its SHA-256, and install
-  without changing system packages.
+  without changing system packages. Upgrades create and verify a pre-upgrade
+  backup first and abort without changing the runtime if it fails.
 - `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
   and mathcore health probe, and exercises the portable installer.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and

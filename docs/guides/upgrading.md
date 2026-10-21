@@ -31,10 +31,13 @@ This guide covers a safe upgrade and rollback.
 
 ## Upgrade
 
-Portable install: stop Zoveli, back up with `zoveli backup`, copy the current
-install directory somewhere safe, then rerun `install-zoveli-runtime.sh` or
-`install-zoveli-runtime.ps1`. The installer replaces only the runtime; the
-vault and configuration under your home directory are untouched.
+Portable install: stop Zoveli, then rerun `install-zoveli-runtime.sh` or
+`install-zoveli-runtime.ps1`. When an existing runtime is present, the
+installer runs `zoveli backup` and `zoveli verify` first, aborts if either
+fails, and leaves the verified backup under `~/.zoveli/backups`. The installer
+replaces only the runtime; the vault and configuration under your home
+directory are untouched. Use `--skip-backup` (POSIX) or `-SkipBackup`
+(PowerShell) only when you already have a verified backup.
 
 Source checkout:
 

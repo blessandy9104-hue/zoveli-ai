@@ -6,7 +6,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
 #
 # The archive is downloaded from the matching GitHub release and verified
-# against its published SHA-256 checksum before extraction.
+# against its published SHA-256 checksum before extraction. Upgrades create
+# and verify a backup of the existing vault under ~/.zoveli/backups.
 set -euo pipefail
 
 REPO="blessandy9104-hue/zoveli-ai"
@@ -18,6 +19,7 @@ ASSET_URL="${ZOVELI_RUNTIME_URL:-}"
 ASSUME_YES=false
 VERIFY=true
 FORCE=false
+SKIP_BACKUP=false
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -41,6 +43,7 @@ Options:
       --url <url>      Override the runtime archive URL
       --no-verify      Skip SHA-256 verification (not recommended)
       --force          Replace a non-Zoveli directory
+      --skip-backup    Do not back up an existing install (not recommended)
   -h, --help           Show this help
 EOF
 }
@@ -54,6 +57,7 @@ while [ $# -gt 0 ]; do
     --url) ASSET_URL="${2:?--url requires a value}"; shift 2 ;;
     --no-verify) VERIFY=false; shift ;;
     --force) FORCE=true; shift ;;
+    --skip-backup) SKIP_BACKUP=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) error "Unknown option: $1"; usage; exit 1 ;;
   esac
@@ -138,6 +142,29 @@ if [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
   if [ ! -f "$TARGET_DIR/runtime.json" ] && [ "$FORCE" != true ]; then
     error "$TARGET_DIR is not a Zoveli runtime; use --dir or --force."
     exit 1
+  fi
+fi
+
+if [ -f "$TARGET_DIR/runtime.json" ]; then
+  if [ "$SKIP_BACKUP" = true ]; then
+    warn "Skipping the pre-upgrade backup (--skip-backup)."
+  elif [ ! -x "$TARGET_DIR/zoveli" ]; then
+    error "Existing runtime has no executable zoveli; create a manual backup or use --skip-backup."
+    exit 1
+  else
+    BACKUP_DIR="$HOME/.zoveli/backups/pre-upgrade-$(date -u +%Y%m%d-%H%M%S)-$$"
+    info "Backing up existing data to $BACKUP_DIR ..."
+    if ! "$TARGET_DIR/zoveli" backup --out "$BACKUP_DIR" --json > "$TMP_DIR/backup.json"; then
+      cat "$TMP_DIR/backup.json" >&2 || true
+      error "Pre-upgrade backup failed; the existing runtime was not changed."
+      exit 1
+    fi
+    if ! "$TARGET_DIR/zoveli" verify "$BACKUP_DIR" --json > "$TMP_DIR/verify.json"; then
+      cat "$TMP_DIR/verify.json" >&2 || true
+      error "Pre-upgrade backup failed verification; the existing runtime was not changed."
+      exit 1
+    fi
+    info "Backup verified: $BACKUP_DIR"
   fi
 fi
 
