@@ -302,6 +302,8 @@ export class MemoryStore {
   ) {
     this.dbPath = dbPath;
     this.vaultPath = vaultPath;
+    const existed =
+      dbPath !== ':memory:' && fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
     if (dbPath !== ':memory:') {
       fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     }
@@ -328,6 +330,8 @@ export class MemoryStore {
     this.db.exec('PRAGMA journal_mode=WAL;');
     this.db.exec('PRAGMA foreign_keys=ON;');
     try {
+      const current = this.schemaVersion();
+      if (existed && current < SCHEMA_VERSION) this.snapshotBeforeMigration(current);
       this.runMigrations();
     } catch (e) {
       try {
@@ -342,6 +346,36 @@ export class MemoryStore {
       // Recreate FTS as plain table? No — just use LIKE fallback at query time.
     }
     if (options.importVault !== false) this.maybeImportVault();
+  }
+
+  private snapshotBeforeMigration(fromVersion: number): void {
+    const stamp = new Date()
+      .toISOString()
+      .replace(/\.\d{3}Z$/, '')
+      .replace(/[-:]/g, '')
+      .replace('T', '-');
+    const base = `${this.dbPath}.pre-v${fromVersion}-${stamp}.bak`;
+    let target = base;
+    for (let i = 1; fs.existsSync(target); i += 1) target = `${base}-${i}`;
+    try {
+      this.db.prepare('VACUUM INTO ?').run(target);
+      try {
+        fs.chmodSync(target, 0o600);
+      } catch {
+        // Best-effort on Windows ACLs.
+      }
+    } catch (e) {
+      try {
+        fs.rmSync(target, { force: true });
+      } catch {
+        // ignore cleanup failure
+      }
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `refusing to migrate the memory database from schema v${fromVersion} without a backup: ` +
+          `${detail}. Free disk space and retry; no migration was applied.`
+      );
+    }
   }
 
   private runMigrations(): void {

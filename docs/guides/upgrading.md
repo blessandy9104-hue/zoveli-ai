@@ -13,6 +13,7 @@ This guide covers a safe upgrade and rollback.
 | Configuration | Unknown/removed env vars, typos and invalid values are reported by `pnpm config:check`; defaults keep working |
 | Plugins | The `@deepseek-ai/dsh-core` shim keeps plugin APIs stable across point releases; plugin packages share the product version |
 | Backups | Backups are checksum-verified and include the vault database, Markdown vault, auth state and audit log |
+| Schema upgrades | An existing database is copied with `VACUUM INTO` to `memory.db.pre-v<from>-<timestamp>.bak` before migration; migration is refused if that copy fails |
 
 ## Before upgrading
 
@@ -70,6 +71,11 @@ pnpm config:check        # environment drift; exit 1 only on blocking issues
 pnpm migrate:vault       # explicit forward migration + report (also runs on open)
 pnpm health:check        # runtime/config/vault/MCP/capability rollup
 ```
+
+The first open that needs a schema migration writes a consistent copy next to
+the database (`memory.db.pre-v<from>-<timestamp>.bak`) before changing it. If
+that copy cannot be written, the migration is refused and the database is left
+alone. Keep those snapshots until `zoveli health` is green.
 
 Open the app and confirm `/health` is `ok` (or `degraded` only for an optional
 dependency such as mathcore) and `/trace` shows normal tool calls.

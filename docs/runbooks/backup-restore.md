@@ -8,7 +8,7 @@ built-in backup collects all of them into one verified directory.
 | Data | Default path | Override env |
 |------|--------------|--------------|
 | Memory database | `~/.zoveli/memory.db` (plus `-wal`/`-shm`/`-journal` sidecars) | `ZOVELI_MEMORY_DB` |
-| Vault mirror (Markdown export) | `./knowledge-vault` (next to your clone) | `ZOVELI_VAULT_PATH` |
+| Vault mirror (Markdown export) | `~/.zoveli/knowledge-vault` (portable) or `./knowledge-vault` (source checkout) | `ZOVELI_VAULT_PATH` |
 | Auth sessions + OTP state | `~/.zoveli/auth.json`, `~/.zoveli/.session-secret` | `ZOVELI_AUTH_DIR` |
 | Math audit log | `~/.mathcore/audit.jsonl` | `MATHCORE_AUDIT` |
 
@@ -17,11 +17,15 @@ built-in backup collects all of them into one verified directory.
 ## Backup
 
 ```bash
-# Default: ~/.zoveli/backups/zoveli-<UTC timestamp>
+# Portable install:
+zoveli backup
+
+# Source checkout:
 pnpm vault:backup
 
 # Or choose an empty directory outside the vault:
-pnpm vault:backup -- --out ./backups/2026-10-19
+zoveli backup --out ./backups/2026-10-19
+# pnpm vault:backup -- --out ./backups/2026-10-19
 ```
 
 The database is copied with SQLite `VACUUM INTO`, so the backup is consistent
@@ -33,10 +37,16 @@ and a SHA-256 checksum per file.
 Path overrides: `--db`, `--vault`, `--auth-dir`, `--audit`. A backup directory
 must be empty and must not live inside the vault.
 
+Schema migrations make their own database-only snapshot next to the live file,
+named `memory.db.pre-v<from>-<timestamp>.bak`. This is separate from the
+full backup above and is created automatically before an existing database is
+migrated; the migration is refused if the snapshot fails.
+
 ## Verify
 
 ```bash
-pnpm vault:verify -- ./backups/2026-10-19
+zoveli verify ./backups/2026-10-19          # portable
+pnpm vault:verify -- ./backups/2026-10-19   # source
 ```
 
 Verification checks file sizes/checksums, SQLite `integrity_check` and
@@ -62,6 +72,24 @@ database. The backup is verified before anything is written.
 
 Use the same `--db`/`--vault`/`--auth-dir`/`--audit` overrides at restore
 time to put the data back where Zoveli will look for it.
+
+## Restore drill
+
+Prove a backup is usable without touching live data by restoring it into a
+temporary directory:
+
+```bash
+tmp=$(mktemp -d)
+zoveli restore ./backups/2026-10-19 \
+  --db "$tmp/memory.db" --vault "$tmp/vault" \
+  --auth-dir "$tmp/auth" --audit "$tmp/audit.jsonl"
+find "$tmp" -maxdepth 2 -type f
+rm -rf "$tmp"
+```
+
+The restore verifies the backup before writing. If it reports a schema that is
+newer than the binary, install the newer Zoveli version instead of deleting
+anything. On Windows, use `$env:TEMP` with `zoveli.cmd` and the same flags.
 
 ## Manual fallback
 

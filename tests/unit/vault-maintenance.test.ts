@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -105,6 +105,17 @@ describe('vault safety (schema, backup, restore, migration)', () => {
     expect(note.body).toBe('kept through the upgrade');
     expect(note.tags).toContain('old');
     store.close();
+
+    const snapshots = readdirSync(base).filter(
+      (name) => name.startsWith('legacy.db.pre-v0-') && name.endsWith('.bak')
+    );
+    expect(snapshots).toHaveLength(1);
+    const snapshot = openDatabaseSync(join(base, snapshots[0]), { readOnly: true });
+    try {
+      expect((snapshot.prepare('SELECT COUNT(*) AS c FROM notes').get() as { c: number }).c).toBe(1);
+    } finally {
+      snapshot.close();
+    }
   });
 
   it('backs up WAL-safe state with checksums and detects tampering', async () => {

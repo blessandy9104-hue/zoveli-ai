@@ -169,7 +169,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 - **Markdown mirror in git**: `[done]` `knowledge-vault/` export mirror can be committed.
 - **Integrity Checks**: `[done]` SHA-256 manifest + SQLite integrity/foreign-key checks via `pnpm vault:verify`.
 - **Recovery Tool**: `[done]` `pnpm vault:restore` is verified and refuses overwrite without `--force`.
-- **Automatic pre-upgrade backup**: `[partial]` portable installers create and verify a backup before replacing an existing runtime; source upgrades are still manual and there is no scheduled backup/restore drill.
+- **Automatic pre-upgrade backup**: `[partial]` portable installers create and verify a backup before replacing an existing runtime, and schema migrations snapshot an existing database first; source runtime upgrades are still manual and there is no scheduled backup/restore drill.
 
 ### Plugin Supply Chain
 **Workaround:**

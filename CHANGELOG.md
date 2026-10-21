@@ -63,7 +63,8 @@ the new section **before** running `pnpm release:check --release`.
   and REPL `/mcp`.
 - Config drift detection: `@zoveli/config-audit`, `pnpm config:check`.
 - Vault maintenance: schema versioning with forward migrations, refusal of
-  newer databases, checksum-verified backup/verify/restore and
+  newer databases, an automatic `VACUUM INTO` snapshot before migrating an
+  existing database, checksum-verified backup/verify/restore and
   `pnpm migrate:vault`.
 - Plugin scaffolder: `pnpm create:plugin <name> --mount`.
 - `assistant --version` / `--help`; release metadata guard

@@ -100,9 +100,11 @@ pnpm vault:restore -- ./backups/2026-10-19 --force
 pnpm migrate:vault -- --db ./memory.db --vault ./knowledge-vault
 ```
 
-`--db`, `--vault`, `--auth-dir` and `--audit` override the default paths.
-`node apps/cli/dist/cli.js backup --help` prints the full usage. See
-`docs/runbooks/backup-restore.md` and `docs/runbooks/vault-corruption.md`.
+Portable runtimes expose the same operations without pnpm, for example
+`zoveli backup`, `zoveli verify <dir>`, `zoveli restore <dir> --force`, and
+`zoveli migrate`. `--db`, `--vault`, `--auth-dir` and `--audit` override the
+default paths. `node apps/cli/dist/cli.js backup --help` prints the full usage.
+See `docs/runbooks/backup-restore.md` and `docs/runbooks/vault-corruption.md`.
 
 ## Config drift check
 
