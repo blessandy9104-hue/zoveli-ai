@@ -2,9 +2,10 @@
  * Zoveli plugin scaffolder: `pnpm create:plugin <name> [--description "…"] [--mount]`.
  *
  * Generates a workspace package (packages/<name>) with the repo's real
- * authoring convention (definePlugin + ctx.register tool table), plus a
- * unit test in tests/unit/<name>.test.ts. With --mount it also wires the
- * plugin into packages/host/src/index.ts and the root tsconfig references.
+ * authoring convention (definePlugin + apiVersion + ctx.register tool table),
+ * a README and a unit test in tests/unit/<name>.test.ts. With --mount it wires
+ * the plugin into optionalPlugins (loaded only via ZOVELI_PLUGINS), the host
+ * dependency and the root tsconfig references.
  *
  * Node >= 22, zero dependencies. Refuses to overwrite unless --force.
  */
@@ -64,6 +65,7 @@ function packageJsonTemplate(slug, description, version) {
           lint: 'oxlint',
           clean: 'rm -rf dist',
         },
+        keywords: ['zoveli', 'zoveli-plugin'],
         dependencies: {
           '@deepseek-ai/dsh-core': 'workspace:*',
         },
@@ -99,19 +101,30 @@ function tsconfigTemplate() {
 }
 
 function sourceTemplate(slug, title, description, toolName) {
-  return `import { definePlugin, type Tool } from '@deepseek-ai/dsh-core';
+  return `import { definePlugin, PLUGIN_API_VERSION, type Tool } from '@deepseek-ai/dsh-core';
 
 const ${title}Hello: Tool = {
   name: ${quote(toolName)},
   description: ${quote(`Example tool scaffolded for zoveli-${slug}; replace it.`)},
-  parameters: { type: 'object', properties: {} },
-  async execute() {
-    return { ok: true, plugin: ${quote(`zoveli-${slug}`)}, message: ${quote(`hello from ${slug}`)} };
+  parameters: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Who to greet (optional)' },
+    },
+    additionalProperties: false,
+  },
+  async execute(args: { name?: string } = {}) {
+    return {
+      ok: true,
+      plugin: ${quote(`zoveli-${slug}`)},
+      message: 'hello ' + (args.name || 'world') + ${quote(` from ${slug}`)},
+    };
   },
 };
 
 export const zoveli${title} = definePlugin({
   name: ${quote(`zoveli-${slug}`)},
+  apiVersion: PLUGIN_API_VERSION,
   description: ${quote(description)},
   setup(ctx) {
     ctx.register(${quote(`zoveli-${slug}-tools`)}, [${title}Hello]);
@@ -119,6 +132,39 @@ export const zoveli${title} = definePlugin({
 });
 
 export default zoveli${title};
+`;
+}
+
+function readmeTemplate(slug, title, description, toolName) {
+  return `# @zoveli/${slug}
+
+${description}
+
+## Enable
+
+\`\`\`bash
+pnpm install && pnpm run build
+ZOVELI_PLUGINS=zoveli-${slug} pnpm start
+\`\`\`
+
+The \`--mount\` scaffolder option wires this package into
+\`optionalPlugins\` in \`packages/host/src/index.ts\`; it stays unloaded
+until named in \`ZOVELI_PLUGINS\`. Promoting it to \`defaultPlugins\` is a
+core change (ADR + maintainer sign-off, see \`docs/core-plugins.md\`).
+
+## Tool
+
+\`${toolName}\` accepts \`{ name?: string }\` and returns
+\`{ ok, plugin, message }\`. Replace it in \`src/index.ts\`.
+
+## Test
+
+\`\`\`bash
+pnpm exec vitest run tests/unit/${slug}.test.ts
+pnpm run plugin:check
+\`\`\`
+
+Authoring guide: [docs/plugin-sdk/README.md](../../docs/plugin-sdk/README.md).
 `;
 }
 
@@ -159,10 +205,14 @@ export function mountHostPlugin(text, importName, packageName) {
     insertAt = text.indexOf('\n', lastImport + 1);
   }
   let out = text.slice(0, insertAt) + `\nimport { ${importName} } from '${packageName}';` + text.slice(insertAt);
-  const arrayStart = out.indexOf('export const defaultPlugins = [');
-  if (arrayStart === -1) throw new Error('defaultPlugins array not found in packages/host/src/index.ts');
+  const arrayStart = out.indexOf('export const optionalPlugins = [');
+  if (arrayStart === -1) {
+    throw new Error('optionalPlugins array not found in packages/host/src/index.ts');
+  }
   const arrayEnd = out.indexOf('];', arrayStart);
-  if (arrayEnd === -1) throw new Error('defaultPlugins array end not found in packages/host/src/index.ts');
+  if (arrayEnd === -1) {
+    throw new Error('optionalPlugins array end not found in packages/host/src/index.ts');
+  }
   out = out.slice(0, arrayEnd) + `  ${importName},\n` + out.slice(arrayEnd);
   return { text: out, changed: true };
 }
@@ -225,6 +275,7 @@ export function generatePlugin(options) {
       file: path.join(packageDir, 'src', 'index.ts'),
       content: sourceTemplate(slug, title, description, toolName),
     },
+    { file: path.join(packageDir, 'README.md'), content: readmeTemplate(slug, title, description, toolName) },
     { file: testFile, content: testTemplate(slug, title, toolName) },
   ];
   for (const { file, content } of files) {
@@ -288,6 +339,7 @@ export function generatePlugin(options) {
     mounted,
     warnings,
     importName,
+    pluginName: `zoveli-${slug}`,
     toolName,
   };
 }
@@ -301,13 +353,15 @@ Arguments:
 
 Options:
   -d, --description <text>  package + plugin description
-      --mount               also wire packages/host/src/index.ts and root tsconfig.json
+      --mount               wire optionalPlugins in packages/host/src/index.ts, the
+                            host dependency and root tsconfig.json (opt-in, not core)
       --force               overwrite existing files
   -h, --help                show this help
 
 Next steps after scaffolding:
   pnpm install && pnpm run build && pnpm test
-  (without --mount, add the plugin to defaultPlugins in packages/host/src/index.ts yourself)`;
+  ZOVELI_PLUGINS=zoveli-<name> pnpm start   (only with --mount)
+  (without --mount, wire optionalPlugins yourself; see docs/plugin-sdk/README.md)`;
 }
 
 export function parseArgs(argv) {
@@ -346,10 +400,11 @@ function main() {
   for (const file of result.files) console.log(`  + ${path.relative(path.resolve(args.rootDir ?? DEFAULT_ROOT), file)}`);
   if (args.mount) {
     console.log(
-      `mounted: host=${result.mounted.host ? 'yes' : 'no'}, ` +
+      `mounted (opt-in): host=${result.mounted.host ? 'yes' : 'no'}, ` +
         `host-dependency=${result.mounted.hostDependency ? 'yes' : 'no'}, ` +
         `tsconfig=${result.mounted.tsconfig ? 'yes' : 'no'}`
     );
+    console.log(`enable with: ZOVELI_PLUGINS=${result.pluginName} pnpm start`);
   }
   for (const warning of result.warnings) console.log(`warning: ${warning}`);
   console.log('\nNext steps: pnpm install && pnpm run build && pnpm test');

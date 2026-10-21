@@ -1,5 +1,5 @@
 import * as http from 'node:http';
-import { ZoveliHost, defaultPlugins, resolveChatConfig, chat, isLocalProvider } from '@zoveli/host';
+import { ZoveliHost, resolvePlugins, resolveChatConfig, chat, isLocalProvider } from '@zoveli/host';
 import { promptSectionsText } from '@zoveli/core';
 import {
   zoveliAuth, issueCode, verifyCode, mintSession,
@@ -343,7 +343,7 @@ document.getElementById('clear-chats').addEventListener('click', () => {
 
 async function main(): Promise<void> {
   const host = new ZoveliHost();
-  const agent = host.mount([...(defaultPlugins as any), zoveliAuth]);
+  const agent = host.mount([...resolvePlugins(), zoveliAuth]);
   const systemSections = agent.systemSections;
   // Any API key wins; otherwise a free local Ollama server when one answers;
   // otherwise tools-only offline mode (probe refuses instantly when absent).

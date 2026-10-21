@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
+import { validatePlugin } from '../../packages/shim-dsh-core/src/index';
 import { createMockContext } from '../setup';
 
 const PACKAGES_DIR = path.join(__dirname, '..', '..', 'packages');
@@ -40,6 +41,7 @@ describe('plugin contract: every built package loads and sets up', () => {
         return;
       }
       for (const plugin of plugins) {
+        expect(validatePlugin(plugin)).toEqual([]);
         const ctx = createMockContext();
         await plugin.setup(ctx);
         // A plugin must contribute something: a registration, a

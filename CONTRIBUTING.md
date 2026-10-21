@@ -34,6 +34,7 @@ pnpm run build
 # Run checks (all must pass)
 pnpm run lint
 pnpm run typecheck
+pnpm run plugin:check
 pnpm test
 
 # Start the CLI assistant
@@ -138,15 +139,20 @@ zoveli-ai/
 
 ## Adding a New Plugin
 
-1. Create directory in `packages/<name>/` (`@zoveli/<name>`)
-2. Add `package.json` with workspace dependencies
-3. Implement `src/index.ts` with `definePlugin`
-4. Add tests in `tests/unit/`
-5. Mount it **opt-in** (experimental by default — see the New Package
-   Policy above). Adding to `defaultPlugins` in
-   `packages/host/src/index.ts` is a core change: it needs an ADR and
-   maintainer sign-off, plus a reference in root `tsconfig.json`
-6. Update documentation
+Start with the [plugin SDK guide](docs/plugin-sdk/README.md).
+
+1. Scaffold: `pnpm create:plugin <name> --description "..." --mount`
+2. Implement `src/index.ts` with `definePlugin`, `apiVersion:
+   PLUGIN_API_VERSION`, a synchronous `setup`, and typed tool schemas
+3. Add tests in `tests/unit/`
+4. Run `pnpm install && pnpm run build && pnpm run plugin:check && pnpm test`
+5. Enable with `ZOVELI_PLUGINS=zoveli-<name>`; the scaffolder wires
+   `optionalPlugins` (experimental by default — see the New Package Policy
+   above). Adding to `defaultPlugins` in `packages/host/src/index.ts` is a
+   core change: it needs an ADR and maintainer sign-off, plus a reference in
+   root `tsconfig.json`
+6. Update documentation (`docs/api/README.md` for tools, package README for
+   setup)
 
 ## Style Guide
 

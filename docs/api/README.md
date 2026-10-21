@@ -71,9 +71,17 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 ## Skills
 - Skills: `daily-briefing`, `research`, `task-planning`, `code-review` (see `packages/skills`)
 
+## Plugins
+- Default tools come from the core plugins; optional plugins mount only when
+  named in `ZOVELI_PLUGINS=<plugin-name,...>` (see
+  [plugin SDK](../plugin-sdk/README.md)).
+- `pnpm run plugin:check` validates the contract, tool names and collisions
+  for every built package (requires `pnpm run build` first).
+
 ## HTTP endpoints (web server, `http://127.0.0.1:3080`)
 
 - `GET /health` → `{ok, tools}` (tool count; also the Docker/CI readiness probe)
+- `GET /api/onboarding` → `{ok, chat:{ready,provider,model}, math:{ready}, tools}` (first-run readiness)
 - `GET /api/tools` → `[{name, description, plugin}]` (the live tool list)
 - `POST /api/chat {message}` → `{ok, verified, reply, model, provider, local}` (50k-char cap; per-IP rate limit)
 - `POST /api/run {tool, args}` → `{ok, result}` on success, `{ok:false, error}` when the tool throws (unknown tools included); malformed bodies get 400

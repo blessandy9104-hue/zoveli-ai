@@ -43,6 +43,12 @@ the new section **before** running `pnpm release:check --release`.
   (`GET /api/onboarding`), and setup replies are not persisted. New
   [first-run guide](docs/guides/onboarding.md) covers install, verification,
   expected output and troubleshooting.
+- Plugin ecosystem: `PLUGIN_API_VERSION` + contract validation at mount
+  (sync setup, duplicate names, newer API versions rejected before any setup),
+  opt-in `optionalPlugins` selected by `ZOVELI_PLUGINS`, `pnpm plugin:check`
+  in CI, and a scaffolder that generates an `apiVersion`, typed tool schema,
+  README and opt-in mount. Expanded [plugin SDK guide](docs/plugin-sdk/README.md)
+  covers lifecycle, events, services, testing, security and versioning.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.

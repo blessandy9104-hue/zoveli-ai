@@ -28,12 +28,132 @@ export interface ZoveliContext {
   [key: string]: any;
 }
 
+/**
+ * Plugin authoring contract version. Increment only for a breaking change to
+ * `ZoveliPlugin`, `ZoveliContext`, or the tool shape; plugins may declare
+ * `apiVersion` and the host refuses newer values with an actionable error.
+ */
+export const PLUGIN_API_VERSION = 1;
+
 /** Zoveli plugin shape (authoring convention, not upstream Cordis). */
 export interface ZoveliPlugin {
   name: string;
   description?: string;
+  apiVersion?: number;
   setup: (ctx: ZoveliContext) => unknown;
   [key: string]: unknown;
+}
+
+export interface PluginContractIssue {
+  code: string;
+  index: number;
+  plugin?: string;
+  message: string;
+}
+
+export class PluginContractError extends Error {
+  readonly issues: PluginContractIssue[];
+
+  constructor(issues: PluginContractIssue[]) {
+    super(
+      ['invalid plugin contract:', ...issues.map((issue) => `- ${issue.message}`)].join('\n')
+    );
+    this.name = 'PluginContractError';
+    this.issues = issues;
+  }
+}
+
+/**
+ * Check one plugin against the authoring contract without mounting it.
+ * Returns every issue so a scaffolder, CLI, or test can report them at once.
+ * `apiVersion` is optional (missing means 1) for back-compat with built-ins.
+ */
+export function validatePlugin(plugin: unknown, index = 0): PluginContractIssue[] {
+  const issues: PluginContractIssue[] = [];
+  if (!plugin || typeof plugin !== 'object' || Array.isArray(plugin)) {
+    return [
+      {
+        code: 'PLUGIN_NOT_OBJECT',
+        index,
+        message: `plugin at index ${index} must be a plain object`,
+      },
+    ];
+  }
+  const p = plugin as Partial<ZoveliPlugin> & Record<string, unknown>;
+  if (typeof p.name !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(p.name)) {
+    issues.push({
+      code: 'PLUGIN_NAME',
+      index,
+      message: `plugin at index ${index} needs a lowercase name (letters, digits, dashes; 1-64 chars)`,
+    });
+  }
+  if (p.description !== undefined && typeof p.description !== 'string') {
+    issues.push({
+      code: 'PLUGIN_DESCRIPTION',
+      index,
+      plugin: typeof p.name === 'string' ? p.name : undefined,
+      message: `plugin "${p.name}" description must be a string`,
+    });
+  }
+  if (typeof p.setup !== 'function') {
+    issues.push({
+      code: 'PLUGIN_SETUP',
+      index,
+      plugin: typeof p.name === 'string' ? p.name : undefined,
+      message: `plugin "${p.name}" needs a setup(ctx) function`,
+    });
+  } else if (p.setup.constructor?.name === 'AsyncFunction') {
+    issues.push({
+      code: 'PLUGIN_ASYNC_SETUP',
+      index,
+      plugin: typeof p.name === 'string' ? p.name : undefined,
+      message: `plugin "${p.name}" setup() must be synchronous (the host mounts synchronously)`,
+    });
+  }
+  if (p.apiVersion !== undefined) {
+    if (!Number.isInteger(p.apiVersion) || p.apiVersion < 1) {
+      issues.push({
+        code: 'PLUGIN_API_VERSION',
+        index,
+        plugin: typeof p.name === 'string' ? p.name : undefined,
+        message: `plugin "${p.name}" apiVersion must be a positive integer`,
+      });
+    } else if (p.apiVersion > PLUGIN_API_VERSION) {
+      issues.push({
+        code: 'PLUGIN_API_UNSUPPORTED',
+        index,
+        plugin: typeof p.name === 'string' ? p.name : undefined,
+        message: `plugin "${p.name}" targets plugin API ${p.apiVersion}, but this host supports ${PLUGIN_API_VERSION}; update Zoveli or the plugin`,
+      });
+    }
+  }
+  return issues;
+}
+
+/** Validate a mount list as a whole, including duplicate plugin names. */
+export function assertPlugins(plugins: readonly unknown[]): asserts plugins is ZoveliPlugin[] {
+  const issues: PluginContractIssue[] = [];
+  const seen = new Map<string, number>();
+  plugins.forEach((plugin, index) => {
+    issues.push(...validatePlugin(plugin, index));
+    const name =
+      plugin && typeof plugin === 'object' && typeof (plugin as any).name === 'string'
+        ? (plugin as any).name
+        : null;
+    if (!name) return;
+    const first = seen.get(name);
+    if (first !== undefined) {
+      issues.push({
+        code: 'PLUGIN_DUPLICATE',
+        index,
+        plugin: name,
+        message: `plugin "${name}" is mounted twice (indexes ${first} and ${index})`,
+      });
+    } else {
+      seen.set(name, index);
+    }
+  });
+  if (issues.length > 0) throw new PluginContractError(issues);
 }
 
 /** Zoveli skill shape (authoring convention). */

@@ -29,6 +29,7 @@ afterEach(() => {
 
 function fakePlugin() {
   return {
+    name: 'zoveli-trace-test',
     setup(ctx: any) {
       ctx.register('a-tools', [
         { name: 'ok', description: 'ok', execute: async () => 1 },

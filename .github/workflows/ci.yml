@@ -55,6 +55,9 @@ jobs:
       - name: Run TypeScript type check
         run: pnpm run typecheck
 
+      - name: Validate plugin contract
+        run: pnpm run plugin:check
+
       - name: Performance budgets
         run: node scripts/perf-check.mjs
 

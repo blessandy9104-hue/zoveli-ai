@@ -35,6 +35,9 @@ const HOST_FIXTURE = [
   '  zoveliCore,',
   '];',
   '',
+  'export const optionalPlugins = [',
+  '];',
+  '',
 ].join('\n');
 
 const TSCONFIG_FIXTURE = `{
@@ -88,16 +91,24 @@ describe('plugin scaffolder', () => {
     const result = generatePlugin({ rootDir: root, name: 'daily-brief', description: 'Daily briefing plugin' });
 
     expect(result.importName).toBe('zoveliDailyBrief');
+    expect(result.pluginName).toBe('zoveli-daily-brief');
     expect(result.toolName).toBe('daily_brief_hello');
     expect(existsSync(join(root, 'packages', 'daily-brief', 'package.json'))).toBe(true);
     expect(existsSync(join(root, 'packages', 'daily-brief', 'tsconfig.json'))).toBe(true);
     expect(existsSync(join(root, 'packages', 'daily-brief', 'src', 'index.ts'))).toBe(true);
+    expect(existsSync(join(root, 'packages', 'daily-brief', 'README.md'))).toBe(true);
     expect(existsSync(join(root, 'tests', 'unit', 'daily-brief.test.ts'))).toBe(true);
 
     const source = readFileSync(join(root, 'packages', 'daily-brief', 'src', 'index.ts'), 'utf-8');
     expect(source).toContain("name: 'zoveli-daily-brief'");
     expect(source).toContain('definePlugin');
+    expect(source).toContain('apiVersion: PLUGIN_API_VERSION');
     expect(source).toContain("ctx.register('zoveli-daily-brief-tools'");
+    expect(source).toContain("additionalProperties: false");
+
+    const readme = readFileSync(join(root, 'packages', 'daily-brief', 'README.md'), 'utf-8');
+    expect(readme).toContain('ZOVELI_PLUGINS=zoveli-daily-brief');
+    expect(readme).toContain('optionalPlugins');
 
     const manifest = JSON.parse(readFileSync(join(root, 'packages', 'daily-brief', 'package.json'), 'utf-8'));
     expect(manifest.name).toBe('@zoveli/daily-brief');
@@ -125,7 +136,8 @@ describe('plugin scaffolder', () => {
 
     const host = readFileSync(join(root, 'packages', 'host', 'src', 'index.ts'), 'utf-8');
     expect(host).toContain("import { zoveliDailyBrief } from '@zoveli/daily-brief';");
-    expect(host).toMatch(/zoveliCore,\n  zoveliDailyBrief,\n\];/);
+    expect(host).toMatch(/export const defaultPlugins = \[\n  zoveliCore,\n\];/);
+    expect(host).toMatch(/export const optionalPlugins = \[\n  zoveliDailyBrief,\n\];/);
 
     const hostManifest = JSON.parse(readFileSync(join(root, 'packages', 'host', 'package.json'), 'utf-8'));
     expect(hostManifest.dependencies['@zoveli/daily-brief']).toBe('workspace:*');

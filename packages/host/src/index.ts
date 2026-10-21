@@ -1,6 +1,8 @@
+import type { ZoveliPlugin } from '@deepseek-ai/dsh-core';
 import { ZoveliHost } from './host.js';
 import { runRepl } from './repl.js';
 import { chatConfigFromEnv } from './chat.js';
+import { selectPlugins } from './plugin-set.js';
 import { zoveliCore } from '@zoveli/core';
 import { zoveliMathIntelligence } from '@zoveli/math-intelligence';
 import { zoveliMathAlgebra, zoveliMathCalculus, zoveliMathStatistics, zoveliMathLogic, zoveliMathUnits, zoveliMathDiscrete, zoveliMathArithmetic, zoveliMathGeometry, zoveliMathTrigonometry, zoveliMathProbability, zoveliMathLinear, zoveliMathNumber } from '@zoveli/math-domains';
@@ -61,10 +63,24 @@ export const defaultPlugins = [
   zoveliDiagnostics,
 ];
 
-/** Boot the host, mount the default plugins, and start the REPL. */
+/**
+ * Opt-in plugins wired by `pnpm create:plugin <name> --mount`. They stay
+ * unloaded unless selected with `ZOVELI_PLUGINS=<plugin-name,...>`; promoting
+ * one to `defaultPlugins` is a core change (see docs/core-plugins.md).
+ */
+export const optionalPlugins: ZoveliPlugin[] = [];
+
+/** Resolve defaults plus any plugins requested by name in `ZOVELI_PLUGINS`. */
+export function resolvePlugins(env: Record<string, string | undefined> = process.env): ZoveliPlugin[] {
+  return selectPlugins(env, defaultPlugins, optionalPlugins);
+}
+
+export { selectPlugins } from './plugin-set.js';
+
+/** Boot the host, mount defaults plus `ZOVELI_PLUGINS`, and start the REPL. */
 export async function boot(): Promise<void> {
   const host = new ZoveliHost();
-  const agent = host.mount(defaultPlugins as any);
+  const agent = host.mount(resolvePlugins());
   await runRepl(host, agent);
 }
 

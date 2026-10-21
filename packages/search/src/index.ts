@@ -14,7 +14,7 @@ export const zoveliSearch = definePlugin({
   name: 'zoveli-search',
   description: 'SQLite FTS5 full-text search for knowledge store',
 
-  async setup(ctx) {
+  setup(ctx) {
     ctx.provide('search', {
       search: async (options: { query: string; tags?: string[]; limit?: number; offset?: number; highlight?: boolean }) => {
         return getStore().searchNotes(options).results;

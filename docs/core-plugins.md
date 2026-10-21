@@ -33,9 +33,15 @@ experimental package grows a second independent consumer or a public
 surface worth keeping, propose promotion via ADR instead of letting
 dependents sprawl.
 
+`pnpm create:plugin <name> --mount` wires a new package into
+`optionalPlugins`; it stays unloaded until named in `ZOVELI_PLUGINS`.
+Promoting it to `defaultPlugins` is the core change that needs an ADR.
+
 ## Contributor checklist
 
 - [ ] Does this belong in core, or is experimental the right home?
 - [ ] New package? Justify it in the PR (link this file in
       `.github/PULL_REQUEST_TEMPLATE.md` terms: core vs experimental).
-- [ ] Ran `pnpm run doctor`, `pnpm run build:core`, and the affected tests.
+- [ ] Declared `apiVersion: PLUGIN_API_VERSION` and a synchronous `setup`.
+- [ ] Ran `pnpm run doctor`, `pnpm run build:core`, `pnpm run plugin:check`,
+      and the affected tests.

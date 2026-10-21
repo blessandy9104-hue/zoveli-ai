@@ -1,4 +1,4 @@
-import type { ZoveliContext, ZoveliPlugin, Tool } from '@deepseek-ai/dsh-core';
+import { assertPlugins, type ZoveliContext, type ZoveliPlugin, type Tool } from '@deepseek-ai/dsh-core';
 import { checkToolCall, defaultPolicy } from '@zoveli/guard';
 import { redactSecrets } from '@zoveli/secscan';
 import {
@@ -120,8 +120,16 @@ export class ZoveliHost {
 
   /** Mount plugins and fire agent/created so prompt injections apply. */
   mount(plugins: ZoveliPlugin[]): AgentLike {
+    // Validate the whole list before setup so one bad plugin cannot leave a
+    // half-mounted host. The contract is exported for scaffolders/tests.
+    assertPlugins(plugins);
     for (const p of plugins) {
-      p.setup(this.ctx);
+      const result = p.setup(this.ctx);
+      if (result && typeof (result as { then?: unknown }).then === 'function') {
+        throw new Error(
+          `plugin "${p.name}" setup() returned a Promise; plugin setup must be synchronous`
+        );
+      }
     }
     const agent: AgentLike = {
       systemSections: this.systemSections,

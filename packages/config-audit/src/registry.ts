@@ -17,7 +17,7 @@ export type EnvKind =
 
 export interface EnvSpec {
   name: string;
-  group: 'Chat' | 'Math' | 'Memory' | 'Auth' | 'Desktop' | 'Observability';
+  group: 'Chat' | 'Plugins' | 'Math' | 'Memory' | 'Auth' | 'Desktop' | 'Observability';
   kind: EnvKind;
   description: string;
   default?: string;
@@ -147,6 +147,14 @@ export const ENV_REGISTRY: EnvSpec[] = [
     values: ['friend', 'tutor', 'engineer', 'coach'],
     description: 'pins a persona',
     default: 'remembered preference',
+  },
+  // Plugins
+  {
+    name: 'ZOVELI_PLUGINS',
+    group: 'Plugins',
+    kind: 'string',
+    description: 'comma-separated optional plugin names to mount (e.g. zoveli-daily-brief)',
+    default: 'default plugins only',
   },
   // Math
   {

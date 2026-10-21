@@ -75,6 +75,7 @@ pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
 pnpm release:check     # version/tsconfig/changelog consistency
+pnpm plugin:check      # plugin contract, naming and tool collisions
 pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
@@ -102,6 +103,7 @@ pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
 pnpm config:check      # env + vault drift (typos, ignored values, schema)
 pnpm health:check      # runtime/config/vault/MCP health rollup
 pnpm release:check     # version/tsconfig/changelog consistency
+pnpm plugin:check      # plugin contract, naming and tool collisions
 pnpm perf:check        # startup/mount/tool-call budgets
 ```
 
@@ -120,6 +122,10 @@ key (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY` or `ZOVELI_API_KEY`) with optional
 `ZOVELI_MODEL` / `ZOVELI_API_BASE` to use any OpenAI-compatible model.
 Try: `/math solve x^2 - 5x + 6 = 0` · `/sys` · `/tools`.
+
+Extend it with the [plugin SDK](docs/plugin-sdk/README.md):
+`pnpm create:plugin <name> --mount`, then enable the opt-in plugin with
+`ZOVELI_PLUGINS=zoveli-<name>`.
 
 ## Features (all runnable today)
 
