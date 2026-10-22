@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Zoveli AI command-line assistant",
   "bin": {
+    "zoveli": "./dist/cli.js",
     "assistant": "./dist/cli.js"
   },
   "scripts": {

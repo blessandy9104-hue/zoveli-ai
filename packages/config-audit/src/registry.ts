@@ -156,6 +156,13 @@ export const ENV_REGISTRY: EnvSpec[] = [
     description: 'comma-separated optional plugin names to mount (e.g. zoveli-daily-brief)',
     default: 'default plugins only',
   },
+  {
+    name: 'ZOVELI_DISABLE_PLUGINS',
+    group: 'Plugins',
+    kind: 'string',
+    description: 'comma-separated plugin names to remove from the mount list',
+    default: 'no plugins disabled',
+  },
   // Math
   {
     name: 'MATHCORE_MCP_COMMAND',
@@ -286,6 +293,15 @@ export const ENV_REGISTRY: EnvSpec[] = [
     toggle: 'enable',
     literalOnly: true,
     description: 'set 1 to echo login codes and disable login rate limits (dev only)',
+    default: 'off',
+  },
+  {
+    name: 'ZOVELI_AUTH_REQUIRED',
+    group: 'Auth',
+    kind: 'boolean01',
+    toggle: 'enable',
+    literalOnly: true,
+    description: 'require a valid login session for the desktop app and API',
     default: 'off',
   },
   {

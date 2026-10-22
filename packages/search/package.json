@@ -1,7 +1,7 @@
 {
   "name": "@zoveli/search",
   "version": "0.1.0",
-  "description": "Dependency-free full-text search for Obsidian vault (in-memory TF index)",
+  "description": "Legacy SQLite FTS5 search service for the Zoveli knowledge store",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

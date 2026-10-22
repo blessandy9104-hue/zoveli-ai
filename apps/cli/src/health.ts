@@ -41,7 +41,7 @@ function parseFlags(argv: string[]): ParsedFlags {
 
 function usage(): string {
   return `zoveli runtime health
-  assistant health [--db PATH] [--offline] [--json]
+  zoveli health [--db PATH] [--offline] [--json]
 
 Aggregates runtime facts, configuration drift, vault schema and the mathcore
 MCP pool, and (unless --offline) spawns mathcore once to verify the full MCP

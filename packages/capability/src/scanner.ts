@@ -1,9 +1,240 @@
-import { 
-  Capability, 
-  CapabilityStatus, 
+import {
+  Capability,
+  CapabilityCategory,
   CapabilityHealth,
-  CapabilityScanOptions 
+  CapabilityScanOptions,
+  CapabilityStatus,
 } from './types';
+
+interface CapabilityDefinition {
+  name: string;
+  displayName: string;
+  description: string;
+  category: CapabilityCategory;
+  subcategory: string;
+  priority: Capability['priority'];
+  tools?: string[];
+  prefixes?: string[];
+  requiresHost?: boolean;
+  provides: string[];
+  dependencies?: string[];
+  tags: string[];
+}
+
+const CAPABILITIES: CapabilityDefinition[] = [
+  {
+    name: 'mathcore.verified-compute',
+    displayName: 'Verified Mathematical Computation',
+    description: 'Verified math through the mounted mathcore and math-domain tools',
+    category: 'computation',
+    subcategory: 'verified-math',
+    priority: 'critical',
+    tools: ['mathcore_compute', 'mathcore_check_answer', 'mathcore_status'],
+    prefixes: ['math_'],
+    provides: [
+      'evaluate',
+      'solve',
+      'derivative',
+      'integrate',
+      'linear-algebra',
+      'statistics',
+      'number-theory',
+      'logic',
+      'units',
+    ],
+    tags: ['verified', 'offline', 'auditable'],
+  },
+  {
+    name: 'memory.vault',
+    displayName: 'Local Memory Vault',
+    description: 'Persistent local markdown notes with search, tags and wiki-links',
+    category: 'memory',
+    subcategory: 'knowledge-base',
+    priority: 'critical',
+    tools: [
+      'memory_create_note',
+      'memory_read_note',
+      'memory_update_note',
+      'memory_delete_note',
+      'memory_search',
+      'memory_list_tags',
+      'vault_search',
+    ],
+    provides: ['create-note', 'search', 'read', 'list-tags', 'wiki-links', 'frontmatter'],
+    tags: ['local-first', 'markdown', 'portable'],
+  },
+  {
+    name: 'memory.graph',
+    displayName: 'Knowledge Graph',
+    description: 'Vault wiki-link graph with orphans, hubs and DOT export',
+    category: 'memory',
+    subcategory: 'graph',
+    priority: 'medium',
+    tools: ['vault_graph'],
+    provides: ['vault-graph', 'orphans', 'hubs', 'dot-export'],
+    dependencies: ['memory.vault'],
+    tags: ['graph', 'wiki-links'],
+  },
+  {
+    name: 'languages.polyglot',
+    displayName: 'Programming Languages',
+    description: 'Language detection, analysis, formatting, linting, tests and tooling guidance',
+    category: 'tools',
+    subcategory: 'languages',
+    priority: 'high',
+    prefixes: ['language_'],
+    provides: [
+      'language-detect',
+      'code-analyze',
+      'code-format',
+      'code-lint',
+      'run-tests',
+      'tooling-guide',
+    ],
+    tags: ['polyglot', 'ast', 'format', 'lint', 'test'],
+  },
+  {
+    name: 'code.review',
+    displayName: 'Code Review',
+    description: 'Complexity hotspots, duplication, dead code and secret detection',
+    category: 'tools',
+    subcategory: 'code-analysis',
+    priority: 'medium',
+    tools: ['code_review'],
+    provides: ['code-review', 'hotspots', 'duplication', 'dead-code'],
+    tags: ['review', 'quality'],
+  },
+  {
+    name: 'docs.generate',
+    displayName: 'Documentation Generator',
+    description: 'Offline Markdown API docs generated from source exports',
+    category: 'tools',
+    subcategory: 'docgen',
+    priority: 'low',
+    tools: ['docs_generate'],
+    provides: ['docs-generate'],
+    tags: ['docs', 'offline'],
+  },
+  {
+    name: 'project.health',
+    displayName: 'Project Health Monitor',
+    description: 'Scores projects on tests, CI, docs, dependencies and TODO debt',
+    category: 'reasoning',
+    subcategory: 'health',
+    priority: 'medium',
+    tools: ['project_health'],
+    provides: ['project-health', 'health-score'],
+    tags: ['health', 'score'],
+  },
+  {
+    name: 'tasks.smart-schedule',
+    displayName: 'Smart Task Scheduler',
+    description: 'Energy-aware prioritisation with deep-work, quick-win and low-energy blocks',
+    category: 'workflows',
+    subcategory: 'scheduler',
+    priority: 'medium',
+    tools: ['tasks_schedule'],
+    provides: ['task-scheduling', 'time-blocking'],
+    tags: ['scheduling', 'energy'],
+  },
+  {
+    name: 'security.scan',
+    displayName: 'Security Scanner',
+    description: 'Secret and risky-pattern scanning for repository files',
+    category: 'system',
+    subcategory: 'secscan',
+    priority: 'high',
+    tools: ['security_scan'],
+    provides: ['security-scan', 'secret-detection'],
+    tags: ['security', 'secrets'],
+  },
+  {
+    name: 'system.hardware',
+    displayName: 'System & Hardware Awareness',
+    description: 'Local OS, CPU, memory, disk, GPU, battery and network insight',
+    category: 'system',
+    subcategory: 'sysinfo',
+    priority: 'high',
+    prefixes: ['sysinfo_'],
+    provides: [
+      'sysinfo-snapshot',
+      'cpu',
+      'memory',
+      'disk',
+      'gpu',
+      'battery',
+      'network',
+      'budget-check',
+    ],
+    tags: ['hardware', 'local-only', 'no-network'],
+  },
+  {
+    name: 'web.research',
+    displayName: 'Web Research',
+    description: 'SSRF-guarded page fetching and keyless search when network access is available',
+    category: 'tools',
+    subcategory: 'web',
+    priority: 'medium',
+    tools: ['web_search', 'web_fetch'],
+    provides: ['web-search', 'web-fetch', 'source-citation'],
+    tags: ['network', 'research', 'ssrf-guarded'],
+  },
+  {
+    name: 'persona.switching',
+    displayName: 'Persona Switching',
+    description: 'Switch the active response style between friend, tutor, engineer and coach',
+    category: 'communication',
+    subcategory: 'persona',
+    priority: 'low',
+    tools: ['persona_switch', 'persona_current'],
+    provides: ['persona-switch', 'persona-current'],
+    tags: ['style', 'persona'],
+  },
+  {
+    name: 'capability.introspection',
+    displayName: 'Capability Introspection',
+    description: 'Inspect, adapt to and report the tools actually mounted in this host',
+    category: 'reasoning',
+    subcategory: 'introspection',
+    priority: 'medium',
+    prefixes: ['capability_'],
+    provides: ['capability-scan', 'capability-check', 'capability-report'],
+    tags: ['inventory', 'introspection'],
+  },
+  {
+    name: 'diagnostics.health',
+    displayName: 'Runtime Diagnostics',
+    description: 'Health rollup for the runtime, configuration, vault and tool registry',
+    category: 'system',
+    subcategory: 'diagnostics',
+    priority: 'medium',
+    tools: ['health_report'],
+    provides: ['health-report', 'diagnostics'],
+    tags: ['health', 'diagnostics'],
+  },
+  {
+    name: 'agent.loop',
+    displayName: 'Agent Loop',
+    description: 'The host tool-dispatch and multi-turn loop',
+    category: 'agents',
+    subcategory: 'core',
+    priority: 'critical',
+    requiresHost: true,
+    provides: ['tool-use', 'multi-turn'],
+    tags: ['core'],
+  },
+  {
+    name: 'guard.policy',
+    displayName: 'Shell Guard Policy',
+    description: 'Destructive-command policy for an optional shell_exec tool (not mounted by default)',
+    category: 'system',
+    subcategory: 'guard',
+    priority: 'low',
+    tools: ['guard_set_policy'],
+    provides: ['shell-policy'],
+    tags: ['security', 'shell', 'opt-in'],
+  },
+];
 
 export class CapabilityScanner {
   private ctx: any;
@@ -20,8 +251,20 @@ export class CapabilityScanner {
       return this.scanPromise;
     }
 
-    this.scanPromise = this.performScan(options);
-    return this.scanPromise;
+    const pending = this.performScan();
+    this.scanPromise = pending;
+    try {
+      return await pending;
+    } finally {
+      if (this.scanPromise === pending) this.scanPromise = null;
+    }
+  }
+
+  scanSync(): Capability[] {
+    const capabilities = this.scanMountedTools();
+    this.updateCache(capabilities);
+    this.lastScan = new Date();
+    return capabilities;
   }
 
   async quickScan(): Promise<Capability[]> {
@@ -34,823 +277,80 @@ export class CapabilityScanner {
 
   async incrementalScan(): Promise<Capability[]> {
     const now = new Date();
-    if (this.lastScan && (now.getTime() - this.lastScan.getTime()) < 60000) {
+    if (this.lastScan && now.getTime() - this.lastScan.getTime() < 60000) {
       return Array.from(this.cache.values());
     }
     return this.scanAll({ forceRefresh: true });
   }
 
-  private async performScan(options: CapabilityScanOptions): Promise<Capability[]> {
-    const capabilities: Capability[] = [];
-
-    capabilities.push(...await this.scanBuiltinCapabilities());
-    capabilities.push(...await this.scanPluginCapabilities());
-    capabilities.push(...await this.scanMCPCapabilities());
-    capabilities.push(...await this.scanExternalCapabilities());
-    capabilities.push(...await this.scanVirtualCapabilities());
-
-    if (options.deep) {
-      await this.verifyCapabilities(capabilities);
-    }
-
+  private async performScan(): Promise<Capability[]> {
+    const capabilities = this.scanMountedTools();
     this.updateCache(capabilities);
     this.lastScan = new Date();
-    this.scanPromise = null;
-
     return capabilities;
   }
 
-  private async scanBuiltinCapabilities(): Promise<Capability[]> {
-    const builtin: Capability[] = [
-      {
-        name: 'mathcore.verified-compute',
-        displayName: 'Verified Mathematical Computation',
-        description: 'Zero-hallucination math with independent verification via mathcore MCP',
-        category: 'computation',
-        subcategory: 'verified-math',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'critical',
-        dependencies: ['mathcore-mcp'],
-        conflicts: [],
-        provides: ['evaluate', 'solve', 'derivative', 'integrate', 'linear-algebra', 'statistics', 'number-theory', 'logic', 'units'],
-        requires: [
-          { type: 'capability', name: 'mcp.client', optional: false, description: 'MCP client for mathcore communication' },
-          { type: 'binary', name: 'mathcore-mcp', optional: false, description: 'mathcore MCP server executable' }
-        ],
-        metadata: {
-          source: 'mcp',
-          mcpServer: 'mathcore',
-          documentation: 'https://github.com/.../mathcore',
-          tags: ['verified', 'offline', 'auditable', 'no-api-key'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'memory.vault',
-        displayName: 'Obsidian Vault Memory',
-        description: 'Persistent local-first memory with markdown notes, wiki-links, and tags',
-        category: 'memory',
-        subcategory: 'knowledge-base',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'critical',
-        dependencies: ['fs.local'],
-        conflicts: [],
-        provides: ['create-note', 'search', 'read', 'list-tags', 'wiki-links', 'frontmatter'],
-        requires: [
-          { type: 'capability', name: 'fs.local', optional: false, description: 'Local filesystem access' },
-          { type: 'permission', name: 'vault-read-write', optional: false, description: 'Read/write access to vault directory' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-memory',
-          documentation: 'https://obsidian.md',
-          tags: ['local-first', 'markdown', 'portable', 'wiki-links'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'agent.loop',
-        displayName: 'Agent Loop',
-        description: 'Core agent execution loop with turn/step flow, streaming, and cancellation',
-        category: 'agents',
-        subcategory: 'core',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'critical',
-        dependencies: ['llm', 'tools', 'session'],
-        conflicts: [],
-        provides: ['chat', 'tool-use', 'streaming', 'cancellation', 'multi-turn'],
-        requires: [
-          { type: 'capability', name: 'llm.provider', optional: false, description: 'LLM provider adapter' },
-          { type: 'capability', name: 'tools.registry', optional: false, description: 'Tool registry' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-agent',
-          tags: ['core', 'streaming', 'cancellation'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tools.filesystem',
-        displayName: 'Filesystem Access',
-        description: 'Local/remote/sandboxed filesystem with policy controls',
-        category: 'tools',
-        subcategory: 'filesystem',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['read', 'write', 'list', 'delete', 'move', 'copy', 'watch', 'policy'],
-        requires: [
-          { type: 'permission', name: 'fs-read', optional: false, description: 'Filesystem read permission' },
-          { type: 'permission', name: 'fs-write', optional: true, description: 'Filesystem write permission' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-fs',
-          tags: ['local', 'remote', 'sandboxed', 'policy'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tools.shell',
-        displayName: 'Shell Execution',
-        description: 'Command execution with subprocess management and PTY support',
-        category: 'tools',
-        subcategory: 'shell',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['exec', 'background', 'pty', 'env', 'cwd', 'timeout'],
-        requires: [
-          { type: 'permission', name: 'shell-exec', optional: false, description: 'Shell execution permission' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-shell',
-          tags: ['subprocess', 'pty', 'async', 'cross-platform'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tools.browser',
-        displayName: 'Browser Automation',
-        description: 'Playwright-based browser automation with multiple contexts',
-        category: 'tools',
-        subcategory: 'browser',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: ['playwright'],
-        conflicts: [],
-        provides: ['navigate', 'click', 'type', 'extract', 'screenshot', 'pdf', 'network'],
-        requires: [
-          { type: 'package', name: 'playwright', optional: false, description: 'Playwright library' },
-          { type: 'binary', name: 'chromium', optional: true, description: 'Chromium browser' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-browser',
-          tags: ['playwright', 'headless', 'stealth', 'multi-context'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tools.terminal',
-        displayName: 'Terminal Sessions',
-        description: 'Persistent PTY terminal sessions with history',
-        category: 'tools',
-        subcategory: 'terminal',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: [],
-        conflicts: [],
-        provides: ['create', 'write', 'read', 'resize', 'kill', 'list', 'history'],
-        requires: [
-          { type: 'permission', name: 'pty-access', optional: false, description: 'PTY access permission' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-terminal',
-          tags: ['pty', 'persistent', 'cross-platform'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tools.lsp',
-        displayName: 'Language Server Protocol',
-        description: 'Multi-language code intelligence (TS, Python, Rust, Go, JSON)',
-        category: 'tools',
-        subcategory: 'lsp',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: ['language-servers'],
-        conflicts: [],
-        provides: ['hover', 'definition', 'references', 'diagnostics', 'completion', 'rename'],
-        requires: [
-          { type: 'binary', name: 'typescript-language-server', optional: true, description: 'TypeScript LSP' },
-          { type: 'binary', name: 'pylsp', optional: true, description: 'Python LSP' },
-          { type: 'binary', name: 'rust-analyzer', optional: true, description: 'Rust LSP' },
-          { type: 'binary', name: 'gopls', optional: true, description: 'Go LSP' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-lsp',
-          tags: ['code-intelligence', 'multi-language', 'ide-features'],
-          maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'agents.subagent',
-        displayName: 'Subagent Delegation',
-        description: 'Child agents, delegated turns, and specialist agents',
-        category: 'agents',
-        subcategory: 'delegation',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: ['agent.loop'],
-        conflicts: [],
-        provides: ['spawn', 'delegate', 'specialist', 'context-isolation'],
-        requires: [
-          { type: 'capability', name: 'agent.loop', optional: false, description: 'Core agent loop' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-subagent',
-          tags: ['delegation', 'isolation', 'specialist'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'workflows.orchestration',
-        displayName: 'Workflow Orchestration',
-        description: 'Template-based workflow execution with persistence',
-        category: 'workflows',
-        subcategory: 'orchestration',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: ['agent.loop', 'tools'],
-        conflicts: [],
-        provides: ['templates', 'parallel', 'sequential', 'retry', 'persistence'],
-        requires: [
-          { type: 'capability', name: 'agent.loop', optional: false, description: 'Core agent loop' },
-          { type: 'capability', name: 'storage', optional: true, description: 'Workflow persistence' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-workflow',
-          tags: ['templates', 'parallel', 'retry', 'persistence'],
-          maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'mcp.client',
-        displayName: 'MCP Client',
-        description: 'Model Context Protocol client for server communication',
-        category: 'communication',
-        subcategory: 'mcp',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['stdio', 'sse', 'websocket', 'capability-negotiation'],
-        requires: [],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-mcp',
-          tags: ['protocol', 'extensible', 'standard'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'computer-use.automation',
-        displayName: 'Computer Use Automation',
-        description: 'Screen, keyboard, mouse automation via Playwright',
-        category: 'perception',
-        subcategory: 'automation',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: ['tools.browser'],
-        conflicts: [],
-        provides: ['screenshot', 'click', 'type', 'key', 'scroll', 'drag', 'ocr'],
-        requires: [
-          { type: 'capability', name: 'tools.browser', optional: false, description: 'Browser automation' },
-          { type: 'permission', name: 'screen-access', optional: false, description: 'Screen capture permission' }
-        ],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-computer-use',
-          tags: ['gui', 'automation', 'accessibility'],
-          maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'languages.polyglot',
-        displayName: 'Programming Languages',
-        description: 'Multi-language detection, analysis, formatting, linting, testing, and tooling for 17+ languages',
-        category: 'tools',
-        subcategory: 'languages',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['language-detect', 'code-analyze', 'code-format', 'code-lint', 'run-tests', 'tooling-guide'],
-        requires: [],
-        metadata: {
-          source: 'builtin',
-          pluginId: 'zoveli-languages',
-          documentation: 'docs/capabilities/languages.md',
-          tags: ['polyglot', 'ast', 'format', 'lint', 'test', '17-languages'],
-          maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'code.review',
-        displayName: 'AI Code Review',
-        description: 'Complexity hotspots, duplication, dead code, and secret detection with fix suggestions',
-        category: 'tools',
-        subcategory: 'code-analysis',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: [],
-        conflicts: [],
-        provides: ['code-review', 'hotspots', 'duplication', 'dead-code'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-code-analysis',
-          tags: ['review', 'quality'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'docs.generate',
-        displayName: 'Documentation Generator',
-        description: 'Offline Markdown API docs generated from source exports',
-        category: 'tools',
-        subcategory: 'docgen',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'low',
-        dependencies: [],
-        conflicts: [],
-        provides: ['docs-generate'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-docgen',
-          tags: ['docs', 'offline'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'project.health',
-        displayName: 'Project Health Monitor',
-        description: 'Scores projects on tests, CI, docs, dependencies, and TODO debt',
-        category: 'reasoning',
-        subcategory: 'health',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: [],
-        conflicts: [],
-        provides: ['project-health', 'health-score'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-health',
-          tags: ['health', 'score'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'memory.graph',
-        displayName: 'Knowledge Graph',
-        description: 'Vault wiki-link graph with orphans, hubs, and DOT export',
-        category: 'memory',
-        subcategory: 'graph',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: ['memory.vault'],
-        conflicts: [],
-        provides: ['vault-graph', 'orphans', 'hubs', 'dot-export'],
-        requires: [
-          { type: 'capability', name: 'memory.vault', optional: false, description: 'Vault access' }
-        ],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-graph',
-          tags: ['graph', 'wiki-links'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'tasks.smart-schedule',
-        displayName: 'Smart Task Scheduler',
-        description: 'Energy-aware prioritization with deep-work / quick-wins / low-energy time blocks',
-        category: 'workflows',
-        subcategory: 'scheduler',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: [],
-        conflicts: [],
-        provides: ['task-scheduling', 'time-blocking'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-scheduler',
-          tags: ['scheduling', 'energy'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'security.scan',
-        displayName: 'Security Scanner',
-        description: 'Secrets and risky-pattern scanning (keys, eval, injection, privileged containers)',
-        category: 'system',
-        subcategory: 'secscan',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['security-scan', 'secret-detection'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-secscan',
-          tags: ['security', 'secrets'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'search.fulltext',
-        displayName: 'Vault Full-Text Search',
-        description: 'Tantivy-powered vault search with live indexing and tag filters',
-        category: 'memory',
-        subcategory: 'search',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: ['memory.vault'],
-        conflicts: [],
-        provides: ['vault-search', 'fulltext', 'tag-filter'],
-        requires: [
-          { type: 'capability', name: 'memory.vault', optional: false, description: 'Vault access' }
-        ],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-search',
-          tags: ['search', 'tantivy'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'system.telemetry',
-        displayName: 'Telemetry & Observability',
-        description: 'In-memory meters with Prometheus/OTLP export and Grafana dashboard',
-        category: 'system',
-        subcategory: 'telemetry',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'medium',
-        dependencies: [],
-        conflicts: [],
-        provides: ['metrics', 'traces', 'snapshot'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-telemetry',
-          tags: ['otel', 'prometheus'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'system.hardware',
-        displayName: 'System & Hardware Awareness',
-        description: 'Local OS/CPU/memory/disk/GPU/battery/network/process insight with budget checks',
-        category: 'system',
-        subcategory: 'sysinfo',
-        version: '0.1.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: [],
-        conflicts: [],
-        provides: ['sysinfo-snapshot', 'cpu', 'memory', 'disk', 'gpu', 'battery', 'network', 'budget-check'],
-        requires: [],
-        metadata: {
-          source: 'builtin', pluginId: 'zoveli-sysinfo',
-          documentation: 'docs/capabilities/sysinfo.md',
-          tags: ['hardware', 'local-only', 'no-network'], maturity: 'beta'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      }
-    ];
+  private scanMountedTools(): Capability[] {
+    const toolNames = this.mountedToolNames();
+    if (!toolNames) return [];
 
-    return builtin;
-  }
-
-  private async scanPluginCapabilities(): Promise<Capability[]> {
-    const plugins = this.ctx.plugins || [];
     const capabilities: Capability[] = [];
-
-    for (const plugin of plugins) {
-      if (plugin.capabilities) {
-        for (const cap of plugin.capabilities) {
-          capabilities.push({
-            ...cap,
-            metadata: {
-              ...cap.metadata,
-              source: 'plugin',
-              pluginId: plugin.id
-            }
-          });
-        }
-      }
+    for (const def of CAPABILITIES) {
+      const matched = [
+        ...(def.tools ?? []).filter((name) => toolNames.has(name)),
+        ...(def.prefixes ?? []).flatMap((prefix) =>
+          [...toolNames].filter((name) => name.startsWith(prefix))
+        ),
+      ];
+      if (matched.length === 0 && !def.requiresHost) continue;
+      capabilities.push(this.toCapability(def, matched));
     }
-
     return capabilities;
   }
 
-  private async scanMCPCapabilities(): Promise<Capability[]> {
-    const mcpServers = this.ctx.config?.mcpServers || {};
-    const capabilities: Capability[] = [];
-
-    for (const [name, config] of Object.entries(mcpServers)) {
-      try {
-        const serverCaps = await this.queryMCPCapabilities(name, config as any);
-        capabilities.push(...serverCaps);
-      } catch (e) {
-        capabilities.push(this.createUnavailableMCPCapability(name, e));
-      }
+  private mountedToolNames(): Set<string> | null {
+    let inventory: any;
+    try {
+      inventory = this.ctx.get?.('tool-inventory');
+    } catch {
+      return null;
     }
-
-    return capabilities;
+    const list = inventory?.list?.();
+    if (!Array.isArray(list)) return null;
+    const names = list
+      .map((item) => (typeof item === 'string' ? item : item?.name))
+      .filter((name): name is string => typeof name === 'string' && name.length > 0);
+    return new Set(names);
   }
 
-  private async queryMCPCapabilities(name: string, _config: any): Promise<Capability[]> {
-    return [{
-      name: `mcp.${name}`,
-      displayName: `MCP: ${name}`,
-      description: `MCP server: ${name}`,
-      category: 'communication',
-      subcategory: 'mcp-server',
+  private toCapability(def: CapabilityDefinition, tools: string[]): Capability {
+    return {
+      name: def.name,
+      displayName: def.displayName,
+      description: def.description,
+      category: def.category,
+      subcategory: def.subcategory,
       version: '1.0.0',
       status: 'available',
-      priority: 'medium',
-      dependencies: ['mcp.client'],
+      priority: def.priority,
+      dependencies: def.dependencies ?? [],
       conflicts: [],
-      provides: ['tools', 'resources', 'prompts'],
-      requires: [
-        { type: 'capability', name: 'mcp.client', optional: false, description: 'MCP client' }
-      ],
+      provides: def.provides,
+      requires: tools.map((name) => ({
+        type: 'capability' as const,
+        name,
+        optional: false,
+        description: `Mounted tool: ${name}`,
+      })),
       metadata: {
-        source: 'mcp',
-        mcpServer: name,
-        tags: ['mcp', 'protocol'],
-        maturity: 'stable'
+        source: 'plugin',
+        tags: [...def.tags, ...tools],
+        maturity: 'stable',
       },
       health: this.createHealth('available'),
       discoveredAt: new Date(),
-      lastVerified: new Date()
-    }];
-  }
-
-  private createUnavailableMCPCapability(name: string, error: any): Capability {
-    return {
-      name: `mcp.${name}`,
-      displayName: `MCP: ${name}`,
-      description: `MCP server: ${name} (unavailable)`,
-      category: 'communication',
-      subcategory: 'mcp-server',
-      version: 'unknown',
-      status: 'unavailable',
-      priority: 'low',
-      dependencies: ['mcp.client'],
-      conflicts: [],
-      provides: [],
-      requires: [
-        { type: 'capability', name: 'mcp.client', optional: false, description: 'MCP client' }
-      ],
-      metadata: {
-        source: 'mcp',
-        mcpServer: name,
-        tags: ['mcp', 'unavailable'],
-        maturity: 'unknown'
-      },
-      health: {
-        lastCheck: new Date(),
-        successRate: 0,
-        avgLatency: 0,
-        errorCount: 1,
-        warningCount: 0,
-        details: { error: error?.message || 'Unknown error' }
-      },
-      discoveredAt: new Date(),
-      lastVerified: new Date()
+      lastVerified: new Date(),
     };
-  }
-
-  private async scanExternalCapabilities(): Promise<Capability[]> {
-    const capabilities: Capability[] = [];
-
-    const externalChecks = [
-      { name: 'docker', check: () => this.checkCommand('docker --version'), provides: ['container', 'sandbox'] },
-      { name: 'git', check: () => this.checkCommand('git --version'), provides: ['version-control'] },
-      { name: 'python', check: () => this.checkCommand('python --version'), provides: ['python-execution'] },
-      { name: 'node', check: () => this.checkCommand('node --version'), provides: ['js-execution'] }
-    ];
-
-    for (const ext of externalChecks) {
-      try {
-        const version = await ext.check();
-        capabilities.push({
-          name: `external.${ext.name}`,
-          displayName: `External: ${ext.name}`,
-          description: `${ext.name} executable available`,
-          category: 'system',
-          subcategory: 'external-tool',
-          version: version || 'unknown',
-          status: 'available',
-          priority: 'low',
-          dependencies: [],
-          conflicts: [],
-          provides: ext.provides,
-          requires: [],
-          metadata: {
-            source: 'external',
-            executable: ext.name,
-            tags: ['external', 'system'],
-            maturity: 'stable'
-          },
-          health: this.createHealth('available'),
-          discoveredAt: new Date(),
-          lastVerified: new Date()
-        });
-      } catch {
-        capabilities.push({
-          name: `external.${ext.name}`,
-          displayName: `External: ${ext.name}`,
-          description: `${ext.name} not found`,
-          category: 'system',
-          subcategory: 'external-tool',
-          version: 'unavailable',
-          status: 'unavailable',
-          priority: 'low',
-          dependencies: [],
-          conflicts: [],
-          provides: [],
-          requires: [],
-          metadata: {
-            source: 'external',
-            executable: ext.name,
-            tags: ['external', 'missing'],
-            maturity: 'unknown'
-          },
-          health: this.createHealth('unavailable'),
-          discoveredAt: new Date(),
-          lastVerified: new Date()
-        });
-      }
-    }
-
-    return capabilities;
-  }
-
-  private async scanVirtualCapabilities(): Promise<Capability[]> {
-    return [
-      {
-        name: 'virtual.reasoning',
-        displayName: 'LLM Reasoning',
-        description: 'Large language model reasoning capability',
-        category: 'reasoning',
-        subcategory: 'llm',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'critical',
-        dependencies: ['llm.provider'],
-        conflicts: [],
-        provides: ['analysis', 'synthesis', 'planning', 'explanation'],
-        requires: [
-          { type: 'capability', name: 'llm.provider', optional: false, description: 'LLM provider' }
-        ],
-        metadata: {
-          source: 'virtual',
-          tags: ['llm', 'reasoning', 'core'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      },
-      {
-        name: 'virtual.planning',
-        displayName: 'Task Planning',
-        description: 'Decompose goals into executable plans',
-        category: 'reasoning',
-        subcategory: 'planning',
-        version: '1.0.0',
-        status: 'available',
-        priority: 'high',
-        dependencies: ['virtual.reasoning', 'tools'],
-        conflicts: [],
-        provides: ['decomposition', 'scheduling', 'dependency-resolution'],
-        requires: [
-          { type: 'capability', name: 'virtual.reasoning', optional: false, description: 'LLM reasoning' }
-        ],
-        metadata: {
-          source: 'virtual',
-          tags: ['planning', 'decomposition'],
-          maturity: 'stable'
-        },
-        health: this.createHealth('available'),
-        discoveredAt: new Date(),
-        lastVerified: new Date()
-      }
-    ];
-  }
-
-  private async verifyCapabilities(capabilities: Capability[]): Promise<void> {
-    for (const cap of capabilities) {
-      if (cap.status === 'available') {
-        try {
-          await this.verifyCapability(cap);
-          cap.health.lastCheck = new Date();
-          cap.health.successRate = 1.0;
-        } catch (e) {
-          cap.status = 'degraded';
-          cap.health.errorCount++;
-          cap.health.details = { error: e instanceof Error ? e.message : String(e) };
-        }
-      }
-    }
-  }
-
-  private async verifyCapability(cap: Capability): Promise<void> {
-    switch (cap.metadata.source) {
-      case 'mcp':
-        break;
-      case 'builtin':
-        break;
-      case 'external':
-        await this.checkCommand(`${cap.metadata.executable} --version`);
-        break;
-    }
-  }
-
-  private async checkCommand(cmd: string): Promise<string | null> {
-    try {
-      const { execSync } = await import('child_process');
-      const output = execSync(cmd, { encoding: 'utf-8', timeout: 5000 });
-      return output.trim().split('\n')[0];
-    } catch {
-      throw new Error(`Command failed: ${cmd}`);
-    }
   }
 
   private createHealth(status: CapabilityStatus): CapabilityHealth {
@@ -859,7 +359,7 @@ export class CapabilityScanner {
       successRate: status === 'available' ? 1.0 : 0,
       avgLatency: 0,
       errorCount: 0,
-      warningCount: 0
+      warningCount: 0,
     };
   }
 

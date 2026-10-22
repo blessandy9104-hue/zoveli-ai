@@ -8,14 +8,16 @@ declares which packages carry that promise and which are free to evolve.
 ## Core (stable)
 
 Everything the default boot path needs: `apps/cli` → `@zoveli/host`
-(`defaultPlugins`, REPL, chat) and its direct providers — 22 shipped
-packages:
+(`defaultPlugins`, REPL, chat) and its direct providers:
 
-`host`, `core`, `math-intelligence`, `math-domains`,
-`memory-store`, `memory`, `skills`, `languages`, `sysinfo`, `search`,
-`scheduler`, `secscan`, `health`, `graph`, `docgen`, `code-analysis`,
-`capability`, `guard`, `persona`, `webresearch`, `auth`,
-`shim-dsh-core` (authoring shim), `apps/cli`.
+`host`, `math-intelligence`, `math-domains`, `memory-store`, `languages`,
+`sysinfo`, `scheduler`, `secscan`, `health`, `graph`, `docgen`,
+`code-analysis`, `capability`, `persona`, `webresearch`,
+`diagnostics`, `auth` (desktop only), `shim-dsh-core` (authoring shim),
+`apps/cli`. `guard` is optional and only useful with a custom `shell_exec`.
+
+The legacy `core`, `memory`, `search`, and `skills` packages remain in the
+workspace for compatibility but are not part of the default surface.
 
 Rules for core:
 
@@ -24,14 +26,27 @@ Rules for core:
   and maintainer sign-off.
 - The fast local loop builds core only: `pnpm run build:core`.
 
+## Legacy compatibility (unmounted)
+
+`core`, `memory`, `search`, and `skills` remain buildable packages for
+import compatibility. They are not in `defaultPlugins`; `core` contributes
+only its prompt, `memory`/`search` are service wrappers, and `skills` still
+contains placeholder implementations.
+
 ## Experimental (opt-in)
 
-None currently — the 41 unreachable packages were removed as dead code
-(see git history). New packages start here: safe to use, but may change
-without notice and not covered by the core stability promise. If an
-experimental package grows a second independent consumer or a public
-surface worth keeping, propose promotion via ADR instead of letting
-dependents sprawl.
+`guard` is opt-in: mount it with `ZOVELI_PLUGINS=zoveli-guard` only when a
+custom `shell_exec` tool is present. It has no effect on the default tools.
+The other experimental packages were removed as dead code (see git history).
+New packages start here: safe to use, but may change without notice and not
+covered by the core stability promise. If an experimental package grows a
+second independent consumer or a public surface worth keeping, propose
+promotion via ADR instead of letting dependents sprawl.
+
+Any plugin, including a default one, can be removed without editing source:
+`ZOVELI_DISABLE_PLUGINS=zoveli-webresearch pnpm start`. `zoveli plugins` lists
+the available surface and current status. Disabling an unknown name fails
+startup, and a plugin cannot be both requested and disabled.
 
 `pnpm create:plugin <name> --mount` wires a new package into
 `optionalPlugins`; it stays unloaded until named in `ZOVELI_PLUGINS`.

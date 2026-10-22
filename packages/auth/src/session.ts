@@ -88,15 +88,21 @@ export function sessionEmailFromCookie(cookieHeader: string | undefined): string
     .map((p) => p.trim())
     .find((p) => p.startsWith(`${COOKIE_NAME}=`));
   if (!match) return null;
-  return verifySession(decodeURIComponent(match.slice(COOKIE_NAME.length + 1)));
+  let token: string;
+  try {
+    token = decodeURIComponent(match.slice(COOKIE_NAME.length + 1));
+  } catch {
+    return null;
+  }
+  return verifySession(token);
 }
 
-export function sessionCookie(token: string): string {
-  // 30 days, host-only, JS-inaccessible. Secure flag is set by the server
-  // when it serves HTTPS (see web app); localhost stays http.
+export function sessionCookie(token: string, secure = false): string {
+  // 30 days, host-only, JS-inaccessible. The server sets Secure when the
+  // request arrived over TLS; loopback HTTP keeps working without it.
   return `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(
     SESSION_TTL_MS / 1000
-  )}`;
+  )}${secure ? '; Secure' : ''}`;
 }
 
 export function clearSessionCookie(): string {

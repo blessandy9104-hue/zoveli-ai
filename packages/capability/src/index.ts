@@ -69,7 +69,11 @@ export const zoveliCapability = definePlugin({
           required: ['capability']
         },
         async execute({ capability, details }: any) {
-          const cap = registry.get(capability);
+          let cap = registry.get(capability);
+          if (!cap) {
+            await runScan();
+            cap = registry.get(capability);
+          }
           if (!cap) return { available: false, capability };
           return details ? cap : { available: true, capability, version: cap.version };
         }
@@ -85,6 +89,7 @@ export const zoveliCapability = definePlugin({
           }
         },
         async execute({ category, status }: any) {
+          if (registry.getAll().length === 0) await runScan();
           return registry.list({ category, status });
         }
       },
@@ -100,6 +105,7 @@ export const zoveliCapability = definePlugin({
           required: ['task']
         },
         async execute({ task, preferences }: any) {
+          if (registry.getAll().length === 0) await runScan();
           return adaptation.adapt(task, preferences);
         }
       },
@@ -114,25 +120,26 @@ export const zoveliCapability = definePlugin({
           }
         },
         async execute({ format, includeRecommendations }: any) {
+          if (registry.getAll().length === 0) await runScan();
           return adaptation.generateReport(format, includeRecommendations);
         }
       }
     ]);
 
-    ctx.on('agent/created', async (agent) => {
-      const caps = await scanner.scanAll();
+    ctx.on('agent/created', (agent) => {
+      const caps = scanner.scanSync();
+      for (const cap of caps) registry.register(cap);
+      const available = caps.filter((cap) => cap.status === 'available');
+      if (available.length === 0) return;
       agent.inject({
         type: 'system',
-        content: `CAPABILITY AWARENESS: You have access to ${caps.length} capabilities across ${new Set(caps.map(c => c.category)).size} categories. 
-Key capabilities: ${caps.filter(c => c.priority === 'critical').map(c => c.name).join(', ')}.
-Use capability_check tool to verify specific capabilities before attempting tasks.
-Use capability_adapt to automatically select best approach for complex tasks.`
+        content: `CAPABILITY AWARENESS: This host exposes ${available.length} capability groups backed by mounted tools: ${available.map((cap) => cap.name).join(', ')}. These come from the live tool registry. Use capability_check before assuming an ability exists, and capability_adapt to choose among the mounted tools.`
       });
     });
 
     ctx.on('turn/start', async () => {
-      if (ctx.config.capabilityConfig?.autoScan) {
-        await scanner.incrementalScan();
+      if (ctx.config.capabilityConfig?.autoScan !== false) {
+        await runScan({ forceRefresh: true });
       }
     });
   }

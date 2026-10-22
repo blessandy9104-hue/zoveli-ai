@@ -35,6 +35,21 @@ function Info($m) { Write-Host $m -ForegroundColor Green }
 function Warn($m) { Write-Host $m -ForegroundColor Yellow }
 function Fail($m) { Write-Host $m -ForegroundColor Red; exit 1 }
 
+function Get-RuntimeVersion($launcher) {
+  $previousPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $output = & $launcher --version 2>&1
+    $code = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  return @{
+    Code = $code
+    Text = "$($output | Select-Object -Last 1)".Trim()
+  }
+}
+
 function Test-SafeTarget($path) {
   $full = [System.IO.Path]::GetFullPath($path).TrimEnd('\')
   $protected = @(
@@ -92,6 +107,7 @@ if (-not $Archive) {
 }
 
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("zoveli-install-" + [guid]::NewGuid().ToString('N'))
+$stageRoot = $null
 New-Item -ItemType Directory -Path $temp | Out-Null
 try {
   if ($Archive) {
@@ -131,20 +147,68 @@ try {
     }
   }
 
+  $stageParent = Split-Path -Parent $Dir
+  if (-not $stageParent) { $stageParent = '.' }
+  New-Item -ItemType Directory -Path $stageParent -Force | Out-Null
+  $stageRoot = Join-Path $stageParent ('.zoveli-stage-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+  New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
+  Copy-Item -Path (Join-Path $src.FullName '*') -Destination $stageRoot -Recurse -Force
+
+  $preflight = Get-RuntimeVersion (Join-Path $stageRoot 'zoveli.cmd')
+  if ($preflight.Code -ne 0 -or -not $preflight.Text.StartsWith('zoveli ')) {
+    Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Fail "New runtime failed its preflight check; the existing runtime was not changed.`n$($preflight.Text)"
+  }
+  Info "New runtime preflight: $($preflight.Text)"
+
   Backup-ExistingRuntime $Dir
 
-  New-Item -ItemType Directory -Path $Dir -Force | Out-Null
-  Get-ChildItem -LiteralPath $Dir -Force | Remove-Item -Recurse -Force
-  Copy-Item -Path (Join-Path $src.FullName '*') -Destination $Dir -Recurse -Force
-
-  $installed = (& (Join-Path $Dir 'zoveli.cmd') --version | Select-Object -Last 1).Trim()
-  if ($LASTEXITCODE -ne 0 -or -not $installed.StartsWith('zoveli ')) {
-    Fail "Installed runtime failed its version check: $installed"
+  $previous = Join-Path $stageParent ('.zoveli-previous-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+  $oldMoved = $false
+  $newMoved = $false
+  $installed = ''
+  try {
+    if ((Test-Path -LiteralPath $Dir) -and (Get-ChildItem -LiteralPath $Dir -Force | Select-Object -First 1)) {
+      Move-Item -LiteralPath $Dir -Destination $previous
+      $oldMoved = $true
+    } elseif (Test-Path -LiteralPath $Dir) {
+      Remove-Item -LiteralPath $Dir -Force
+    }
+    Move-Item -LiteralPath $stageRoot -Destination $Dir
+    $newMoved = $true
+    $installedCheck = Get-RuntimeVersion (Join-Path $Dir 'zoveli.cmd')
+    $installed = $installedCheck.Text
+    if ($installedCheck.Code -ne 0 -or -not $installedCheck.Text.StartsWith('zoveli ')) {
+      throw "Installed runtime failed its version check: $($installedCheck.Text)"
+    }
+  } catch {
+    $reason = $_.Exception.Message
+    if ($newMoved -and (Test-Path -LiteralPath $Dir)) {
+      Remove-Item -LiteralPath $Dir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    $restored = $false
+    if ($oldMoved -and (Test-Path -LiteralPath $previous)) {
+      Move-Item -LiteralPath $previous -Destination $Dir -ErrorAction SilentlyContinue
+      $restored = Test-Path -LiteralPath $Dir
+    }
+    if ($oldMoved -and -not $restored) {
+      Fail "Upgrade failed and automatic rollback did not finish. Previous runtime: $previous`n$reason"
+    }
+    if ($oldMoved) {
+      Fail "Upgrade failed; the previous runtime was restored.`n$reason"
+    }
+    Fail "Upgrade failed; no runtime was left installed.`n$reason"
+  }
+  if ($oldMoved -and (Test-Path -LiteralPath $previous)) {
+    Remove-Item -LiteralPath $previous -Recurse -Force -ErrorAction SilentlyContinue
   }
   Info "Installed $installed into $Dir"
   Write-Host ''
   Write-Host "Run:"
   Write-Host "  $(Join-Path $Dir 'zoveli.cmd')"
 } finally {
+  if ($stageRoot -and (Test-Path -LiteralPath $stageRoot)) {
+    Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+  }
   Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

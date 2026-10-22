@@ -1,5 +1,6 @@
 import type * as http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { sessionEmailFromCookie } from '@zoveli/auth';
 
 /**
  * Localhost web hardening. The server binds 127.0.0.1, but binding alone
@@ -67,18 +68,42 @@ export class RateLimiter {
   }
 }
 
+function bearerConfigured(): boolean {
+  return (process.env.ZOVELI_API_TOKEN || '').length >= 16;
+}
+
+function bearerMatches(req: http.IncomingMessage): boolean {
+  const expected = process.env.ZOVELI_API_TOKEN || '';
+  const got = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+  return a.length === b.length && a.length > 0 && timingSafeEqual(a, b);
+}
+
 /**
  * Optional bearer gate for tool-running routes. Off by default (preserves
  * no-account local UX); set `ZOVELI_API_TOKEN` (min 16 chars) to require
  * `Authorization: Bearer <token>` on POST /api/run and /api/chat.
  */
 export function bearerAuthorized(req: http.IncomingMessage): boolean {
-  const expected = process.env.ZOVELI_API_TOKEN || '';
-  if (expected.length < 16) return true;
-  const got = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const a = Buffer.from(got);
-  const b = Buffer.from(expected);
-  return a.length === b.length && a.length > 0 && timingSafeEqual(a, b);
+  if (!bearerConfigured()) return true;
+  return bearerMatches(req);
+}
+
+/** True when `ZOVELI_AUTH_REQUIRED` asks the desktop UI/API to require login. */
+export function authRequired(): boolean {
+  return (process.env.ZOVELI_AUTH_REQUIRED || '').trim() === '1';
+}
+
+/**
+ * Gate for chat/run. A configured bearer token wins; otherwise, when login
+ * is required, a valid session cookie is mandatory. Default localhost use
+ * stays account-free.
+ */
+export function apiRequestAuthorized(req: http.IncomingMessage): boolean {
+  if (bearerConfigured()) return bearerMatches(req);
+  if (authRequired()) return Boolean(sessionEmailFromCookie(req.headers.cookie));
+  return true;
 }
 
 /** Cap for a single chat message (LLM-cost and memory bound). */
@@ -105,15 +130,19 @@ export function parseRunCall(body: unknown): { tool: string; args: Record<string
   return { tool, args: rawArgs as Record<string, unknown> };
 }
 
-/**
- * HSTS value when the request arrived over TLS (directly or via a
- * TLS-terminating reverse proxy). Plain-localhost responses omit it —
- * pinning HSTS on http://127.0.0.1 would be wrong.
- */
-export function hstsForRequest(req: http.IncomingMessage): Record<string, string> {
+/** True when the request arrived over TLS directly or via a trusted proxy. */
+export function isTlsRequest(req: http.IncomingMessage): boolean {
   const forwarded = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
   const encrypted = (req.socket as { encrypted?: boolean } | undefined)?.encrypted === true;
-  if (encrypted || forwarded === 'https') {
+  return encrypted || forwarded === 'https';
+}
+
+/**
+ * HSTS value when the request arrived over TLS. Plain-localhost responses
+ * omit it — pinning HSTS on http://127.0.0.1 would be wrong.
+ */
+export function hstsForRequest(req: http.IncomingMessage): Record<string, string> {
+  if (isTlsRequest(req)) {
     return { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' };
   }
   return {};

@@ -383,9 +383,6 @@ importers:
       '@zoveli/math-intelligence':
         specifier: workspace:*
         version: link:../math-intelligence
-      '@zoveli/memory':
-        specifier: workspace:*
-        version: link:../memory
       '@zoveli/memory-store':
         specifier: workspace:*
         version: link:../memory-store
@@ -395,15 +392,9 @@ importers:
       '@zoveli/scheduler':
         specifier: workspace:*
         version: link:../scheduler
-      '@zoveli/search':
-        specifier: workspace:*
-        version: link:../search
       '@zoveli/secscan':
         specifier: workspace:*
         version: link:../secscan
-      '@zoveli/skills':
-        specifier: workspace:*
-        version: link:../skills
       '@zoveli/sysinfo':
         specifier: workspace:*
         version: link:../sysinfo

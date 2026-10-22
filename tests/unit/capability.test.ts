@@ -1,16 +1,34 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CapabilityScanner } from '@zoveli/capability/src/scanner';
 import { CapabilityRegistry } from '@zoveli/capability/src/registry';
 import { CapabilityAdaptation } from '@zoveli/capability/src/adaptation';
 import { zoveliCapability } from '@zoveli/capability/src/index';
 import { createMockContext, createMockCapability } from '../setup';
 
+const MOUNTED_TOOLS = [
+  'mathcore_compute',
+  'mathcore_check_answer',
+  'memory_create_note',
+  'memory_search',
+  'language_detect',
+  'web_search',
+  'web_fetch',
+  'capability_scan',
+];
+
+function liveContext() {
+  return createMockContext({
+    get: (key: string) =>
+      key === 'tool-inventory' ? { list: () => MOUNTED_TOOLS } : undefined,
+  });
+}
+
 describe('CapabilityScanner', () => {
   let scanner: CapabilityScanner;
   let mockCtx: any;
 
   beforeEach(() => {
-    mockCtx = createMockContext();
+    mockCtx = liveContext();
     scanner = new CapabilityScanner(mockCtx);
   });
 
@@ -41,6 +59,24 @@ describe('CapabilityScanner', () => {
     expect(categories.has('memory')).toBe(true);
     expect(categories.has('agents')).toBe(true);
     expect(categories.has('tools')).toBe(true);
+  });
+
+  it('only reports capabilities backed by mounted tools', async () => {
+    const capabilities = await scanner.scanAll({ deep: false });
+    const names = capabilities.map((cap) => cap.name);
+
+    expect(names).toContain('mathcore.verified-compute');
+    expect(names).toContain('memory.vault');
+    expect(names).not.toContain('tools.filesystem');
+    expect(names).not.toContain('tools.shell');
+    expect(names).not.toContain('tools.browser');
+    expect(names).not.toContain('tools.lsp');
+    expect(names).not.toContain('workflows.orchestration');
+  });
+
+  it('does not invent capabilities when no live inventory is available', async () => {
+    const empty = new CapabilityScanner(createMockContext());
+    expect(await empty.scanAll({ forceRefresh: true })).toEqual([]);
   });
 
   it('should cache capabilities', async () => {
@@ -148,8 +184,8 @@ describe('CapabilityAdaptation', () => {
 
 describe('capability plugin registry wiring', () => {
   it('registers scan results so capability_check/list see them', async () => {
-    const ctx = createMockContext();
-    zoveliCapability.setup(ctx);
+    const ctx = liveContext();
+    zoveliCapability.setup(ctx as any);
     const provided = ctx.provide.mock.calls.find(
       (call: any[]) => call[0] === 'capability'
     )?.[1];
@@ -160,5 +196,23 @@ describe('capability plugin registry wiring', () => {
     expect(scanned.length).toBeGreaterThan(0);
     expect(provided.registry.getAll()).toHaveLength(scanned.length);
     expect(provided.getCapability('mathcore.verified-compute')).toBeTruthy();
+  });
+
+  it('registers and injects capabilities synchronously on agent/created', () => {
+    const ctx = liveContext();
+    zoveliCapability.setup(ctx as any);
+    const provided = ctx.provide.mock.calls.find(
+      (call: any[]) => call[0] === 'capability'
+    )?.[1];
+    const handler = ctx.on.mock.calls.find(
+      (call: any[]) => call[0] === 'agent/created'
+    )?.[1];
+    const agent = { inject: vi.fn(), systemSections: [] as string[] };
+
+    handler(agent);
+
+    expect(provided.registry.getAll().length).toBeGreaterThan(0);
+    expect(agent.inject).toHaveBeenCalledTimes(1);
+    expect(agent.inject.mock.calls[0][0].content).toContain('mathcore.verified-compute');
   });
 });

@@ -11,13 +11,22 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- Offline `/remember <fact>` and `/recall <query>` REPL commands backed by the
+  local SQLite memory store, so the core memory workflow needs no chat model.
 - Prebuilt runtime archives for Linux, macOS and Windows: `app.cjs` plus a
   matching Node runtime and a PyInstaller mathcore sidecar, so target machines
   need no Git/Node/pnpm/Python/compiler toolchain.
 - Portable installers (`install/install-zoveli-runtime.sh` and `.ps1`) that
   download the matching release archive, verify its SHA-256, and install
-  without changing system packages. Upgrades create and verify a pre-upgrade
-  backup first and abort without changing the runtime if it fails.
+  without changing system packages. Upgrades stage and preflight the new
+  runtime, create and verify a pre-upgrade backup, swap only after both pass,
+  and automatically restore the previous runtime if the installed launcher
+  check fails.
+- Clean-home product acceptance gate (`scripts/product-acceptance.mjs`,
+  [runbook](docs/runbooks/product-acceptance.md)) installs the packaged archive
+  with the real installer, runs the local workflows, exercises rollback and
+  upgrade paths, and writes a JSON report; CI runs it on Linux, Windows and
+  macOS.
 - `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
   and mathcore health probe, and exercises the portable installer.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and
@@ -58,6 +67,15 @@ the new section **before** running `pnpm release:check --release`.
   in CI, and a scaffolder that generates an `apiVersion`, typed tool schema,
   README and opt-in mount. Expanded [plugin SDK guide](docs/plugin-sdk/README.md)
   covers lifecycle, events, services, testing, security and versioning.
+- Plugin control: `zoveli plugins [--json]` lists tier, mount status and
+  description for every plugin. `ZOVELI_DISABLE_PLUGINS` removes any default or
+  optional plugin without editing source; unknown names and request/disable
+  conflicts fail startup instead of being ignored.
+- `zoveli recovery-check [--json] [--keep]`: a safe backup/restore drill that
+  creates synthetic data in an isolated temporary directory, verifies
+  checksums and SQLite integrity, restores it, reads the note back, and cleans
+  up without touching the real vault. Product acceptance now runs the drill
+  from the installed runtime.
 - Supervised mathcore MCP pool: one child process, request multiplexing,
   identity-guarded restart backoff, graceful shutdown, `mathcore_status` tool
   and REPL `/mcp`.
@@ -67,14 +85,27 @@ the new section **before** running `pnpm release:check --release`.
   existing database, checksum-verified backup/verify/restore and
   `pnpm migrate:vault`.
 - Plugin scaffolder: `pnpm create:plugin <name> --mount`.
-- `assistant --version` / `--help`; release metadata guard
+- `zoveli --version` / `--help`; release metadata guard
   (`pnpm release:check`) verifies workspace versions, the runtime version
   constant and tsconfig references; upgrade and release runbooks.
 
 ### Changed
 
-- Capability scans now populate the capability registry, so
-  `capability_check`/`capability_list` and the health summary see actual results.
+- Capability discovery now reads the live host tool inventory. Existing tools
+  are reported; nonexistent filesystem, shell, browser, terminal and LSP
+  capabilities are no longer invented, and scans populate the registry so
+  `capability_check`/`capability_list` see actual results.
+- Default surface is 26 plugins / 58 tools: legacy `core`, `memory`, `search`
+  and `skills` packages are no longer mounted, duplicate tool registrations
+  fail `pnpm plugin:check`, and `guard` is opt-in for custom shell tools.
+- The system prompt now describes the tools that are actually mounted and no
+  longer claims skills, filesystem/shell/browser tools or a shell guard.
+- CLI is branded `zoveli` (the `assistant` bin remains as an alias); docs and
+  website counts now describe the 58-tool default surface.
+- Desktop login is optional and off by default. `ZOVELI_AUTH_REQUIRED=1` gates
+  the app and API on a valid session; TLS requests set the Secure cookie flag.
+- Security documentation now reflects shipped controls: no OS keychain,
+  certification, signed-artifact or append-only audit claims.
 - `ctx.get` resolves provided services before registrations.
 - Version is defined once in `packages/core/src/version.ts` and enforced
   against `package.json`.
@@ -87,8 +118,13 @@ the new section **before** running `pnpm release:check --release`.
   spaces, matching how the runtime resolves `MATHCORE_MCP_COMMAND`.
 - Crash storms after a failed mathcore spawn: calls share backoff instead of
   restarting per request.
+- Capabilities are scanned, registered and injected synchronously when a
+  session is created, so capability tools are populated before the first turn.
 - Plugin scaffolding no longer emits a shebang that breaks Windows checkouts
   under CRLF.
+- `security_scan` now scans `.env` files instead of skipping every dotfile.
+- Formatter/test helpers use `npx --no-install`, so they never fetch packages
+  from the network.
 
 ## [0.1.0] - 2026-10-12
 

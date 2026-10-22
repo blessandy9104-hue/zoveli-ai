@@ -66,21 +66,21 @@ Practical status of the known negative consequences in the Zoveli architecture.
 
 ### Negative: Scanning Overhead
 **Workaround:**
-- **Incremental Scanning**: `[planned]` scans rebuild the in-memory cache.
-- **Cache**: `[done]` `CapabilityScanner` keeps a `Map` cache and clears it on rescan; no TTL.
-- **Background Worker**: `[planned]` scanning is synchronous.
-- **Priority Scanning**: `[planned]`
+- **Incremental Scanning**: `[done]` `incrementalScan()` reuses the cache for 60 seconds; turn starts force a fresh scan.
+- **Cache**: `[done]` `CapabilityScanner` keeps a `Map` cache and clears it on rescan.
+- **Background Worker**: `[planned]` scans run in-process; no worker thread.
+- **Priority Scanning**: `[planned]` one pass over the mounted tool inventory.
 
 ### Negative: System Complexity
 **Workaround:**
-- **Unified API**: `[partial]` `CapabilityScanner.scan()/report()` plus `verifyCapabilities`; adapters remain per-capability.
+- **Unified API**: `[done]` `CapabilityScanner.scanAll()/scanSync()`, the provided `capability` service and `capability_report`; adapters remain per-capability.
 - **Auto-Configuration**: `[done]` sensible defaults; built-ins need no config.
 - **Documentation**: `[done]` `docs/capabilities/` + `capability:report`.
 - **Migration Path**: `[planned]` no legacy `tool_*` auto-mapping.
 
 ### Negative: False Positives
 **Workaround:**
-- **Health Verification**: `[done]` `verifyCapabilities` probes registered MCP tools.
+- **Health Verification**: `[done]` capabilities are reported only when their backing tools are in the live inventory; runtime tool failures surface through diagnostics and the tool trace.
 - **Degraded State**: `[planned]` no 3-failure auto-recovery state machine.
 - **User Override**: `[planned]` `capability_check` has no `force` flag.
 - **Telemetry**: `[planned]` no false-positive tracking.
@@ -203,7 +203,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 | Automatic Pre-Upgrade Backup | Partial | portable installers run `backup` + `verify`; source upgrades stay manual |
 | Connection Pooling | Done | `packages/math-intelligence/src/transport.ts`; multi-server pool planned |
 | Plugin Generator | Done | `scripts/create-plugin.mjs` |
-| Capability Health Probes | Done | `packages/capability/src/scanner.ts` |
+| Capability Inventory Mapping | Done | `packages/capability/src/scanner.ts` |
 | Vault Migration System | Done | `PRAGMA user_version` + `MIGRATIONS`; `pnpm migrate:vault` |
 | Vault Backup / Verify / Restore | Done | `packages/memory-store/src/maintenance.ts` |
 | Git Auto-Commit Hooks | Planned | no `.husky/` |

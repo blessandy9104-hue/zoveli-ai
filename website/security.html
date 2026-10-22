@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Zoveli AI security — local-first protection</title>
-<meta name="description" content="How Zoveli AI protects you: passwordless login, local data, verified math, guardrails, and responsible disclosure." />
+<meta name="description" content="How Zoveli AI protects you: optional passwordless login, local data, verified math, no default shell tools, and responsible disclosure." />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -31,7 +31,7 @@
 <section>
   <h2>🛡️ Guardrails that enforce</h2>
   <ul>
-    <li><strong>Destructive shell commands are blocked</strong> before they run — switch policies live with <code>guard_set_policy</code>.</li>
+    <li><strong>No shell tool by default</strong> — the default surface cannot run arbitrary commands. If you add a custom <code>shell_exec</code> tool, mount the opt-in guard with <code>ZOVELI_PLUGINS=zoveli-guard</code>.</li>
     <li><strong>Verified math or silence</strong> — independent methods must agree; anything else is withheld, never guessed.</li>
     <li><strong>Secrets are redacted</strong> from errors and logs; audit trails are hash-chained and tamper-evident.</li>
     <li><strong>Local web server</strong> binds loopback only, rejects foreign hosts, rate-limits auth and tool routes, and ships hardening headers.</li>
@@ -40,7 +40,7 @@
 
 <section>
   <h2>🔍 Open and auditable</h2>
-  <p>MIT licensed and built in the open. Every release runs lint, strict typechecks, 180+ tests, Playwright e2e, Trivy scans, secret scans, and Docker builds. Scan it yourself: the <code>security_scan</code> tool audits any path for secrets and risky patterns.</p>
+  <p>MIT licensed and built in the open. Every release runs lint, strict typechecks, 300+ tests, Playwright e2e, Trivy scans, secret scans, and Docker builds. Scan it yourself: the <code>security_scan</code> tool audits any path for secrets and risky patterns.</p>
 </section>
 
 <section>

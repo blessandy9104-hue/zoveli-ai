@@ -76,7 +76,7 @@ export class TestRunner {
 
   private async runNode(projectPath: string, testPath: string | undefined, args: string[], timeout: number, started: number): Promise<TestResult> {
     // Prefer vitest JSON reporter; fallback to npm test
-    const vitestArgs = ['--yes', 'vitest', 'run', '--reporter=json', ...(testPath ? [testPath] : []), ...args];
+    const vitestArgs = ['--no-install', 'vitest', 'run', '--reporter=json', ...(testPath ? [testPath] : []), ...args];
     try {
       const { stdout } = await execFileAsync('npx', vitestArgs, { cwd: projectPath, timeout, maxBuffer: 20 * 1024 * 1024 });
       return this.parseVitestJson(stdout, Date.now() - started);

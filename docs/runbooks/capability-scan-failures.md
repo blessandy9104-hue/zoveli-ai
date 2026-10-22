@@ -1,87 +1,66 @@
 # Runbook: Capability Scan Failures
 
 ## Symptoms
-- `capability_scan` tool returns error or empty results
-- Agent reports missing capabilities
-- Capability report shows degraded/unavailable
+- `capability_scan` returns an empty list
+- `capability_check` reports a tool-group capability missing
+- Agent says it has no capabilities
 
-## Diagnosis Steps
+## How discovery works now
+Capabilities come from the live tool registry, not a hardcoded inventory.
+`ZoveliHost` provides `tool-inventory`; the scanner maps mounted tools to
+capability groups. If no inventory provider exists, the scan returns an empty
+list rather than inventing capabilities.
 
-### 1. Check Scanner Health
-```bash
-# Run capability scan manually
-pnpm exec tsx packages/capability/src/scanner.ts scan --deep
+## Diagnosis
 
-# Check logs
-grep "CapabilityScanner" logs/zoveli.log
+### 1. Check the live tool list
+In the CLI, run `/tools`. It should show 58 default tools. The desktop mounts
+two auth tools on top, so `GET /api/tools` returns 60 as JSON.
+
+### 2. Scan and inspect
+```text
+capability_scan {}
+capability_check {"capability":"mathcore.verified-compute","details":true}
 ```
 
-### 2. Verify MCP Connections
-```bash
-# Check mathcore MCP
-mathcore-mcp --version
-mathcore "2 + 2"
+If the tool is present but the capability is missing, check the capability
+name in `packages/capability/src/scanner.ts` and the tool name in the owning
+plugin.
 
-# Check other MCP servers
-npx @modelcontextprotocol/server-filesystem --version
+### 3. Check plugin mounting
+```powershell
+node --input-type=module -e "import { defaultPlugins } from './packages/host/dist/index.js'; console.log(defaultPlugins.map(p=>p.name).join('\n'))"
 ```
 
-### 3. Check External Binaries
-```bash
-# Verify required binaries
-which docker git python3 node
-docker --version
-git --version
-python3 --version
-node --version
+Expected: 26 plugins. If a plugin is missing, check `defaultPlugins` and
+`ZOVELI_PLUGINS`. `guard` is opt-in and is not part of the default set.
+
+### 4. Check the host inventory service
+Custom hosts must expose the same `tool-inventory` service as `ZoveliHost`:
+
+```ts
+ctx.provide('tool-inventory', { list: () => host.tools() });
 ```
 
-### 4. Check Plugin Loading
-```bash
-# List loaded plugins
-pnpm exec tsx -e "
-const { createDsh } = require('@deepseek-ai/dsh-core');
-const dsh = await createDsh({ profile: 'personal-assistant-headless' });
-console.log(dsh.plugins.map(p => p.name));
-"
+Without it, an empty scan is correct behavior, not a crash.
+
+### 5. Rebuild after package changes
+```powershell
+pnpm run build
+pnpm run capability:scan
+pnpm run capability:report
+pnpm exec vitest run tests/unit/capability.test.ts tests/integration/capability.integration.test.ts
 ```
 
 ## Resolution
-
-### MCP Server Not Starting
-```bash
-# Reinstall mathcore (vendored in ./mathcore)
-pip install -e ./mathcore --force-reinstall
-
-# Check audit log path
-ls -la ~/.mathcore/audit.jsonl
-```
-
-### Plugin Not Registering Capabilities
-- Verify plugin `setup(ctx)` calls `ctx.register('capability-*', ...)`
-- Check plugin loads in profile config
-- Verify plugin package.json has correct exports
-
-### External Binary Missing
-```bash
-# Install missing binaries
-# Ubuntu/Debian
-apt-get install -y docker.io git python3 nodejs
-
-# macOS
-brew install docker git python node
-
-# Windows
-winget install Docker.DockerDesktop Git.Git Python.Python.3.11 OpenJS.NodeJS
-```
+- **No tools listed**: fix plugin mounting before debugging capabilities.
+- **Tool listed, capability missing**: add or correct the capability mapping.
+- **Capability listed, tool fails at runtime**: capability discovery only proves
+  the tool is mounted. Run the tool (for example `mathcore_status`) to check health.
+- **Stale behavior**: rebuild `@zoveli/host` and `@zoveli/capability`; the CLI
+  loads `dist`, not `src`.
 
 ## Escalation
-If unresolved after 30 minutes:
-1. Collect diagnostic bundle: `pnpm run capability:report > capability-report.json`
-2. Check GitHub Issues for similar problems
-3. Contact: blessandy9104@gmail.com
-
-## Prevention
-- Health checks in CI/CD
-- Startup validation of critical capabilities
-- Automated dependency updates via Dependabot
+1. Collect `zoveli health` output and the `/tools` list.
+2. Run the capability tests above.
+3. Open a GitHub issue with the tool list, expected capability name and scan output.

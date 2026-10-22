@@ -11,7 +11,7 @@
 |---|---|
 | Price | Free forever, MIT licensed |
 | Where it runs | **Your machine** (CLI, web UI, desktop, Docker) |
-| Offline | **Yes** — ~63 local tools work with no network |
+| Offline | **Yes for local tools** — 58 default tools; web research needs network |
 | Your data | **Never leaves home**; SQLite store you own (+ Markdown mirror); **never trained on** |
 | Math answers | **Verified or withheld** (mathcore: independent methods must agree + sealed certificate; governed specialists memorize proofs) |
 | Model lock-in | None — any API key, any compatible base (incl. local Ollama), or tools-only |
@@ -23,8 +23,8 @@
 - Private notes, journals, or client work that must not touch a third-party server.
 - Exact computation (homework, engineering, finance) where a confident wrong
   answer is worse than no answer — `/math` and `/check` give VERIFIED/MATCH/MISMATCH.
-- Planes, labs, and locked-down networks — the CLI works fully offline.
-- Tinkerers: 23 packages, MCP servers, and an HTTP API you can extend in an afternoon.
+- Planes, labs, and locked-down networks — the local tool loop works offline.
+- Tinkerers: 24 packages, a plugin surface, and an HTTP API you can extend in an afternoon.
 
 ## Honest limits
 
@@ -38,7 +38,7 @@
 
 **Does Zoveli need a chat model to work?**
 No. Chat is an optional adapter; the core — verified math, SQLite memory,
-sysinfo, scheduler, search, 23 packages — runs with no model and no network.
+sysinfo, scheduler, 24 packages — runs with no model; local tools need no network.
 
 **What does "verified math" mean?**
 Every computation runs through independent methods (e.g. symbolic solve +
@@ -50,8 +50,9 @@ Electricity. No subscription, no credits, no seat fees. Optional model API
 usage is billed by whoever provides your key, not by us.
 
 **What password do I need?**
-None for Zoveli — login is a 6-digit code emailed to you. The only password
-you'll ever need is your email account's.
+None for Zoveli. Login is optional: enable `ZOVELI_AUTH_REQUIRED=1` to gate
+the desktop with a 6-digit email code. The only password you'll ever need is
+your email account's.
 
 **Can I use it at work?**
 It's MIT licensed with a threat model (`docs/THREAT_MODEL.md`) and security

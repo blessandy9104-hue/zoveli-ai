@@ -55,6 +55,9 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `auth_verify_code {email, code}` → `{ok, email, token}` or `{ok:false, reason}`
 - HTTP: `POST /api/auth/request`, `POST /api/auth/verify` (sets `zoveli_session` cookie),
   `GET /api/auth/me`, `POST /api/auth/logout`, page `GET /login`
+- Login is optional. `ZOVELI_AUTH_REQUIRED=1` gates the app, `/api/chat`,
+  `/api/run` and other non-public routes on a valid session cookie. `/health`,
+  `/login` and `/api/auth/*` stay reachable.
 - No Proton OAuth exists for third-party sites, so there is no "Login with
   Proton" button by design — email codes work with every provider instead.
   Set `ZOVELI_SMTP_URL` (+`ZOVELI_SMTP_FROM`) for real delivery, else codes go to
@@ -68,13 +71,17 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `sysinfo_network {}` → local interfaces only, never probes externally
 - `sysinfo_check {minFreeMemBytes?, minFreeDiskBytes?, maxCpuPercent?}` → budget gate
 
-## Skills
-- Skills: `daily-briefing`, `research`, `task-planning`, `code-review` (see `packages/skills`)
+## Legacy skills (unmounted)
+- `@zoveli/skills` still exports `daily-briefing`, `research`, `task-planning`,
+  and `code-review` placeholders for compatibility, but it is not in the
+  default plugin set and does not contribute live tools.
 
 ## Plugins
-- Default tools come from the core plugins; optional plugins mount only when
+- Default tools come from the default plugins; optional plugins mount only when
   named in `ZOVELI_PLUGINS=<plugin-name,...>` (see
   [plugin SDK](../plugin-sdk/README.md)).
+- `ZOVELI_DISABLE_PLUGINS=<plugin-name,...>` removes any default or optional
+  plugin. `zoveli plugins [--json]` lists every plugin and its mount status.
 - `pnpm run plugin:check` validates the contract, tool names and collisions
   for every built package (requires `pnpm run build` first).
 
@@ -86,5 +93,5 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `POST /api/chat {message}` → `{ok, verified, reply, model, provider, local}` (50k-char cap; per-IP rate limit)
 - `POST /api/run {tool, args}` → `{ok, result}` on success, `{ok:false, error}` when the tool throws (unknown tools included); malformed bodies get 400
 - `GET /login`, `POST /api/auth/request`, `POST /api/auth/verify`, `GET /api/auth/me`, `POST /api/auth/logout` (passwordless email OTP)
-- `POST /api/run` and `/api/chat` accept an optional bearer gate: set `ZOVELI_API_TOKEN` (min 16 chars) to require `Authorization: Bearer`; per-IP rate limits apply (auth 30/min, chat/run 120/min; disabled when `ZOVELI_AUTH_DEV_ECHO=1` test mode is on)
+- `POST /api/run` and `/api/chat` accept an optional bearer gate: set `ZOVELI_API_TOKEN` (min 16 chars) to require `Authorization: Bearer`; when login is required and no bearer token is set, a valid session cookie is required. Per-IP rate limits apply (auth 30/min, chat/run 120/min; disabled when `ZOVELI_AUTH_DEV_ECHO=1` test mode is on).
 

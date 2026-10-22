@@ -3,16 +3,17 @@
  * Scan all Zoveli capabilities and print JSON.
  *
  * Usage:
- *   pnpm run build                       # required first (uses dist output)
- *   node scripts/scan-capabilities.js            # quick scan
- *   node scripts/scan-capabilities.js --deep    # with live verification probes
+ *   pnpm run build
+ *   node scripts/scan-capabilities.js
  */
 const { CapabilityScanner } = require('../packages/capability/dist/scanner.js');
+const { ZoveliHost, defaultPlugins } = require('../packages/host/dist/index.js');
 
 async function main() {
-  const deep = process.argv.includes('--deep');
-  const scanner = new CapabilityScanner({ config: {}, plugins: [] });
-  const caps = await scanner.scanAll({ deep });
+  const host = new ZoveliHost();
+  host.mount(defaultPlugins);
+  const scanner = new CapabilityScanner(host.ctx);
+  const caps = await scanner.scanAll();
   console.log(
     JSON.stringify(
       caps.map((c) => ({

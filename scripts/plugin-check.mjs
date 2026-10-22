@@ -89,7 +89,6 @@ try {
   if (!existsSync(hostEntry)) fail('host output missing; run pnpm run build first');
   const { defaultPlugins } = await import(pathToFileURL(hostEntry).href);
   if (!Array.isArray(defaultPlugins)) fail('host does not export defaultPlugins; rebuild');
-  const defaultOwners = new Set(defaultPlugins.map((plugin) => plugin.name));
 
   for (const pkg of packages()) {
     packageCount += 1;
@@ -187,15 +186,9 @@ try {
           } else {
             const owner = toolOwners.get(tool.name);
             if (owner && owner !== plugin.name) {
-              if (defaultOwners.has(owner) && defaultOwners.has(plugin.name)) {
-                notes.push(
-                  `${label}: shadowed by default plugin "${owner}" (first mounted wins)`
-                );
-              } else {
-                errors.push(
-                  `${label}: already registered by plugin "${owner}"; rename the tool or unmount one plugin`
-                );
-              }
+              errors.push(
+                `${label}: already registered by plugin "${owner}"; rename the tool or unmount one plugin`
+              );
             } else if (!owner) {
               toolOwners.set(tool.name, plugin.name);
             }

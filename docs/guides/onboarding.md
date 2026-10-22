@@ -30,9 +30,9 @@ PowerShell:
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
-Re-running the installer upgrades in place and first writes a verified backup
-under `~/.zoveli/backups`; it stops without changing the runtime if the backup
-cannot be verified.
+Re-running the installer stages and preflights the new runtime, writes a
+verified backup under `~/.zoveli/backups`, and rolls back automatically if the
+new runtime fails after the swap.
 
 Source install (developers), from a manual clone:
 
@@ -54,7 +54,13 @@ Portable install:
 ```bash
 zoveli health          # or zoveli.cmd health on Windows
 zoveli config-check
+zoveli recovery-check  # proves backup/restore in an isolated temp vault
 ```
+
+`recovery-check` should print `PASS` and `Your real vault was not touched.`
+It exercises the backup, checksum verification and restore path before you
+trust the install with notes. If it fails, run `zoveli health` and include the
+drill output when reporting the problem.
 
 If the installer did not create a `~/.local/bin/zoveli` link, run the launcher
 from the install directory printed at the end of the install.
@@ -91,20 +97,35 @@ pnpm start
 ```
 
 The first-run banner names the detected chat model and prints a fix when the
-verified-math backend is missing. On a TTY it also shows four commands to try
-first:
+verified-math backend is missing. On a TTY it also shows the first commands to
+try:
 
 ```text
-Try in 30 seconds (all offline, math is verified or withheld):
+Try in 30 seconds (local tools need no network, math is verified or withheld):
   /math solve x^2 - 5x + 6 = 0   proven answer + certificate
   /sys                           this machine: OS/CPU/RAM/disk/GPU
-  /tools                         every local tool (~63), no API key needed
+  /tools                         every default tool (58), no API key needed
+  /remember <fact> | /recall <q> local notes, no model needed
   /health                        re-check config, vault, mathcore and capabilities
 ```
 
 Try `/math 2+2` and look for `VERIFIED`. If a result cannot be verified, it is
-`WITHHELD` rather than guessed. `/health` re-checks configuration, the vault,
-the mathcore pool, and capabilities at any time.
+`WITHHELD` rather than guessed. `/remember My spare key is in the blue drawer`
+then `/recall blue drawer` proves local memory without a model. `/health`
+re-checks configuration, the vault, the mathcore pool, and capabilities at any
+time.
+
+These are the five workflows the product is built around:
+
+| Goal | Command | What success looks like |
+| --- | --- | --- |
+| Solve math | `/math solve x^2 - 5x + 6 = 0` | `VERIFIED` plus a certificate |
+| Remember a fact | `/remember My spare key is in the blue drawer` | `remembered: ...` |
+| Search your vault | `/recall blue drawer` | a matching note title and preview |
+| Run a local tool | `/sys` | OS/CPU/RAM/disk snapshot |
+| Ask for local help | `/help` or `/health` | command list or `health: ok` |
+
+None of these need an account, API key, or network connection.
 
 ## 5. Enable chat (optional)
 

@@ -16,30 +16,31 @@ are core (stable, semver-minded) vs experimental (opt-in, may change).
 
 ```
 User (CLI / Desktop)
-  → dsh profile (config/*.cordis.yml)
-    → Cordis context (ctx)
-      → zoveli plugins (23 packages; 31 mounted by default)
-        → capabilities (scanner → registry → adaptation)
-        → tools (guarded pre/post pipeline, ~63 live)
-        → sessions (JSONL + projections)
-        → external systems (mathcore MCP, SQLite store, vault FS, LLM APIs)
+  → zoveli host (minimal plugin context)
+    → zoveli plugins (24 packages; 26 mounted by default)
+      → capabilities (live tool inventory → registry → adaptation)
+      → tools (58 live by default; desktop adds 2 auth tools)
+      → chat history (in-memory per session)
+      → local systems (mathcore binary, SQLite store, vault FS, optional LLM API)
 ```
 
 ## Plugin inventory
 
 | Area | Plugins |
 |------|---------|
-| Core | `core`, `host`, `shim-dsh-core` (authoring shim, not a runtime) |
+| Core | `core` (legacy prompt-only package), `host`, `shim-dsh-core` (authoring shim, not a runtime) |
 | Math | `math-intelligence` (governor: verified compute + proof memory + rules), `math-domains` (algebra/calculus/statistics/logic/units/discrete/arithmetic/geometry/trigonometry/probability/linear/number specialists) |
-| Memory | `memory`, `memory-store` (SQLite FTS5 + vault export mirror) |
-| Capabilities | `capability`, `skills`, `languages`, `search`, `docgen`, `code-analysis`, `health`, `graph`, `scheduler`, `sysinfo` |
-| Safety | `guard`, `secscan`, `auth` |
-| Interaction | `persona` (switchable friend/tutor/engineer/coach), `webresearch` (guarded fetch + search) |
+| Memory | `memory-store` (SQLite FTS5 + vault export mirror); legacy `memory` and `search` wrappers are unmounted |
+| Capabilities | `capability`, `languages`, `docgen`, `code-analysis`, `health`, `graph`, `scheduler`, `sysinfo`; legacy `skills` is unmounted |
+| Safety | `secscan` by default; `guard` is opt-in for custom shell tools; `auth` is desktop-only and optional |
+| Interaction | `persona` (switchable friend/tutor/engineer/coach), `webresearch` (guarded fetch + search), `diagnostics` |
 
-The host's `defaultPlugins` (30) are the tool-bearing set: core,
-math-intelligence, the 12 math specialists, memory-store, memory, skills,
-languages, sysinfo, search, scheduler, secscan, health, graph, docgen,
-code-analysis, capability, guard, persona, webresearch.
+The host's `defaultPlugins` (26) are: math-intelligence, the 12 math
+specialists, memory-store, languages, sysinfo, scheduler, secscan, health,
+graph, docgen, code-analysis, capability, persona, webresearch and
+diagnostics. Legacy `core`, `memory`, `search` and `skills` packages remain in
+the workspace but are not mounted by default; `guard` is available through
+`ZOVELI_PLUGINS=zoveli-guard` for custom shell tools.
 
 ## Data flows
 

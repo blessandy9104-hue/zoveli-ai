@@ -16,17 +16,6 @@ export const zoveliLanguages = definePlugin({
     const runner = new TestRunner(ctx);
     const tooling = new LanguageTooling(ctx);
 
-    // Register language capabilities
-    ctx.register('language-capabilities', {
-      detect: detector.detect.bind(detector),
-      analyze: analyzer.analyze.bind(analyzer),
-      format: formatter.format.bind(formatter),
-      lint: formatter.lint.bind(formatter),
-      runTests: runner.run.bind(runner),
-      getTooling: tooling.getForLanguage.bind(tooling),
-      supportedLanguages: detector.getSupportedLanguages()
-    });
-
     // Provide unified API
     ctx.provide('languages', {
       detect: detector.detect.bind(detector),

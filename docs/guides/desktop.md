@@ -13,6 +13,15 @@ it in a window. No remote servers, no accounts. Set `ZOVELI_DESKTOP_PORT`
 to change the port (default 3080). See the [first-run guide](onboarding.md)
 for setup checks and the readiness panel (`GET /api/onboarding`).
 
+## Optional login
+
+The desktop is account-free by default. Set `ZOVELI_AUTH_REQUIRED=1` to
+require a valid email-OTP session for the app, `/api/chat`, `/api/run` and
+other non-public routes. Configure `ZOVELI_SMTP_URL` and `ZOVELI_SMTP_FROM`
+for real code delivery; otherwise codes print to the server console. A
+configured `ZOVELI_API_TOKEN` lets machine clients bypass the session gate
+with a bearer token.
+
 ## Verify without a window
 
 ```bash

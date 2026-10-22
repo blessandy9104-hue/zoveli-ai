@@ -117,9 +117,8 @@ Tools are data, not classes: `{ name, description, parameters, execute(args) }`.
 `parameters` is a JSON Schema object shown to the model. Tool names should use
 `snake_case` (dashes are accepted for skill-style names) and stay unique:
 the host keeps the **first** tool registered under a name, so a collision can
-silently shadow another plugin. `plugin:check` rejects duplicate names within a
-plugin and fails when an opt-in plugin collides with a default plugin; known
-shadows inside the built-in default set are reported as notes. Avoid
+silently shadow another plugin at runtime. `plugin:check` rejects duplicate
+names within a plugin and fails on any collision across plugin packages. Avoid
 cross-plugin collisions by prefixing tools with your plugin name.
 
 `execute` may return any JSON-serializable value or throw. A thrown error is
@@ -149,21 +148,35 @@ There is no `unmount`/teardown hook: setup runs once for the process lifetime.
 Keep setup idempotent where practical, and do long-running work lazily inside a
 tool or event handler instead of blocking boot.
 
-## Opt-in loading
+## Opt-in loading and disabling plugins
 
 `packages/host/src/index.ts` exports `defaultPlugins` and `optionalPlugins`.
 `resolvePlugins()` mounts the defaults plus every plugin named in the
-`ZOVELI_PLUGINS` environment variable (comma-separated, whitespace-trimmed,
-duplicates ignored):
+`ZOVELI_PLUGINS` environment variable and removes every plugin named in
+`ZOVELI_DISABLE_PLUGINS` (both comma-separated, whitespace-trimmed, duplicates
+ignored):
 
 ```bash
-ZOVELI_PLUGINS=zoveli-daily-brief pnpm start
-ZOVELI_PLUGINS=zoveli-daily-brief,zoveli-clock pnpm run desktop
+ZOVELI_PLUGINS=zoveli-guard pnpm start
+ZOVELI_DISABLE_PLUGINS=zoveli-webresearch pnpm start
 ```
 
-An unknown name fails startup with the available list and a scaffolding hint;
-it never silently starts without the plugin. `pnpm config:check` recognizes the
-variable.
+Disabling works for default and optional plugins. A plugin that is both
+requested and disabled is rejected, as is any unknown name, so typos never
+silently change the mount surface. `pnpm config:check` recognizes both
+variables.
+
+To inspect the current surface without starting the assistant:
+
+```bash
+pnpm run build:core
+node apps/cli/dist/cli.js plugins
+node apps/cli/dist/cli.js plugins --json
+```
+
+The listing shows each plugin's tier (`default` or `optional`), status
+(`enabled`, `opt-in`, or `disabled`) and description. After changing either
+variable, restart Zoveli.
 
 ## End-to-end example
 

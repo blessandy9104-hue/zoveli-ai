@@ -6,12 +6,14 @@ function printHelp(): void {
   console.log(`zoveli ${ZOVELI_VERSION} — local-first AI assistant
 
 Usage:
-  assistant                          start the interactive assistant
-  assistant config-check [--json]    validate environment configuration
-  assistant health [--offline]       runtime/config/vault/MCP health rollup
-  assistant backup|verify|restore|migrate   vault maintenance
-  assistant --version                print the version
-  assistant --help                   show this help
+  zoveli                          start the interactive assistant
+  zoveli config-check [--json]    validate environment configuration
+  zoveli health [--offline]       runtime/config/vault/MCP health rollup
+  zoveli plugins [--json]         list plugin inventory and mount status
+  zoveli recovery-check           prove backup/restore works in isolation
+  zoveli backup|verify|restore|migrate   vault maintenance
+  zoveli --version                print the version
+  zoveli --help                   show this help
 
 Docs: docs/guides/cli.md · docs/guides/upgrading.md`);
 }
@@ -36,6 +38,16 @@ async function main() {
   if (argv[0] === 'health') {
     const { runHealth } = await import('./health.js');
     process.exitCode = await runHealth(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'plugins') {
+    const { runPlugins } = await import('./plugins.js');
+    process.exitCode = await runPlugins(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'recovery-check') {
+    const { runRecoveryCheck } = await import('./recovery-check.js');
+    process.exitCode = await runRecoveryCheck(argv.slice(1));
     return;
   }
   const maintenance = await import('./maintenance.js');

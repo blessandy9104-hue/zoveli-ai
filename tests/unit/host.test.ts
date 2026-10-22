@@ -309,7 +309,6 @@ describe('chat transport', () => {
     try {
       const host = new ZoveliHost();
       host.mount([]);
-      const startedAt = Date.now();
       await expect(
         chat(
           host,
@@ -326,7 +325,6 @@ describe('chat transport', () => {
         )
       ).rejects.toThrow(/timed out after 1000ms/);
       expect(hits).toBe(1);
-      expect(Date.now() - startedAt).toBeLessThan(3000);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -62,6 +62,8 @@ const HELP = `zoveli commands:
   /help                 show this help
   /tools                list available tools
   /math <expression>    verified computation (mathcore, offline)
+  /remember <fact>      save a local note, no model needed
+  /recall <query>       search your local notes, no model needed
   /mcp                  mathcore MCP pool status (pid, restarts, last error)
   /health               runtime health rollup (config, vault, pool, capabilities)
   /trace                recent tool calls and failures
@@ -101,10 +103,11 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
   // First-30-seconds starters (TTY only, so piped/batch output stays
   // byte-identical for scripts and tests): show what to try first.
   if (process.stdin.isTTY) {
-    console.log('Try in 30 seconds (all offline, math is verified or withheld):');
+    console.log('Try in 30 seconds (local tools need no network, math is verified or withheld):');
     console.log('  /math solve x^2 - 5x + 6 = 0   proven answer + certificate');
     console.log('  /sys                           this machine: OS/CPU/RAM/disk/GPU');
-    console.log('  /tools                         every local tool (~63), no API key needed');
+    console.log('  /tools                         every default tool (58), no API key needed');
+    console.log('  /remember <fact> | /recall <q> local notes, no model needed');
     console.log('  /health                        re-check config, vault, mathcore and capabilities');
   }
 
@@ -156,6 +159,53 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
       } else if (text === '/tools') {
         for (const t of host.tools()) {
           console.log(`- ${t.name}  [${t.plugin}]`);
+        }
+      } else if (text === '/remember' || text.startsWith('/remember ')) {
+        const fact = text.slice('/remember '.length).trim();
+        if (!fact) {
+          console.log('usage: /remember <fact>');
+        } else {
+          const base = fact.replace(/\s+/g, ' ').slice(0, 80);
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          let title = base;
+          try {
+            await host.runTool('memory_create_note', {
+              title,
+              content: fact,
+              tags: ['quick-note'],
+            });
+          } catch (e) {
+            if (!/already exists/i.test(e instanceof Error ? e.message : String(e))) throw e;
+            title = `${base} (${stamp})`;
+            await host.runTool('memory_create_note', {
+              title,
+              content: fact,
+              tags: ['quick-note'],
+            });
+          }
+          console.log(`remembered: ${title}`);
+        }
+      } else if (text === '/recall' || text.startsWith('/recall ')) {
+        const query = text.slice('/recall '.length).trim();
+        if (!query) {
+          console.log('usage: /recall <query>');
+        } else {
+          const raw = (await host.runTool('memory_search', { query, limit: 5 })) as {
+            results?: { file?: string; title?: string; content?: string; score?: number }[];
+          };
+          const results = Array.isArray(raw) ? raw : raw.results ?? [];
+          if (results.length === 0) {
+            console.log(`no notes matched: ${query}`);
+          } else {
+            for (const result of results) {
+              const title = result.file ?? result.title ?? '(untitled)';
+              const preview = String(result.content ?? '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 160);
+              console.log(`- ${title}${preview ? `: ${preview}` : ''}`);
+            }
+          }
         }
       } else if (text === '/caps') {
         try {

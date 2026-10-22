@@ -116,6 +116,9 @@ export class ZoveliHost {
       config: {},
       plugins: [],
     };
+    this.ctx.provide('tool-inventory', {
+      list: () => this.tools(),
+    });
   }
 
   /** Mount plugins and fire agent/created so prompt injections apply. */

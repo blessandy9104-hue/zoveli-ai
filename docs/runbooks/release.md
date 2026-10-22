@@ -37,18 +37,21 @@ CI runs the same gate plus Docker, SBOM, e2e, and security scans. Do not tag
 with any check red.
 
 The `Runtime Artifacts` workflow builds the portable archives on Linux, macOS,
-and Windows, runs `scripts/smoke-runtime.mjs` against each archive, and installs
-each archive through the portable installer. Locally, after building mathcore:
+and Windows, then runs the clean-install acceptance gate against each archive.
+Locally, after building mathcore:
 
 ```bash
 python -m pip install pyinstaller -e ./mathcore
 node scripts/build-mathcore-runtime.mjs
 node scripts/build-runtime.mjs
 node scripts/smoke-runtime.mjs
+pnpm run acceptance:runtime -- --archive release/zoveli-X.Y.Z-<platform>-<arch>.tar.gz
 ```
 
-Do not publish unless the archive smoke and portable-installer steps are green.
-Archives are checksummed but not yet code-signed or notarized.
+Do not publish unless the archive smoke and clean-install acceptance checks are
+green. The acceptance report records install time, first-task time and the
+core workflow results; the first task must stay under ten minutes. Archives are
+checksummed but not yet code-signed or notarized.
 
 ## 3. Tag and publish
 
@@ -71,11 +74,15 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
 - CI/release workflow is green.
 - `docker pull ghcr.io/blessandy9104-hue/zoveli-ai:X.Y.Z` works.
 - Installer smoke (`Installer Check` workflow) passes.
-- `Runtime Artifacts` passes on Linux, macOS, and Windows.
+- `Runtime Artifacts` passes on Linux, macOS, and Windows, including
+  clean-install acceptance.
 - The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
   matching `.sha256` files where the runner supports that architecture.
+- The acceptance reports show every core workflow green and a first-task time
+  under ten minutes.
 - Download one archive on a clean machine (or clean container), run the
-  portable installer, and verify `zoveli --version` and `zoveli health`.
+  portable installer, and verify `zoveli --version`, `zoveli health`, `/math`,
+  `/remember` and `/recall`.
 - Update the release draft if release-drafter left stale entries.
 
 ## Hotfixes

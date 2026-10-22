@@ -119,6 +119,14 @@ test.describe('CLI Application', () => {
     expect(run.stdout).toContain('VERIFIED');
   });
 
+  test('remembers and recalls a local fact without a model', async () => {
+    const fact = `acceptance-token-${Date.now()}-cobalt`;
+    const run = await runCliOnce(`/remember ${fact}\n/recall ${fact}\n/quit\n`);
+    expect(run.code).toBe(0);
+    expect(run.stdout).toContain(`remembered: ${fact}`);
+    expect(run.stdout).toContain(fact);
+  });
+
   test('exits zero on /quit', async () => {
     const run = await runCliOnce('/quit\n');
     expect(run.code).toBe(0);

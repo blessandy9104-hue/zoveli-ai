@@ -30,6 +30,7 @@ NC='\033[0m'
 info() { printf '%b%s%b\n' "$GREEN" "$1" "$NC"; }
 warn() { printf '%b%s%b\n' "$YELLOW" "$1" "$NC"; }
 error() { printf '%b%s%b\n' "$RED" "$1" "$NC" >&2; }
+last_line() { printf '%s\n' "$1" | tail -n 1 | tr -d '\r'; }
 
 usage() {
   cat <<EOF
@@ -89,7 +90,11 @@ if [ "$ASSUME_YES" != true ] && [ -t 0 ]; then
 fi
 
 TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/zoveli-install.XXXXXX")
-cleanup() { rm -rf "$TMP_DIR"; }
+STAGE=""
+cleanup() {
+  rm -rf "$TMP_DIR"
+  if [ -n "$STAGE" ]; then rm -rf "$STAGE"; fi
+}
 trap cleanup EXIT INT TERM
 
 if [ -z "$ARCHIVE" ]; then
@@ -145,6 +150,28 @@ if [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
   fi
 fi
 
+STAGE_PARENT=$(dirname "$TARGET_DIR")
+mkdir -p "$STAGE_PARENT"
+STAGE=$(mktemp -d "$STAGE_PARENT/.zoveli-stage-XXXXXX")
+cp -R "$SRC/." "$STAGE/"
+chmod +x "$STAGE/zoveli" "$STAGE/node" "$STAGE/mathcore/mathcore-mcp"
+
+if ! preflight=$("$STAGE/zoveli" --version 2>&1); then
+  error "New runtime failed its preflight check; the existing runtime was not changed."
+  printf '%s\n' "$preflight" >&2
+  exit 1
+fi
+preflight=$(last_line "$preflight")
+case "$preflight" in
+  zoveli\ *) ;;
+  *)
+    error "New runtime reported an unexpected version; the existing runtime was not changed."
+    printf '%s\n' "$preflight" >&2
+    exit 1
+    ;;
+esac
+info "New runtime preflight: $preflight"
+
 if [ -f "$TARGET_DIR/runtime.json" ]; then
   if [ "$SKIP_BACKUP" = true ]; then
     warn "Skipping the pre-upgrade backup (--skip-backup)."
@@ -168,12 +195,68 @@ if [ -f "$TARGET_DIR/runtime.json" ]; then
   fi
 fi
 
-mkdir -p "$TARGET_DIR"
-rm -rf "$TARGET_DIR"/*
-cp -R "$SRC/." "$TARGET_DIR/"
-chmod +x "$TARGET_DIR/zoveli" "$TARGET_DIR/node" "$TARGET_DIR/mathcore/mathcore-mcp"
+PREVIOUS="${TARGET_DIR%/}.zoveli-previous-$$"
+OLD_MOVED=false
+NEW_MOVED=false
 
-installed=$("$TARGET_DIR/zoveli" --version)
+rollback() {
+  if [ "$NEW_MOVED" = true ] && [ -e "$TARGET_DIR" ]; then
+    rm -rf "$TARGET_DIR"
+  fi
+  if [ "$OLD_MOVED" = true ] && [ -e "$PREVIOUS" ]; then
+    if ! mv "$PREVIOUS" "$TARGET_DIR"; then
+      error "Automatic rollback failed. The previous runtime is at: $PREVIOUS"
+      return 1
+    fi
+  fi
+  return 0
+}
+
+install_failed() {
+  reason=$1
+  if rollback; then
+    if [ "$OLD_MOVED" = true ]; then
+      error "$reason; the previous runtime was restored."
+    else
+      error "$reason; no runtime was left installed."
+    fi
+  else
+    error "$reason and automatic rollback failed. The previous runtime is at: $PREVIOUS"
+  fi
+  exit 1
+}
+
+if [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+  if ! mv "$TARGET_DIR" "$PREVIOUS"; then
+    error "Could not move the existing runtime aside; nothing was changed."
+    exit 1
+  fi
+  OLD_MOVED=true
+else
+  rm -rf "$TARGET_DIR"
+fi
+
+if ! mv "$STAGE" "$TARGET_DIR"; then
+  install_failed "Could not install the new runtime"
+fi
+NEW_MOVED=true
+
+if ! installed=$("$TARGET_DIR/zoveli" --version 2>&1); then
+  printf '%s\n' "$installed" >&2
+  install_failed "New runtime failed its installed version check"
+fi
+installed=$(last_line "$installed")
+case "$installed" in
+  zoveli\ *) ;;
+  *)
+    printf '%s\n' "$installed" >&2
+    install_failed "New runtime reported an unexpected version"
+    ;;
+esac
+
+if [ "$OLD_MOVED" = true ] && [ -e "$PREVIOUS" ]; then
+  rm -rf "$PREVIOUS"
+fi
 info "Installed $installed into $TARGET_DIR"
 
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"

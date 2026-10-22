@@ -28,7 +28,7 @@ describe.skipIf(!READY)('CLI fast paths', () => {
     const run = runCli('--help');
     expect(run.status).toBe(0);
     expect(run.stdout).toContain('Usage:');
-    expect(run.stdout).toContain('assistant config-check');
+    expect(run.stdout).toContain('zoveli config-check');
     expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
   });
 
@@ -36,6 +36,13 @@ describe.skipIf(!READY)('CLI fast paths', () => {
     const run = runCli('config-check', '--json');
     expect([0, 1]).toContain(run.status);
     expect(run.stdout).toContain('"ready"');
+    expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
+  });
+
+  it('runs recovery-check without loading the host', () => {
+    const run = runCli('recovery-check', '--json');
+    expect(run.status).toBe(0);
+    expect(JSON.parse(run.stdout).status).toBe('pass');
     expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
   });
 

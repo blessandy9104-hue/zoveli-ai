@@ -19,10 +19,10 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/**
 |---|---|
 | Price | **Free forever**, MIT |
 | Your data | **Stays on your machine**, never trained on |
-| Offline | **Yes** — ~63 tools, no network needed |
+| Offline | **Yes for local tools** — 58 default tools; web research needs network |
 | Math | **Verified or withheld** (+ audit certificate) |
 | Lock-in | None — BYO key or local Ollama |
-| Login | Passwordless email code — the only password you'll ever need is your email account's |
+| Login | Optional passwordless email code; off by default, enable with `ZOVELI_AUTH_REQUIRED=1` |
 
 Details: [docs/why-zoveli.md](docs/why-zoveli.md).
 
@@ -37,8 +37,10 @@ pnpm start                  # then type: /math solve x^2 - 5x + 6 = 0
 ```
 
 No account, no API key needed — local tools (math, memory, sysinfo, …) work fully offline.
-New here? Follow the [first-run guide](docs/guides/onboarding.md) for the install
-check, expected output, and exact fixes for a missing chat or math backend.
+The stable first path is five commands: `/math 2+2`, `/remember <fact>`,
+`/recall <query>`, `/sys`, and `/tools`. New here? Follow the
+[first-run guide](docs/guides/onboarding.md) for the install check, expected
+output, and exact fixes for a missing chat or math backend.
 
 ## Download & install
 
@@ -58,9 +60,10 @@ The installer downloads the matching prebuilt archive, verifies its SHA-256,
 and installs to `~/.local/share/zoveli` (Linux/macOS) or
 `%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli`
 (`%USERPROFILE%\.zoveli` on Windows: vault mirror and memory database) and
-survives upgrades. Re-running the installer first creates and verifies a
-pre-upgrade backup under `~/.zoveli/backups`; it aborts without changing the
-runtime if that backup fails. CI currently publishes Linux x64,
+survives upgrades. Re-running the installer stages and preflights the new
+runtime, creates and verifies a pre-upgrade backup under `~/.zoveli/backups`,
+and automatically restores the previous runtime if the swap or installed
+launcher check fails. CI currently publishes Linux x64,
 Windows x64, and macOS arm64 archives; other targets use the source install
 below. Review
 [`install/install-zoveli-runtime.sh`](install/install-zoveli-runtime.sh) and
@@ -136,9 +139,14 @@ install directory printed at the end.
 Source checkout:
 
 ```bash
-pnpm start            # CLI assistant (works fully offline, Windows/macOS/Linux terminals)
+pnpm start            # CLI assistant (local tools work offline, Windows/macOS/Linux terminals)
 pnpm run desktop      # Electron desktop shell (dev mode, spawns local server internally)
 ```
+
+Before trusting the install with notes, run `zoveli recovery-check` (or
+`node apps/cli/dist/cli.js recovery-check` from a source checkout). It proves
+backup, checksum verification and restore in an isolated temporary vault
+without touching real data.
 
 The CLI works fully offline for all local tools (verified math via
 mathcore, memory vault, sysinfo, languages, search, scheduler, ...).
@@ -147,17 +155,19 @@ For free offline chat with no keys: install Ollama and run
 key (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY` or `ZOVELI_API_KEY`) with optional
 `ZOVELI_MODEL` / `ZOVELI_API_BASE` to use any OpenAI-compatible model.
-Try: `/math solve x^2 - 5x + 6 = 0` · `/sys` · `/tools`.
+Try: `/math solve x^2 - 5x + 6 = 0` · `/remember My spare key is in the blue drawer` · `/recall blue drawer` · `/sys` · `/tools`.
 
 Extend it with the [plugin SDK](docs/plugin-sdk/README.md):
 `pnpm create:plugin <name> --mount`, then enable the opt-in plugin with
-`ZOVELI_PLUGINS=zoveli-<name>`.
+`ZOVELI_PLUGINS=zoveli-<name>`. Inspect the surface with `zoveli plugins`, and
+remove any default or optional plugin with
+`ZOVELI_DISABLE_PLUGINS=zoveli-<name>`.
 
 ## Features (all runnable today)
 
 - **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, calculus, statistics, logic, units, discrete, arithmetic, geometry, trigonometry, probability, linear, number) that memorize verified proofs and recall them (keyword + semantic)
 - **🧠 Local-First Memory** — SQLite store with FTS5 ranked search, wiki-links and tags (Markdown vault kept as human-readable export mirror)
-- **🤖 Full Agent Framework** — 23 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists all ~63 live tools)
+- **🤖 Full Agent Framework** — 24 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 58 default tools; desktop adds 2 auth tools)
 - **🖥️ System & Hardware Awareness** — local OS/CPU/memory/disk/GPU/battery/network insight with budget checks (`@zoveli/sysinfo`)
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
 - **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports
@@ -170,7 +180,7 @@ Extend it with the [plugin SDK](docs/plugin-sdk/README.md):
 - **🎭 Personas** — switchable friend, tutor, engineer, coach (`/persona`, remembered locally)
 - **🌐 Web Research** — SSRF-guarded fetch + keyless search, trusted-source flags
 - **🛡️ Security Scanner** — secrets + risky-pattern scanning
-- **🔑 Passwordless login** — email OTP for any inbox incl. @proton.me, `GET /login`
+- **🔑 Passwordless login** — optional email OTP for any inbox incl. @proton.me, `GET /login`; enable the gate with `ZOVELI_AUTH_REQUIRED=1`
 - **🔒 Privacy-First** — runs locally, no cloud required, MIT licensed
 
 ## Documentation
@@ -178,7 +188,7 @@ Extend it with the [plugin SDK](docs/plugin-sdk/README.md):
 - [Architecture](docs/architecture.md)
 - [Math intelligence subsystem](docs/math-subsystem.md) · [Memory store](docs/memory-store.md)
 - [API Reference](docs/api/) · [Plugin SDK](docs/plugin-sdk/README.md)
-- [Runbooks](docs/runbooks/) · [Release runbook](docs/runbooks/release.md)
+- [Runbooks](docs/runbooks/) · [Release runbook](docs/runbooks/release.md) · [Clean-install acceptance](docs/runbooks/product-acceptance.md)
 - [Upgrading](docs/guides/upgrading.md) · [Changelog](CHANGELOG.md)
 - [ADRs](docs/adr/)
 - [Security policy](SECURITY.md)

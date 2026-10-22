@@ -1,7 +1,7 @@
 {
   "name": "@zoveli/skills",
   "version": "0.1.0",
-  "description": "Custom skills for the Zoveli assistant",
+  "description": "Legacy placeholder skills, not mounted by default",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

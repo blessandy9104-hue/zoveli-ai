@@ -14,7 +14,7 @@ TypeScript, JavaScript, Python, Rust, Go, Java, C++, C#, Ruby, PHP, HTML, CSS, J
 | `language_detect` | Identify language from path + optional content | `filePath` |
 | `language_analyze` | Structure, metrics (LOC, cyclomatic, MI), issues | `filePath` (+ `content` for unsaved buffers) |
 | `language_format` | Format via native tool or deterministic fallback | `filePath`, `content` |
-| `language_lint` | Universal checks + native linter + LSP diagnostics | `filePath`, `content` |
+| `language_lint` | Universal checks + native linter + optional host LSP diagnostics | `filePath`, `content` |
 | `language_run_tests` | Run vitest / pytest / cargo test / go test | `projectPath`, `language` |
 | `language_get_tooling` | Recommended LSP / formatter / linter / test runner + install hints + availability | `language` |
 
@@ -35,7 +35,7 @@ TypeScript, JavaScript, Python, Rust, Go, Java, C++, C#, Ruby, PHP, HTML, CSS, J
 
 ## Fallback strategy (when native tools missing)
 1. **Format:** try `prettier` / `black` / `rustfmt` / `gofmt` in temp dir → else trim trailing whitespace, normalize indentation, single trailing newline.
-2. **Lint:** universal checks (trailing WS, tabs, missing EOL, TODO, `console.log`) + eslint JSON when available + LSP diagnostics when available.
+2. **Lint:** universal checks (trailing WS, tabs, missing EOL, TODO, `console.log`) + eslint JSON when available + LSP diagnostics only when the host provides an `lsp` service (none is bundled).
 3. **Tests:** project-type inference (`Cargo.toml` → rust, `go.mod` → go, `pytest.ini` → python, `package.json` → node) with structured pass/fail parsing; `unknown` → `skipped` with reason instead of failure.
 4. **Tooling:** `which`/`where` probes; `npx`-runnable tools treated as available via fallback.
 

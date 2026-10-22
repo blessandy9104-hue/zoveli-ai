@@ -34,11 +34,21 @@ This guide covers a safe upgrade and rollback.
 
 Portable install: stop Zoveli, then rerun `install-zoveli-runtime.sh` or
 `install-zoveli-runtime.ps1`. When an existing runtime is present, the
-installer runs `zoveli backup` and `zoveli verify` first, aborts if either
-fails, and leaves the verified backup under `~/.zoveli/backups`. The installer
-replaces only the runtime; the vault and configuration under your home
-directory are untouched. Use `--skip-backup` (POSIX) or `-SkipBackup`
-(PowerShell) only when you already have a verified backup.
+installer:
+
+1. stages the new archive beside the install and runs its `--version` check
+   before touching the current runtime;
+2. runs `zoveli backup` and `zoveli verify` and aborts if either fails, leaving
+   the verified backup under `~/.zoveli/backups`;
+3. moves the existing runtime aside, swaps in the staged runtime, and verifies
+   the installed launcher;
+4. on any failure after the swap, removes the new runtime and restores the
+   previous runtime automatically.
+
+The vault and configuration under your home directory are untouched. Staging
+directories are removed on both success and failure. Use `--skip-backup`
+(POSIX) or `-SkipBackup` (PowerShell) only when you already have a verified
+backup.
 
 Source checkout:
 
@@ -62,6 +72,7 @@ Portable install:
 zoveli config-check      # environment drift; exit 1 only on blocking issues
 zoveli migrate           # explicit forward migration + report (also runs on open)
 zoveli health            # runtime/config/vault/MCP/capability rollup
+zoveli recovery-check    # backup/restore drill; real data untouched
 ```
 
 Source checkout:
@@ -70,6 +81,7 @@ Source checkout:
 pnpm config:check        # environment drift; exit 1 only on blocking issues
 pnpm migrate:vault       # explicit forward migration + report (also runs on open)
 pnpm health:check        # runtime/config/vault/MCP/capability rollup
+node apps/cli/dist/cli.js recovery-check   # same isolated backup/restore drill
 ```
 
 The first open that needs a schema migration writes a consistent copy next to
@@ -100,10 +112,13 @@ rewritten automatically.
 
 ## Rollback
 
+Failed installer upgrades roll back automatically. The manual rollback below
+is for undoing a successful upgrade to an older release.
+
 1. Stop the app.
-2. Restore the copied runtime directory, or install the previous release
-   archive with `--archive <previous.tar.gz>`. Source checkouts can use
-   `git checkout v<previous>` and rebuild.
+2. Install the previous release archive with `--archive <previous.tar.gz>`.
+   The installer keeps and verifies your current vault before replacing the
+   runtime. Source checkouts can use `git checkout v<previous>` and rebuild.
 3. Restore the pre-upgrade backup if the older binary cannot read the migrated
    vault:
    ```bash

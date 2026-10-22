@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Zoveli AI features — what you can use today</title>
-<meta name="description" content="Every Zoveli AI feature that runs today: verified math, SQLite memory, 63 tools, 17 languages, system awareness, auth." />
+<meta name="description" content="Every Zoveli AI feature that runs today: verified math, SQLite memory, 58 default tools, 17 languages, system awareness, auth." />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -21,7 +21,7 @@
 
 <section>
   <h2>🧠 Local-first memory</h2>
-  <p>A local SQLite knowledge store with wiki-links, tags, ranked full-text search, and a knowledge graph — mirrored as Markdown files you can open anywhere. Access: <code>memory_create_note</code>, <code>memory_search</code>, <code>vault_search</code>, <code>vault_graph</code>.</p>
+  <p>A local SQLite knowledge store with wiki-links, tags, ranked full-text search, and a knowledge graph — mirrored as Markdown files you can open anywhere. CLI: <code>/remember &lt;fact&gt;</code> and <code>/recall &lt;query&gt;</code> work with no model or network. Tools: <code>memory_create_note</code>, <code>memory_search</code>, <code>vault_search</code>, <code>vault_graph</code>.</p>
 </section>
 
 <section>
@@ -41,12 +41,12 @@
 
 <section>
   <h2>⚡ Capability awareness</h2>
-  <p>The assistant inventories its own 28 capabilities, adapts plans to what's available, and reports gaps. Access: <code>capability_scan</code>, <code>capability_adapt</code>, <code>capability_report</code>.</p>
+  <p>The assistant inventories the tools actually mounted in the host, adapts plans to what's available, and reports gaps. Access: <code>capability_scan</code>, <code>capability_adapt</code>, <code>capability_report</code>.</p>
 </section>
 
 <section>
   <h2>🛠️ Everyday tools</h2>
-  <p>Code review, doc generation, project health scoring, smart scheduling, security scanning, and skills. Run <code>/tools</code> in the CLI or <code>GET /api/tools</code> for the live list (~63 tools).</p>
+  <p>Code review, doc generation, project health scoring, smart scheduling, and security scanning. Run <code>/tools</code> in the CLI or <code>GET /api/tools</code> for the live list (58 default tools; desktop adds 2 auth tools).</p>
 </section>
 
 <section>
@@ -61,13 +61,13 @@
 
 <section>
   <h2>🔑 Passwordless login</h2>
-  <p>Email one-time codes for any inbox including <code>@proton.me</code> — no passwords, no OAuth middleman. Open <code>/login</code> in the web UI.</p>
+  <p>Email one-time codes for any inbox including <code>@proton.me</code> — no passwords, no OAuth middleman. Login is off by default; set <code>ZOVELI_AUTH_REQUIRED=1</code> to gate the desktop and API, then open <code>/login</code>.</p>
 </section>
 
 <section>
   <h2>🖥️ Two ways to run</h2>
   <ul>
-    <li><strong>CLI</strong> — <code>pnpm start</code>, works fully offline (Windows/macOS/Linux terminals).</li>
+    <li><strong>CLI</strong> — <code>pnpm start</code>, local tools work offline (Windows/macOS/Linux terminals).</li>
     <li><strong>Desktop</strong> — <code>pnpm run desktop</code>, Electron shell around the local server.</li>
   </ul>
   <p><a href="install.html">Install Zoveli AI on your hardware →</a></p>

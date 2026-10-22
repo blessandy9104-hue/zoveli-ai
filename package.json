@@ -2,7 +2,7 @@
   "name": "zoveli",
   "version": "0.1.0",
   "private": true,
-  "description": "Zoveli AI - local-first personal assistant with verified math, capability awareness, 23 packages and ~63 tools.",
+  "description": "Zoveli AI - local-first personal assistant with verified math, 24 packages and 58 default tools.",
   "author": "Andy <blessandy9104@gmail.com> (https://github.com/blessandy9104-hue)",
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" exec tsc -p tsconfig.json",
@@ -27,6 +27,7 @@
     "package:mathcore": "node scripts/build-mathcore-runtime.mjs",
     "package:runtime": "node scripts/build-runtime.mjs",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
+    "acceptance:runtime": "node scripts/product-acceptance.mjs",
     "test": "vitest run",
     "lint": "oxlint packages apps tests scripts --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\" --ignore-pattern \"**/coverage/**\"",
     "create:plugin": "node scripts/create-plugin.mjs",

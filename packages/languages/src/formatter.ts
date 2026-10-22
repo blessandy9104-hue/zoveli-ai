@@ -96,10 +96,10 @@ export class CodeFormatter {
       await fs.writeFile(tmpFile, content, 'utf-8');
 
       const commands: Record<string, string[]> = {
-        typescript: ['npx', '--yes', 'prettier', '--parser', 'typescript', '--write', tmpFile],
-        javascript: ['npx', '--yes', 'prettier', '--parser', 'babel', '--write', tmpFile],
-        json: ['npx', '--yes', 'prettier', '--parser', 'json', '--write', tmpFile],
-        markdown: ['npx', '--yes', 'prettier', '--parser', 'markdown', '--write', tmpFile],
+        typescript: ['npx', '--no-install', 'prettier', '--parser', 'typescript', '--write', tmpFile],
+        javascript: ['npx', '--no-install', 'prettier', '--parser', 'babel', '--write', tmpFile],
+        json: ['npx', '--no-install', 'prettier', '--parser', 'json', '--write', tmpFile],
+        markdown: ['npx', '--no-install', 'prettier', '--parser', 'markdown', '--write', tmpFile],
         python: ['black', '-q', tmpFile],
         rust: ['rustfmt', '--edition', '2021', tmpFile],
         go: ['gofmt', '-w', tmpFile],
@@ -155,7 +155,7 @@ export class CodeFormatter {
       const tmpFile = path.join(tmp, path.basename(filePath));
       await fs.writeFile(tmpFile, content, 'utf-8');
       const { stdout } = await execFileAsync(
-        'npx', ['--yes', 'eslint', '--format', 'json', '--no-eslintrc', tmpFile],
+        'npx', ['--no-install', 'eslint', '--format', 'json', '--no-eslintrc', tmpFile],
         { timeout: 20000 }
       ).catch((e: any) => ({ stdout: e.stdout ?? '[]' }));
       await fs.rm(tmp, { recursive: true, force: true });

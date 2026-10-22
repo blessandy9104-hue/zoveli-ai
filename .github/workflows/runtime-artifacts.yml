@@ -13,6 +13,7 @@ on:
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
+      - 'scripts/product-acceptance.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
@@ -26,6 +27,7 @@ on:
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
+      - 'scripts/product-acceptance.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
@@ -85,22 +87,18 @@ jobs:
         run: node scripts/smoke-runtime.mjs
         shell: bash
 
-      - name: Install runtime with installer (Unix)
+      - name: Clean-install acceptance (Unix)
         if: runner.os != 'Windows'
         run: |
           ARCHIVE=$(find release -maxdepth 1 -name '*.tar.gz' | head -n 1)
-          bash install/install-zoveli-runtime.sh --yes --archive "$ARCHIVE" --dir "$RUNNER_TEMP/zoveli-install"
-          bash install/install-zoveli-runtime.sh --yes --archive "$ARCHIVE" --dir "$RUNNER_TEMP/zoveli-install"
-          "$RUNNER_TEMP/zoveli-install/zoveli" --version
+          node scripts/product-acceptance.mjs --archive "$ARCHIVE" --report "acceptance-${{ matrix.os }}.json"
 
-      - name: Install runtime with installer (Windows)
+      - name: Clean-install acceptance (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
-          & install/install-zoveli-runtime.ps1 -Yes -Archive $archive -Dir "$env:RUNNER_TEMP\zoveli-install"
-          & install/install-zoveli-runtime.ps1 -Yes -Archive $archive -Dir "$env:RUNNER_TEMP\zoveli-install"
-          & "$env:RUNNER_TEMP\zoveli-install\zoveli.cmd" --version
+          node scripts/product-acceptance.mjs --archive $archive --report "acceptance-${{ matrix.os }}.json"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -108,6 +106,7 @@ jobs:
           path: |
             release/*.tar.gz
             release/*.sha256
+            acceptance-*.json
           if-no-files-found: error
           retention-days: 14
 

@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Zoveli has 22 packages providing diverse capabilities (math, memory, languages, etc.). The agent needs to:
+Zoveli has many packages providing diverse capabilities (math, memory, languages, etc.). The agent needs to:
 - Know what capabilities are available at runtime
 - Adapt task execution based on available capabilities
 - Detect degraded/unavailable capabilities
@@ -15,12 +15,12 @@ Zoveli has 22 packages providing diverse capabilities (math, memory, languages, 
 Implement a **Capability Awareness System** with three components:
 
 ### 1. CapabilityScanner
-Discovers capabilities from multiple sources:
-- **Builtin**: Hardcoded core capabilities (mathcore, vault, agent loop)
-- **Plugins**: Capabilities exposed by loaded plugins
-- **MCP Servers**: Tools/resources from connected MCP servers
-- **External**: System binaries (docker, git, python, node)
-- **Virtual**: LLM reasoning, planning (derived capabilities)
+Discovers capabilities from one source of truth:
+- **Live tool inventory**: capability groups are reported only when their backing
+  tools are actually mounted in the host
+- **Host loop**: the agent loop is reported only when the host inventory exists
+- **No speculative sources**: the scanner does not probe binaries, MCP servers or
+  virtual LLM abilities, and never hardcodes an available tool that is absent
 
 ### 2. CapabilityRegistry
 Maintains registered capabilities with:
@@ -67,9 +67,9 @@ On `agent/created`, inject capability summary.
 - `capability_report` - Generate awareness report
 
 ### Periodic Scanning
-- Auto-scan on `turn/start` (incremental)
-- Full scan every 5 minutes
-- Deep scan on demand
+- Refresh on `turn/start` while auto-scan is enabled
+- Full refresh on `capability_scan` or when `capability_check` misses
+- Scans are cheap because they read the mounted tool registry
 
 ## Consequences
 
@@ -83,7 +83,7 @@ On `agent/created`, inject capability summary.
 ### Negative
 - Overhead: Scanning adds latency (mitigated by caching)
 - Complexity: Additional system to maintain
-- False Positives: May report available when degraded
+- Tool presence is not a health check: a mounted tool can still fail at runtime
 
 ## Implementation
 Located in `packages/capability/`

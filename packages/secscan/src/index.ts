@@ -15,7 +15,7 @@ const PATTERNS: { rule: string; severity: SecFinding['severity']; re: RegExp; me
   {
     rule: 'hardcoded-secret', severity: 'critical',
     re: /(api[_-]?key|secret|password|passwd|token)\s*[:=]\s*['"][^'"]{8,}['"]/i,
-    message: 'Possible hardcoded secret', remediation: 'Move to OS keychain/env; rotate value',
+    message: 'Possible hardcoded secret', remediation: 'Move to an env var or secret manager; rotate value',
   },
   {
     rule: 'aws-key', severity: 'critical',
@@ -106,13 +106,14 @@ export const zoveliSecscan = definePlugin({  name: 'zoveli-secscan',
       const out: string[] = [];
       async function walk(d: string) {
         if (out.length >= maxFiles) return;
+        const SKIP_DIRS = new Set(['node_modules', '.git', '.hg', '.svn', 'dist', 'build', 'coverage', '.next', '.cache']);
         let entries;
         try { entries = await fs.readdir(d, { withFileTypes: true }); } catch { return; }
         for (const e of entries) {
-          if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('.')) continue;
+          if (e.isDirectory() && SKIP_DIRS.has(e.name)) continue;
           const full = path.join(d, e.name);
           if (e.isDirectory()) await walk(full);
-          else if (/\.(ts|js|py|go|rs|java|yml|yaml|json|env|sh|tf|dockerfile)$/i.test(e.name) || e.name === 'Dockerfile') {
+          else if (/^\.env(\.|$)/.test(e.name) || /\.(ts|js|py|go|rs|java|yml|yaml|json|env|sh|tf)$/i.test(e.name) || e.name === 'Dockerfile') {
             out.push(full);
           }
           if (out.length >= maxFiles) return;

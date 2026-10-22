@@ -80,7 +80,7 @@ export const zoveliCodeAnalysis = definePlugin({
           findings.push({
             severity: 'critical', category: 'security', filePath, line: i + 1,
             message: 'Possible hardcoded secret',
-            suggestion: 'Move to OS keychain / env var; rotate the exposed value',
+            suggestion: 'Move to an env var or secret manager; rotate the exposed value',
           });
         }
       });

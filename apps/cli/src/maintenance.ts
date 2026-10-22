@@ -66,10 +66,10 @@ function pathOverrides(flags: ParsedFlags): Partial<DataPaths> {
 
 function usage(): string {
   return `zoveli data maintenance
-  assistant backup [--out DIR] [--db PATH] [--vault PATH] [--auth-dir DIR] [--audit FILE] [--json]
-  assistant verify <backup-dir> [--json]
-  assistant restore <backup-dir> [--force] [--db PATH] [--vault PATH] [--auth-dir DIR] [--audit FILE]
-  assistant migrate [--db PATH] [--vault PATH] [--json]
+  zoveli backup [--out DIR] [--db PATH] [--vault PATH] [--auth-dir DIR] [--audit FILE] [--json]
+  zoveli verify <backup-dir> [--json]
+  zoveli restore <backup-dir> [--force] [--db PATH] [--vault PATH] [--auth-dir DIR] [--audit FILE]
+  zoveli migrate [--db PATH] [--vault PATH] [--json]
 
 Stop Zoveli before restore. backups include the SQLite database (WAL-safe),
 the Markdown mirror, auth state and the math audit log, plus SHA-256 checksums.`;
@@ -96,13 +96,13 @@ export async function runMaintenanceCommand(argv: string[]): Promise<number> {
             `notes: ${result.manifest.counts.notes}; files: ${result.manifest.counts.files}; schema: v${result.manifest.schemaVersion}`
           );
           for (const warning of result.warnings) console.log(`warning: ${warning}`);
-          console.log(`next: assistant verify "${result.dir}"`);
+          console.log(`next: zoveli verify "${result.dir}"`);
         }
         return 0;
       }
       case 'verify': {
         const dir = flags.positional[0];
-        if (!dir) throw new Error('usage: assistant verify <backup-dir>');
+        if (!dir) throw new Error('usage: zoveli verify <backup-dir>');
         const result = await verifyBackup(dir);
         if (flags.json) {
           console.log(JSON.stringify(result, null, 2));
@@ -122,7 +122,7 @@ export async function runMaintenanceCommand(argv: string[]): Promise<number> {
       }
       case 'restore': {
         const dir = flags.positional[0];
-        if (!dir) throw new Error('usage: assistant restore <backup-dir> [--force]');
+        if (!dir) throw new Error('usage: zoveli restore <backup-dir> [--force]');
         const result = await restoreBackup(dir, { force: flags.force, paths: pathOverrides(flags) });
         if (flags.json) {
           console.log(JSON.stringify(result, null, 2));

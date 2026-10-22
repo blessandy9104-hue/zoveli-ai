@@ -7,7 +7,6 @@ import { zoveliMemoryStore } from '../../packages/memory-store/src/index';
 import { zoveliMemory } from '../../packages/memory/src/index';
 import { zoveliSearch } from '../../packages/search/src/index';
 import { zoveliGraph } from '../../packages/graph/src/index';
-import { memoryTools } from '../../packages/core/src/memory-tools';
 import { ZoveliHost } from '../../packages/host/src/host';
 import { createMockContext } from '../setup';
 
@@ -148,7 +147,7 @@ describe('memory-store plugin contract (tool names preserved)', () => {
     expect(tools.some((t) => t.name === 'vault_graph')).toBe(false);
   });
 
-  it('delegates: memory/search/graph + core tools use the store', async () => {
+  it('legacy memory/search services delegate without registering tools', async () => {
     process.env.ZOVELI_MEMORY_DB = ':memory:';
     process.env.ZOVELI_MEMORY_EXPORT = '0';
     resetStoreForTests();
@@ -156,14 +155,11 @@ describe('memory-store plugin contract (tool names preserved)', () => {
     zoveliMemory.setup(ctx);
     zoveliSearch.setup(ctx as any);
     zoveliGraph.setup(ctx);
-    // provide() shape preserved
     expect(ctx.provide).toHaveBeenCalledWith('memory', expect.any(Object));
     expect(ctx.provide).toHaveBeenCalledWith('search', expect.any(Object));
     expect(ctx.provide).toHaveBeenCalledWith('graph', expect.any(Object));
-    // core tool names preserved
-    expect(memoryTools.some((t) => t.name === 'memory_create_note')).toBe(true);
-    expect(memoryTools.some((t) => t.name === 'memory_update_note')).toBe(true);
-    expect(memoryTools.some((t) => t.name === 'memory_delete_note')).toBe(true);
+    // Tool ownership stays with memory-store/graph; wrappers are service-only.
+    expect(ctx.register).not.toHaveBeenCalledWith('search-tools', expect.anything());
     resetStoreForTests();
     delete process.env.ZOVELI_MEMORY_DB;
   });

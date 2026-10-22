@@ -49,46 +49,51 @@ export class CapabilityAdaptation {
           capabilities = ['mathcore.verified-compute'];
           if (!this.available('mathcore.verified-compute') && this.registry) {
             // registry says unavailable
-            capabilities = ['virtual.reasoning'];
+            capabilities = [];
             strategy = 'llm-reasoning-unverified';
             fallback = { strategy: 'llm-reasoning-unverified', note: 'mathcore unavailable; LLM result marked UNVERIFIED' };
             warnings.push('mathcore unavailable — falling back to unverified reasoning');
           }
         } else {
           strategy = 'llm-reasoning';
-          capabilities = ['virtual.reasoning'];
+          capabilities = [];
         }
       } else {
         strategy = 'llm-reasoning-unverified';
-        capabilities = ['virtual.reasoning'];
+        capabilities = [];
         fallback = { strategy: 'llm-reasoning-unverified', note: 'mathcore unavailable; LLM result marked UNVERIFIED' };
         warnings.push('mathcore unavailable — falling back to unverified reasoning');
       }
     } else if (type === 'research') {
       strategy = 'web-research';
-      capabilities = ['tools.browser', 'memory.vault'];
-      if (!this.available('tools.browser')) {
+      capabilities = ['web.research', 'memory.vault'];
+      if (!this.available('web.research')) {
         gaps.push({
-          needed: 'tools.browser', reason: 'browser unavailable for research',
+          needed: 'web.research', reason: 'web tools unavailable for research',
           alternatives: ['memory.vault'], blockers: [],
         });
       }
     } else if (type === 'code') {
       strategy = 'code-assist';
-      capabilities = ['tools.lsp', 'tools.terminal', 'languages.polyglot'];
-      // tests expect exactly lsp + terminal present (extra languages.polyglot is fine — toContain checks)
+      capabilities = ['languages.polyglot'];
+      if (!this.available('languages.polyglot')) {
+        gaps.push({
+          needed: 'languages.polyglot', reason: 'language tools unavailable',
+          alternatives: ['memory.vault'], blockers: [],
+        });
+      }
     } else if (type === 'vision') {
       strategy = 'unsupported';
       capabilities = [];
       gaps.push({
         needed: 'perception.vision',
         reason: 'no vision/image-analysis capability registered',
-        alternatives: ['tools.browser'],
+        alternatives: ['web.research'],
         blockers: ['missing-model'],
       });
     } else {
       strategy = 'general-assist';
-      capabilities = ['virtual.reasoning', 'memory.vault'];
+      capabilities = ['agent.loop', 'memory.vault'];
     }
 
     // filter to actually-available when registry present (except fallback case)
@@ -99,7 +104,7 @@ export class CapabilityAdaptation {
       }
     }
     if (this.registry && fallback) {
-      capabilities = capabilities.filter((c) => this.available(c) || c === 'virtual.reasoning');
+      capabilities = capabilities.filter((c) => this.available(c));
     }
 
     return { strategy, capabilities, gaps, fallback, warnings };

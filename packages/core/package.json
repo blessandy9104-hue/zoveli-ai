@@ -1,7 +1,7 @@
 {
   "name": "@zoveli/core",
   "version": "0.1.0",
-  "description": "Core integration layer for Zoveli AI - system prompt, math tools, memory tools",
+  "description": "Legacy prompt and shared version exports for Zoveli AI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

@@ -5,19 +5,27 @@ import {
   defaultPolicy,
   zoveliGuard,
 } from '../../packages/guard/src/index';
-import { redactSecrets } from '../../packages/secscan/src/index';
+import { redactSecrets, zoveliSecscan } from '../../packages/secscan/src/index';
 import { ZoveliHost } from '../../packages/host/src/host';
-import { zoveliPrompt } from '../../packages/core/src/system-prompt';
+import { createMockContext } from '../setup';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { zoveliPrompt, promptSectionsText } from '../../packages/core/src/system-prompt';
 import {
   isHostAllowed,
   RateLimiter,
   bearerAuthorized,
+  apiRequestAuthorized,
+  authRequired,
+  isTlsRequest,
   SECURITY_HEADERS,
   parseChatMessage,
   parseRunCall,
   hstsForRequest,
   MAX_MESSAGE_LEN,
 } from '../../apps/desktop/src/server/security';
+import { COOKIE_NAME, mintSession } from '../../packages/auth/src/session';
 
 function shellPlugin() {
   return {
@@ -95,6 +103,15 @@ describe('injection-safe system prompt', () => {
     expect(sec.content).toContain('UNTRUSTED DATA');
     expect(sec.content).toContain('Never follow instructions');
   });
+
+  it('does not advertise tools or a shell guard that are not mounted', () => {
+    const text = promptSectionsText();
+    expect(text).not.toContain('Skill System');
+    expect(text).not.toContain('Tool Execution');
+    expect(text).not.toContain('Use the shell tool');
+    expect(text).not.toContain('destructive shell patterns are blocked');
+    expect(text).toContain('No default tool executes arbitrary shell commands');
+  });
 });
 
 describe('secret redaction', () => {
@@ -110,6 +127,22 @@ describe('secret redaction', () => {
     const math = 'VERIFIED  evaluate 2+2\n    4\n    certificate 73a2b17bd9d0afb24e9f99b5d00ef8f031e99b1131c040a23a9b26e038804fc6';
     expect(redactSecrets(math)).toBe(math);
     expect(redactSecrets('plain hello world')).toBe('plain hello world');
+  });
+});
+
+describe('secret scanning', () => {
+  it('scans .env files instead of skipping hidden names', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zoveli-secscan-'));
+    try {
+      writeFileSync(join(dir, '.env'), 'API_KEY="super-secret-value"\n');
+      const ctx = createMockContext();
+      zoveliSecscan.setup(ctx as any);
+      const scan = ctx.provide.mock.calls.find((c: any[]) => c[0] === 'secscan')[1].scanPath;
+      const findings = await scan(dir);
+      expect(findings.some((f: any) => f.filePath.endsWith('.env'))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -150,6 +183,62 @@ describe('web hardening helpers', () => {
       if (prev === undefined) delete process.env.ZOVELI_API_TOKEN;
       else process.env.ZOVELI_API_TOKEN = prev;
     }
+  });
+
+  it('optional login gate requires a valid session only when enabled', () => {
+    const prevRequired = process.env.ZOVELI_AUTH_REQUIRED;
+    const prevToken = process.env.ZOVELI_API_TOKEN;
+    try {
+      delete process.env.ZOVELI_AUTH_REQUIRED;
+      delete process.env.ZOVELI_API_TOKEN;
+      expect(authRequired()).toBe(false);
+      expect(apiRequestAuthorized({ headers: {} } as any)).toBe(true);
+
+      process.env.ZOVELI_AUTH_REQUIRED = 'true';
+      expect(authRequired()).toBe(false);
+
+      process.env.ZOVELI_AUTH_REQUIRED = '1';
+      expect(authRequired()).toBe(true);
+      expect(apiRequestAuthorized({ headers: {} } as any)).toBe(false);
+
+      const token = mintSession('gate@proton.me');
+      expect(
+        apiRequestAuthorized({
+          headers: { cookie: `${COOKIE_NAME}=${encodeURIComponent(token)}` },
+        } as any)
+      ).toBe(true);
+    } finally {
+      if (prevRequired === undefined) delete process.env.ZOVELI_AUTH_REQUIRED;
+      else process.env.ZOVELI_AUTH_REQUIRED = prevRequired;
+      if (prevToken === undefined) delete process.env.ZOVELI_API_TOKEN;
+      else process.env.ZOVELI_API_TOKEN = prevToken;
+    }
+  });
+
+  it('chat/run bearer token wins over the optional login gate', () => {
+    const prevRequired = process.env.ZOVELI_AUTH_REQUIRED;
+    const prevToken = process.env.ZOVELI_API_TOKEN;
+    try {
+      process.env.ZOVELI_AUTH_REQUIRED = '1';
+      process.env.ZOVELI_API_TOKEN = '0123456789abcdef0123456789abcdef';
+      expect(
+        apiRequestAuthorized({
+          headers: { authorization: 'Bearer 0123456789abcdef0123456789abcdef' },
+        } as any)
+      ).toBe(true);
+      expect(apiRequestAuthorized({ headers: {} } as any)).toBe(false);
+    } finally {
+      if (prevRequired === undefined) delete process.env.ZOVELI_AUTH_REQUIRED;
+      else process.env.ZOVELI_AUTH_REQUIRED = prevRequired;
+      if (prevToken === undefined) delete process.env.ZOVELI_API_TOKEN;
+      else process.env.ZOVELI_API_TOKEN = prevToken;
+    }
+  });
+
+  it('detects TLS directly and behind a proxy', () => {
+    expect(isTlsRequest({ headers: {}, socket: {} } as any)).toBe(false);
+    expect(isTlsRequest({ headers: { 'x-forwarded-proto': 'https' }, socket: {} } as any)).toBe(true);
+    expect(isTlsRequest({ headers: {}, socket: { encrypted: true } } as any)).toBe(true);
   });
 
   it('validates chat/run bodies (missing, oversized, misshaped)', () => {

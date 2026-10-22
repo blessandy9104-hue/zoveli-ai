@@ -32,7 +32,7 @@ function parseFlags(argv: string[]): ParsedFlags {
 
 function usage(): string {
   return `zoveli config drift check
-  assistant config-check [--db PATH] [--json]
+  zoveli config-check [--db PATH] [--json]
 
 Reports environment variables and vault schema that drifted from what this
 Zoveli version expects — typos, values that are silently ignored, removed

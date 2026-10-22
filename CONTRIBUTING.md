@@ -121,7 +121,7 @@ New packages start as **experimental** — mount them opt-in, never in
 ```
 zoveli-ai/
 ├── apps/                    # Applications (CLI, Web, Desktop)
-├── packages/                # 22 packages (@zoveli/*)
+├── packages/                # 24 packages (@zoveli/*)
 │   ├── core                 # Core integration plugin
 │   ├── math-intelligence    # Governed verified math + proof memory
 │   ├── math-domains         # Algebra/calculus/statistics/logic/units/discrete specialists

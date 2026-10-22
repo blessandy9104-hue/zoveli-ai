@@ -39,8 +39,8 @@ pnpm start
 node apps/cli/dist/cli.js
 ```
 
-`assistant --version` prints the product version; `assistant --help` lists the
-one-shot commands. See [Upgrading](upgrading.md) for the upgrade/rollback flow
+`zoveli --version` prints the product version; `zoveli --help` lists the
+one-shot commands (`assistant` remains an alias). See [Upgrading](upgrading.md) for the upgrade/rollback flow
 and `pnpm release:check` (maintainers).
 
 ## Everyday flows
@@ -50,12 +50,13 @@ and `pnpm release:check` (maintainers).
 to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Audit an answer:** `/check integrate x^2 from 0 to 3 ;; the answer is 9`
   → `MATCH` (wrong answers get `MISMATCH`, never a silent guess)
+- **Remember and recall:** `/remember <fact>` saves a local note; `/recall <query>` searches it back. Both work offline with no model configured.
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
 - **MCP pool:** `/mcp` → mathcore pid, spawns, restarts, pending calls, last error (`mathcore_status` does the same from chat)
 - **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures, timings and JSONL log status
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all ~63 local tools
+- **Tool list:** `/tools` → all 58 default tools (desktop adds 2 auth tools)
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 
@@ -87,6 +88,9 @@ docker compose --profile cli up --build
 ## Data maintenance
 
 ```bash
+# Prove backup/restore works without touching real data
+zoveli recovery-check
+
 # WAL-safe backup with a SHA-256 manifest (safe while Zoveli runs)
 pnpm vault:backup -- --out ./backups/2026-10-19
 
@@ -121,6 +125,18 @@ secrets shorter than 16 characters, an unresolvable `MATHCORE_MCP_COMMAND`)
 and vault drift (schema older or newer than this build supports). Secrets are
 never printed. The same report is available programmatically from
 `@zoveli/config-audit` (`configAuditReport()`).
+
+## Plugin inventory
+
+```bash
+zoveli plugins          # tier, mount status and description for every plugin
+zoveli plugins --json   # machine-readable inventory
+```
+
+`ZOVELI_PLUGINS=zoveli-guard` adds an optional plugin;
+`ZOVELI_DISABLE_PLUGINS=zoveli-webresearch` removes any default or optional
+plugin. Unknown names and request/disable conflicts fail startup instead of
+being ignored. Restart Zoveli after changing either variable.
 
 ## Health check
 
@@ -163,19 +179,20 @@ working.
 
 ## Startup and warm math
 
-`assistant --version`, `--help` and the subcommands load only what they need;
+`zoveli --version`, `--help` and the subcommands load only what they need;
 the full plugin host is imported when the interactive assistant starts. In a
 TTY, the REPL starts mathcore in the background at launch when the resolved
 binary exists, so the first `/math` call does not pay the Python startup
 (batch/scripted stdin never warms). Opt out with `ZOVELI_MATHCORE_PREWARM=0`.
 The REPL health probe (`/health`) reuses a live mathcore pool instead of
-spawning a second interpreter; `assistant health` runs a one-shot probe in its
+spawning a second interpreter; `zoveli health` runs a one-shot probe in its
 own process. Add `--offline` to skip the MCP probe entirely. `pnpm run perf:check`
 prints CLI/mount/tool-call metrics and enforces regression budgets.
 
 ## Env
 
 `ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`, `ZOVELI_MATHCORE_PREWARM`,
+`ZOVELI_PLUGINS`, `ZOVELI_DISABLE_PLUGINS`,
 `ZOVELI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_MODEL`,
 `ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`, `ZOVELI_TRACE`, `ZOVELI_TRACE_LOG`,

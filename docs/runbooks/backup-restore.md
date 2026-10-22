@@ -75,8 +75,22 @@ time to put the data back where Zoveli will look for it.
 
 ## Restore drill
 
-Prove a backup is usable without touching live data by restoring it into a
-temporary directory:
+Prove the local backup/restore path works without touching live data:
+
+```bash
+zoveli recovery-check
+zoveli recovery-check --json    # machine-readable for scripts
+```
+
+The drill creates a synthetic note, auth state and audit file in an isolated
+temporary directory, backs them up, verifies checksums and SQLite integrity,
+restores into a second temporary directory, reads the note back, and cleans
+up. Your real vault, auth state and audit log are never read or written, so it
+is safe while Zoveli is running. Exit code 1 means the backup/restore path is
+broken and should be reported with the output. `--keep` retains the temporary
+directory for inspection.
+
+To drill a real backup, restore it into a temporary directory:
 
 ```bash
 tmp=$(mktemp -d)

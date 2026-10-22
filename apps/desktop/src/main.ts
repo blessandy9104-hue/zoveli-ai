@@ -27,7 +27,7 @@ function startServer(): Promise<void> {
     serverProc.on('error', reject);
     serverProc.on('exit', (code) => {
       if (!winOpen) {
-        reject(new Error(`assistant-web exited before ready (code ${code})`));
+        reject(new Error(`zoveli-web exited before ready (code ${code})`));
       }
     });
     pollHealth(resolve, reject);
@@ -46,7 +46,7 @@ function pollHealth(resolve: () => void, reject: (e: Error) => void): void {
       if (res.statusCode === 200) {
         resolve();
       } else if (attempts > 60) {
-        reject(new Error('assistant-web health check failed'));
+        reject(new Error('zoveli-web health check failed'));
       } else {
         setTimeout(() => pollHealth(resolve, reject), 500);
       }
@@ -54,9 +54,9 @@ function pollHealth(resolve: () => void, reject: (e: Error) => void): void {
   );
   req.on('error', () => {
     if (serverProc?.exitCode !== null && serverProc?.exitCode !== undefined) {
-      reject(new Error('assistant-web process died during startup'));
+      reject(new Error('zoveli-web process died during startup'));
     } else if (attempts > 60) {
-      reject(new Error('assistant-web did not become ready in time'));
+      reject(new Error('zoveli-web did not become ready in time'));
     } else {
       setTimeout(() => pollHealth(resolve, reject), 500);
     }

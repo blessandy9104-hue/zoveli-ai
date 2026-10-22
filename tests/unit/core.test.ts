@@ -10,17 +10,25 @@ import {
 } from '../../packages/math-intelligence/src/index';
 import { mathcore } from '../../packages/core/src/index';
 import { zoveliMemory } from '../../packages/memory/src/index';
-import { zoveliSkills } from '../../packages/skills/src/index';
 import { createMockContext } from '../setup';
 
 describe('zoveli core', () => {
-  it('should register core plugins', () => {
+  it('registers only the legacy prompt', () => {
     const ctx = createMockContext();
     zoveliCore.setup(ctx);
-    
+
     expect(ctx.register).toHaveBeenCalledWith('zoveli-prompt', expect.any(Object));
-    expect(ctx.register).toHaveBeenCalledWith('assistant-math-tools', expect.any(Array));
-    expect(ctx.register).toHaveBeenCalledWith('assistant-memory-tools', expect.any(Array));
+    expect(ctx.register).toHaveBeenCalledTimes(1);
+    expect(ctx.on).not.toHaveBeenCalled();
+  });
+
+  it('does not reclaim tool surfaces owned by other packages', () => {
+    const ctx = createMockContext();
+    zoveliCore.setup(ctx);
+
+    const keys = ctx.register.mock.calls.map((c: any[]) => c[0]);
+    expect(keys).not.toContain('assistant-math-tools');
+    expect(keys).not.toContain('assistant-memory-tools');
   });
 
   it('should have system prompt with math rules', () => {
@@ -31,27 +39,6 @@ describe('zoveli core', () => {
     expect(promptCall).toBeDefined();
     expect(promptCall[1].sections).toBeDefined();
     expect(promptCall[1].sections.some((s: any) => s.id === 'math-rules')).toBe(true);
-  });
-
-  it('should have math tools', () => {
-    const ctx = createMockContext();
-    zoveliCore.setup(ctx);
-    
-    const toolsCall = ctx.register.mock.calls.find(c => c[0] === 'assistant-math-tools');
-    expect(toolsCall).toBeDefined();
-    expect(Array.isArray(toolsCall[1])).toBe(true);
-    expect(toolsCall[1].some((t: any) => t.name === 'mathcore_compute')).toBe(true);
-    expect(toolsCall[1].some((t: any) => t.name === 'mathcore_check_answer')).toBe(true);
-  });
-
-  it('should have memory tools', () => {
-    const ctx = createMockContext();
-    zoveliCore.setup(ctx);
-    
-    const toolsCall = ctx.register.mock.calls.find(c => c[0] === 'assistant-memory-tools');
-    expect(toolsCall).toBeDefined();
-    expect(toolsCall[1].some((t: any) => t.name === 'memory_create_note')).toBe(true);
-    expect(toolsCall[1].some((t: any) => t.name === 'memory_search')).toBe(true);
   });
 });
 
@@ -132,30 +119,3 @@ describe('zoveli memory', () => {
     expect(vaultCall).toBeDefined();
   });
 });
-
-describe('zoveli skills', () => {
-  it('should register built-in skills', () => {
-    const ctx = createMockContext();
-    zoveliSkills.setup(ctx);
-    
-    expect(ctx.register).toHaveBeenCalledWith('skill-daily-briefing', expect.any(Object));
-    expect(ctx.register).toHaveBeenCalledWith('skill-research', expect.any(Object));
-    expect(ctx.register).toHaveBeenCalledWith('skill-task-planning', expect.any(Object));
-    expect(ctx.register).toHaveBeenCalledWith('skill-code-review', expect.any(Object));
-  });
-
-  it('should have daily briefing skill', () => {
-    const ctx = createMockContext();
-    zoveliSkills.setup(ctx);
-    
-    const skillCall = ctx.register.mock.calls.find(c => c[0] === 'skill-daily-briefing');
-    expect(skillCall).toBeDefined();
-    expect(skillCall[1].name).toBe('daily-briefing');
-    expect(skillCall[1].execute).toBeDefined();
-  });
-});
-
-
-
-
-

@@ -13,10 +13,12 @@ import {
   withSecurityHeaders,
   isHostAllowed,
   RateLimiter,
-  bearerAuthorized,
+  apiRequestAuthorized,
+  authRequired,
   parseChatMessage,
   parseRunCall,
   hstsForRequest,
+  isTlsRequest,
 } from './security.js';
 import {
   themeCSS,
@@ -146,7 +148,7 @@ ${themeHeadScript()}
 <a class="skip-link" href="#main">Skip to chat</a>
 <header>
 <h1>Zoveli AI</h1>
-<p>Local-first assistant. Math is verified by mathcore; everything runs on your machine. <a href="/login" data-testid="login-link">Log in / sign up</a> with any email address, including your @proton.me address — we send a login code, no password needed.</p>
+<p>Local-first assistant. Math is verified by mathcore; local tools run on your machine. Optional account: <a href="/login" data-testid="login-link">log in / sign up</a> with any email address, including @proton.me, to receive a one-time code. No account is needed for local tools.</p>
 <p>No account needed for local tools. Math answers carry a <span class="badge">VERIFIED</span> badge — anything unverified is withheld, never guessed.</p>
 ${onboarding.status}
 </header>
@@ -378,6 +380,24 @@ async function main(): Promise<void> {
           headers?: Record<string, string>
         ) => origWriteHead(status, { ...hsts, ...headers })) as never;
       }
+      const publicPath =
+        url.pathname === '/login' ||
+        url.pathname === '/health' ||
+        url.pathname.startsWith('/api/auth/') ||
+        url.pathname === '/vendor/lenis.min.js';
+      if (authRequired() && !publicPath) {
+        const hasSession = Boolean(sessionEmailFromCookie(req.headers.cookie));
+        const hasApiAccess = apiRequestAuthorized(req);
+        if (!hasSession && !hasApiAccess) {
+          if (req.method === 'GET' && url.pathname === '/') {
+            res.writeHead(302, withSecurityHeaders({ Location: '/login' }));
+            res.end();
+            return;
+          }
+          json(res, 401, { ok: false, error: 'login required' });
+          return;
+        }
+      }
       if (req.method === 'GET' && url.pathname === '/') {
         const text = pageHTML(onboarding);
         res.writeHead(200, withSecurityHeaders({
@@ -546,7 +566,8 @@ ${themeBootScript(unicornProjectId())}
         res.end(LENIS_BUNDLE);
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/run') {        let tool: string;
+      if (req.method === 'POST' && url.pathname === '/api/run') {
+        let tool: string;
         let args: Record<string, unknown>;
         try {
           ({ tool, args } = parseRunCall(await readBody(req)));
@@ -554,7 +575,7 @@ ${themeBootScript(unicornProjectId())}
           json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
           return;
         }
-        if (!bearerAuthorized(req)) {
+        if (!apiRequestAuthorized(req)) {
           json(res, 401, { ok: false, error: 'unauthorized' });
           return;
         }
@@ -585,7 +606,7 @@ ${themeBootScript(unicornProjectId())}
           json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
           return;
         }
-        if (!bearerAuthorized(req)) {
+        if (!apiRequestAuthorized(req)) {
           json(res, 401, { ok: false, error: 'unauthorized' });
           return;
         }
@@ -696,7 +717,7 @@ ${themeBootScript(unicornProjectId())}
         const token = mintSession(verdict.email);
         res.writeHead(200, withSecurityHeaders({
           'Content-Type': 'application/json; charset=utf-8',
-          'Set-Cookie': sessionCookie(token),
+          'Set-Cookie': sessionCookie(token, isTlsRequest(req)),
         }));
         res.end(JSON.stringify({ ok: true, email: verdict.email }));
         return;

@@ -23,32 +23,35 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 ## Security Measures
 
 ### Supply Chain
-- All dependencies scanned via `pnpm audit` and Snyk
-- SBOM generated for each release (Syft)
-- Docker images signed with Cosign
+- Dependencies scanned via `pnpm audit` (CI gate) and Trivy
+- SBOM generated for each release (Syft/Anchore)
 - Dependabot for automated updates
+- Release archives are SHA-256 checksummed; code signing and image signing
+  are not implemented yet
 
 ### Runtime
-- Sandboxed execution environments
-- Capability-based permissions
-- Guard enforcement: destructive shell patterns are denied in the host
-  (`guard_set_policy` switches strict/balanced/permissive live)
+- The default tool surface has no shell, filesystem or browser tool
+- The shell guard is opt-in for custom `shell_exec` tools
+  (`ZOVELI_PLUGINS=zoveli-guard`)
 - Injection-safe system prompt: tool outputs and web content are treated as
   untrusted data, never as instructions
 - No eval/exec in user-facing code (verified: only the secscan pattern
   table mentions `eval`)
-- Input validation on all tool parameters
+- Input validation on tool parameters and web request bodies
 - Per-IP rate limiting on web APIs (auth 30/min, chat/run 120/min)
+- No OS-level sandbox: tools and plugins run in the same Node process
 
 ### Data Protection
 - Local-first architecture (no cloud required; no cloud sync exists —
-  backups are user-managed encrypted copies)
-- Credential storage via OS keychain
+  backups are user-managed copies)
+- Secrets are read from environment variables; there is no OS-keychain or
+  encrypted credential store
 - OTP codes hashed at rest, 5/hour issuance cap, 5 verify attempts,
   constant-time comparison; HMAC-signed sessions, HttpOnly + SameSite cookies
 - Secret redaction in server errors and logs (key material masked;
   math certificates pass through)
-- Audit logging for all operations
+- Optional JSONL tool trace (`ZOVELI_TRACE_LOG`); chat history is in-memory,
+  and there is no append-only audit log for every operation
 - mathcore verification prevents hallucinated outputs
 
 ### Network
@@ -58,25 +61,31 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 - Hardening headers on every response (nosniff, SAMEORIGIN framing,
   same-origin referrer/COOP)
 - Optional bearer token for tool-running routes (`ZOVELI_API_TOKEN`, off by default)
-- Optional TLS for web UI
+- Optional login gate for the desktop UI/API (`ZOVELI_AUTH_REQUIRED=1`)
+- TLS is not built in; terminate TLS at a reverse proxy for network exposure
+  (HSTS is emitted only when TLS is detected)
 - MCP servers run in isolated processes
-- No telemetry without explicit consent
+- No telemetry exists in the product
 
 ## Threat Model
 
-We use STRIDE methodology:
-- **Spoofing**: JWT/OIDC authentication, signed releases
-- **Tampering**: Immutable audit logs, signed containers
-- **Repudiation**: Comprehensive audit trails
-- **Information Disclosure**: Local-first, encrypted storage
-- **Denial of Service**: Rate limits, resource quotas
-- **Elevation of Privilege**: Capability-based access, sandboxing
+See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the current controls and
+open gaps. In short:
+- **Spoofing**: email OTP login and bearer tokens; no OIDC/SAML yet
+- **Tampering**: hash-chained math audit certificates; no signed releases or
+  immutable session log yet
+- **Repudiation**: optional tool trace and math audit; no complete audit trail
+- **Information Disclosure**: local-first storage, SSRF-guarded web tools and
+  secret redaction; no encrypted memory store
+- **Denial of Service**: request size caps and rate limits; no resource quotas
+- **Elevation of Privilege**: no default shell/filesystem tool; opt-in guard;
+  plugins are trusted code, not sandboxed
 
 ## Compliance
 
-- EU AI Act ready (local processing, audit logs)
-- GDPR compliant (user data control, right to deletion)
-- SOC 2 compatible (audit logging, access controls)
+Zoveli is not certified for SOC 2, ISO 27001, GDPR or the EU AI Act. The
+architecture is designed to support local processing and user-controlled data,
+but certification and formal retention controls are roadmap work.
 
 ## Responsible Disclosure
 
@@ -137,4 +146,4 @@ these controls add safety without gating effectiveness:
   referrer/COOP on every response; HSTS behind TLS.
 - **HTTPS**: localhost serves plain http by design; terminate TLS at a
   reverse proxy for any network exposure (see web guide).
-- **Dependencies scanned**: `pnpm audit` (CI gate) + Snyk + Trivy + SBOM.
+- **Dependencies scanned**: `pnpm audit` (CI gate) + Trivy + SBOM.

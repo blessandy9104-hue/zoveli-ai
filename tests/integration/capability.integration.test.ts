@@ -11,7 +11,19 @@ describe('Capability System Integration', () => {
   let mockCtx: any;
 
   beforeAll(() => {
-    mockCtx = createMockContext();
+    const tools = [
+      'mathcore_compute',
+      'mathcore_check_answer',
+      'memory_create_note',
+      'memory_search',
+      'language_detect',
+      'web_search',
+      'web_fetch',
+      'capability_scan',
+    ];
+    mockCtx = createMockContext({
+      get: (key: string) => (key === 'tool-inventory' ? { list: () => tools } : undefined),
+    });
     scanner = new CapabilityScanner(mockCtx);
     registry = new CapabilityRegistry(mockCtx);
     adaptation = new CapabilityAdaptation(mockCtx, scanner, registry);
@@ -41,7 +53,7 @@ describe('Capability System Integration', () => {
     expect(result.strategy).toBe('verified-computation');
   });
 
-  it('should adapt research task to browser + memory', async () => {
+  it('should adapt research task to web tools + memory', async () => {
     const capabilities = await scanner.scanAll({ deep: false });
     for (const cap of capabilities) {
       registry.register(cap);
@@ -50,12 +62,12 @@ describe('Capability System Integration', () => {
     const task = { type: 'research', topic: 'AI agents market trends' };
     const result = await adaptation.adapt(task);
     
-    expect(result.capabilities).toContain('tools.browser');
+    expect(result.capabilities).toContain('web.research');
     expect(result.capabilities).toContain('memory.vault');
     expect(result.strategy).toBeDefined();
   });
 
-  it('should adapt coding task to LSP + terminal', async () => {
+  it('should adapt coding task to the language tools', async () => {
     const capabilities = await scanner.scanAll({ deep: false });
     for (const cap of capabilities) {
       registry.register(cap);
@@ -64,8 +76,7 @@ describe('Capability System Integration', () => {
     const task = { type: 'code', action: 'refactor', files: ['src/utils.ts'] };
     const result = await adaptation.adapt(task);
     
-    expect(result.capabilities).toContain('tools.lsp');
-    expect(result.capabilities).toContain('tools.terminal');
+    expect(result.capabilities).toContain('languages.polyglot');
   });
 
   it('should generate comprehensive report', async () => {

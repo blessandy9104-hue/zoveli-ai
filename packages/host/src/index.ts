@@ -2,16 +2,12 @@ import type { ZoveliPlugin } from '@deepseek-ai/dsh-core';
 import { ZoveliHost } from './host.js';
 import { runRepl } from './repl.js';
 import { chatConfigFromEnv } from './chat.js';
-import { selectPlugins } from './plugin-set.js';
-import { zoveliCore } from '@zoveli/core';
+import { pluginInventory, selectPlugins } from './plugin-set.js';
 import { zoveliMathIntelligence } from '@zoveli/math-intelligence';
 import { zoveliMathAlgebra, zoveliMathCalculus, zoveliMathStatistics, zoveliMathLogic, zoveliMathUnits, zoveliMathDiscrete, zoveliMathArithmetic, zoveliMathGeometry, zoveliMathTrigonometry, zoveliMathProbability, zoveliMathLinear, zoveliMathNumber } from '@zoveli/math-domains';
 import { zoveliMemoryStore } from '@zoveli/memory-store';
-import { zoveliMemory } from '@zoveli/memory';
-import { zoveliSkills } from '@zoveli/skills';
 import { zoveliLanguages } from '@zoveli/languages';
 import { zoveliSysinfo } from '@zoveli/sysinfo';
-import { zoveliSearch } from '@zoveli/search';
 import { zoveliScheduler } from '@zoveli/scheduler';
 import { zoveliSecscan } from '@zoveli/secscan';
 import { zoveliHealth } from '@zoveli/health';
@@ -30,7 +26,6 @@ import { zoveliDiagnostics } from '@zoveli/diagnostics';
  * this host implements its own loop; upstream Cordis parity is future work.
  */
 export const defaultPlugins = [
-  zoveliCore,
   zoveliMathIntelligence,
   zoveliMathAlgebra,
   zoveliMathCalculus,
@@ -45,11 +40,8 @@ export const defaultPlugins = [
   zoveliMathLinear,
   zoveliMathNumber,
   zoveliMemoryStore,
-  zoveliMemory,
-  zoveliSkills,
   zoveliLanguages,
   zoveliSysinfo,
-  zoveliSearch,
   zoveliScheduler,
   zoveliSecscan,
   zoveliHealth,
@@ -57,7 +49,6 @@ export const defaultPlugins = [
   zoveliDocgen,
   zoveliCodeAnalysis,
   zoveliCapability,
-  zoveliGuard,
   zoveliPersona,
   zoveliWebResearch,
   zoveliDiagnostics,
@@ -65,17 +56,29 @@ export const defaultPlugins = [
 
 /**
  * Opt-in plugins wired by `pnpm create:plugin <name> --mount`. They stay
- * unloaded unless selected with `ZOVELI_PLUGINS=<plugin-name,...>`; promoting
- * one to `defaultPlugins` is a core change (see docs/core-plugins.md).
+ * unloaded unless selected with `ZOVELI_PLUGINS=<plugin-name,...>`, and any
+ * plugin can be removed with `ZOVELI_DISABLE_PLUGINS=<plugin-name,...>`;
+ * promoting one to `defaultPlugins` is a core change (see docs/core-plugins.md).
  */
-export const optionalPlugins: ZoveliPlugin[] = [];
+export const optionalPlugins: ZoveliPlugin[] = [zoveliGuard];
 
-/** Resolve defaults plus any plugins requested by name in `ZOVELI_PLUGINS`. */
+/**
+ * Resolve defaults plus plugins requested in `ZOVELI_PLUGINS`, minus plugins
+ * named in `ZOVELI_DISABLE_PLUGINS`.
+ */
 export function resolvePlugins(env: Record<string, string | undefined> = process.env): ZoveliPlugin[] {
   return selectPlugins(env, defaultPlugins, optionalPlugins);
 }
 
-export { selectPlugins } from './plugin-set.js';
+/** Describe every plugin and whether the current environment mounts it. */
+export function describePlugins(
+  env: Record<string, string | undefined> = process.env
+): ReturnType<typeof pluginInventory> {
+  return pluginInventory(env, defaultPlugins, optionalPlugins);
+}
+
+export { pluginInventory, selectPlugins } from './plugin-set.js';
+export type { PluginInventory, PluginInventoryEntry, PluginStatus, PluginTier } from './plugin-set.js';
 
 /** Boot the host, mount defaults plus `ZOVELI_PLUGINS`, and start the REPL. */
 export async function boot(): Promise<void> {

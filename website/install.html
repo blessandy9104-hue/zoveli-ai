@@ -15,10 +15,21 @@
 </header>
 
 <section>
-  <h2>0. What you need</h2>
+  <h2>0. Portable install (recommended)</h2>
+  <p>No Git, Node, Python, pnpm, or compiler is required. The archive bundles its own runtime and verified-math backend; the installer verifies SHA-256 before extracting.</p>
+  <pre><code># macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
+
+# Windows PowerShell
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex</code></pre>
+  <p>Then run the printed <code>zoveli</code> (or <code>zoveli.cmd</code>) path. Re-running the installer stages and preflights the new runtime, creates a verified backup, and rolls back automatically if the upgrade fails. After install, <code>zoveli health</code> reports readiness and <code>zoveli recovery-check</code> proves backup/restore in an isolated temporary vault without touching your real data. CI builds Linux, Windows, and macOS archives and runs a clean-install acceptance test on each; see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/runbooks/product-acceptance.md">acceptance runbook</a>.</p>
+</section>
+
+<section>
+  <h2>Source install (developers)</h2>
   <ul>
     <li><strong>Node.js 22.16+</strong>, <strong>Python 3.11+</strong>, <strong>pnpm 11.7.0+</strong>, <strong>Git</strong></li>
-    <li>Optional but recommended for verified math: <strong>mathcore</strong> ships vendored in <code>./mathcore</code> (<code>pip install -e ./mathcore</code>)</li>
+    <li>Verified math: <strong>mathcore</strong> ships vendored in <code>./mathcore</code> (<code>pip install -e ./mathcore</code>)</li>
   </ul>
 </section>
 
@@ -31,7 +42,7 @@ cd zoveli-ai
 pip install -e .\mathcore   # vendored: enables verified math
 pnpm install
 pnpm run build
-pnpm test                    # 160+ unit &amp; integration tests, all green
+pnpm test                    # 300+ unit &amp; integration tests, all green
 pnpm start                   # launch the CLI assistant</code></pre>
 </section>
 
@@ -63,15 +74,15 @@ pnpm start</code></pre>
 
 <section>
   <h2>4. Launch it</h2>
-  <pre><code>pnpm start            # CLI — works fully offline
+  <pre><code>pnpm start            # CLI — local tools work offline
 pnpm run desktop      # Electron shell (dev mode)</code></pre>
-  <p>In the CLI, try: <code>/math solve x^2 - 5x + 6 = 0</code> · <code>/sys</code> · <code>/tools</code> · <code>/help</code></p>
+  <p>In the CLI, try: <code>/math solve x^2 - 5x + 6 = 0</code> · <code>/remember My spare key is in the blue drawer</code> · <code>/recall blue drawer</code> · <code>/sys</code> · <code>/tools</code> · <code>/help</code></p>
   <p>For free offline chat with no keys, install <a href="https://ollama.com">Ollama</a> and run <code>ollama pull qwen3:4b</code> — Zoveli detects it automatically. Or set any API key (<code>OPENAI_API_KEY</code>, <code>DEEPSEEK_API_KEY</code>, …) for cloud models. No key needed for any local tool.</p>
 </section>
 
 <section>
   <h2>5. Log in (web UI)</h2>
-  <p>Open <code>http://127.0.0.1:3080/login</code> and enter any email address — including <code>@proton.me</code>. Zoveli sends a 6-digit code (no password, no OAuth middleman). Without an SMTP server configured, the code prints to the server console (dev mode).</p>
+  <p>Login is optional. To require it, set <code>ZOVELI_AUTH_REQUIRED=1</code>, open <code>http://127.0.0.1:3080/login</code>, and enter any email address — including <code>@proton.me</code>. Zoveli sends a 6-digit code (no password, no OAuth middleman). Without an SMTP server configured, the code prints to the server console (dev mode).</p>
 </section>
 
 <footer>

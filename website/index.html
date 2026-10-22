@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Zoveli AI — local-first personal assistant</title>
-<meta name="description" content="Zoveli AI is a local-first personal assistant. Verified math, your data stays home, passwordless login with any email including @proton.me." />
+<meta name="description" content="Zoveli AI is a local-first personal assistant. Verified math, your data stays home, optional passwordless login with any email including @proton.me." />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,7 +16,7 @@
     <a class="btn" href="install.html">Download &amp; launch — free</a>
     <a class="btn secondary" href="features.html">Explore features</a>
   </p>
-  <p><small>Free forever · No account needed · Works fully offline · MIT licensed</small></p>
+  <p><small>Free forever · No account needed · Local tools work offline · MIT licensed</small></p>
 </header>
 
 <section>
@@ -25,23 +25,26 @@
   <table>
     <tr><th>Price</th><td><strong>Free</strong>, runs on your machine, MIT licensed</td></tr>
     <tr><td>Your data</td><td><strong>Stays home</strong> — SQLite store you own plus a Markdown mirror, never used for training</td></tr>
-    <tr><td>Offline</td><td><strong>Fully offline</strong> for ~63 local tools</td></tr>
+    <tr><td>Offline</td><td><strong>Yes for local tools</strong> — 58 default tools; web research needs network</td></tr>
     <tr><td>Math</td><td><strong>Verified or withheld</strong> — independent methods must agree, sealed certificate; governed specialists memorize proofs</td></tr>
     <tr><td>Model choice</td><td>Any API key, or free local Ollama (<code>ollama pull qwen3:4b</code>) — swap anytime</td></tr>
-    <tr><td>Login</td><td><strong>Passwordless</strong> email code — the only password you'll ever need is your email account's</td></tr>
+    <tr><td>Login</td><td><strong>Optional passwordless</strong> email code; off by default</td></tr>
   </table>
   <p>Use Zoveli when the work is yours: private notes, exact computation, and tools that must work on a plane.</p>
 </section>
 
 <section>
   <h2>Value in 30 seconds</h2>
-  <pre><code>$ git clone https://github.com/blessandy9104-hue/zoveli-ai.git
-$ cd zoveli-ai &amp;&amp; pnpm install &amp;&amp; pnpm run build
-$ pnpm start
+  <pre><code>$ curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
+$ ~/.local/share/zoveli/zoveli
 zoveli — local-first assistant. Type /help for commands, /quit to exit.
 zoveli&gt; /math solve x^2 - 5x + 6 = 0
-VERIFIED  x = 2; x = 3  (certificate 9c8739cbf1e5ad80)</code></pre>
-  <p><a href="install.html">Full installation guides for Windows, macOS, and Linux →</a></p>
+VERIFIED  x = 2; x = 3  (certificate 9c8739cbf1e5ad80)
+zoveli&gt; /remember My spare key is in the blue drawer
+remembered: My spare key is in the blue drawer
+zoveli&gt; /recall blue drawer
+- My spare key is in the blue drawer: My spare key is in the blue drawer</code></pre>
+  <p><a href="install.html">Portable and source install guides for Windows, macOS, and Linux →</a></p>
 </section>
 
 <section>
@@ -60,8 +63,8 @@ VERIFIED  solve x^2 - 5x + 6 = 0 for x
   <h2>Local-first by construction</h2>
   <ul>
     <li><strong>SQLite memory, Markdown mirror</strong> — your memory is a local database you own, exportable as plain Markdown files.</li>
-    <li><strong>Offline tools</strong> — ~63 local tools work with no API key and no network.</li>
-    <li><strong>Passwordless login</strong> — email codes for any inbox including <code>@proton.me</code>. No passwords stored, no OAuth middleman.</li>
+    <li><strong>Offline tools</strong> — local tools need no API key and no network; web research is explicit and needs connectivity.</li>
+    <li><strong>Optional login</strong> — email codes for any inbox including <code>@proton.me</code>; off by default, enable with <code>ZOVELI_AUTH_REQUIRED=1</code>.</li>
     <li><strong>Capability awareness</strong> — the assistant knows what it can do and says when it can't.</li>
   </ul>
 </section>
@@ -71,7 +74,7 @@ VERIFIED  solve x^2 - 5x + 6 = 0 for x
   <pre><code>git clone https://github.com/blessandy9104-hue/zoveli-ai.git
 cd zoveli-ai
 pnpm install &amp;&amp; pnpm run build
-pnpm start   # CLI — works fully offline
+pnpm start   # CLI — local tools work offline
 pnpm run desktop # Desktop shell (Electron, dev mode)</code></pre>
   <p><a href="install.html">Full installation guides for Windows, macOS, and Linux →</a></p>
 </section>

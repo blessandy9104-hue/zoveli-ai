@@ -6,7 +6,7 @@ import {
   validatePlugin,
 } from '../../packages/shim-dsh-core/src/index';
 import { ZoveliHost } from '../../packages/host/src/host';
-import { selectPlugins } from '../../packages/host/src/plugin-set';
+import { pluginInventory, selectPlugins } from '../../packages/host/src/plugin-set';
 import { resolvePlugins } from '../../packages/host/src/index';
 
 function plugin(name = 'zoveli-test', extra: Record<string, unknown> = {}) {
@@ -122,8 +122,82 @@ describe('ZOVELI_PLUGINS selection', () => {
 
   it('resolvePlugins boots the real defaults and rejects unknown opt-ins', () => {
     const names = resolvePlugins({}).map((plugin) => plugin.name);
-    expect(names).toContain('zoveli-core');
-    expect(names.length).toBeGreaterThan(20);
+    expect(names).toContain('zoveli-memory-store');
+    expect(names).not.toContain('zoveli-core');
+    expect(names).not.toContain('zoveli-guard');
+    expect(names).toHaveLength(26);
+    expect(resolvePlugins({ ZOVELI_PLUGINS: 'zoveli-guard' }).map((p) => p.name)).toContain(
+      'zoveli-guard'
+    );
     expect(() => resolvePlugins({ ZOVELI_PLUGINS: 'zoveli-nope' })).toThrow(/unknown optional/);
+  });
+});
+
+describe('ZOVELI_DISABLE_PLUGINS selection', () => {
+  const base = [plugin('zoveli-core'), plugin('zoveli-math')];
+  const optional = [plugin('zoveli-guard')];
+
+  it('removes default plugins by name and trims the list', () => {
+    const out = selectPlugins(
+      { ZOVELI_DISABLE_PLUGINS: ' zoveli-math , zoveli-math ' },
+      base,
+      optional
+    );
+    expect(out.map((p) => p.name)).toEqual(['zoveli-core']);
+  });
+
+  it('leaves opt-in plugins unloaded unless requested', () => {
+    const out = selectPlugins(
+      { ZOVELI_PLUGINS: 'zoveli-guard', ZOVELI_DISABLE_PLUGINS: 'zoveli-math' },
+      base,
+      optional
+    );
+    expect(out.map((p) => p.name)).toEqual(['zoveli-core', 'zoveli-guard']);
+  });
+
+  it('allows disabling an optional plugin even when it is not mounted', () => {
+    const out = selectPlugins({ ZOVELI_DISABLE_PLUGINS: 'zoveli-guard' }, base, optional);
+    expect(out.map((p) => p.name)).toEqual(['zoveli-core', 'zoveli-math']);
+  });
+
+  it('fails fast on unknown names and prints the available list', () => {
+    expect(() =>
+      selectPlugins({ ZOVELI_DISABLE_PLUGINS: 'zoveli-missing' }, base, optional)
+    ).toThrow(/unknown plugin\(s\) to disable: zoveli-missing.*zoveli-core, zoveli-guard, zoveli-math/s);
+  });
+
+  it('rejects a plugin that is both requested and disabled', () => {
+    expect(() =>
+      selectPlugins(
+        { ZOVELI_PLUGINS: 'zoveli-guard', ZOVELI_DISABLE_PLUGINS: 'zoveli-guard' },
+        base,
+        optional
+      )
+    ).toThrow(/both requested and disabled: zoveli-guard/);
+  });
+
+  it('reports plugin inventory with tier and status', () => {
+    const inventory = pluginInventory(
+      { ZOVELI_PLUGINS: 'zoveli-guard', ZOVELI_DISABLE_PLUGINS: 'zoveli-math' },
+      base,
+      optional
+    );
+    expect(inventory).toMatchObject({ enabled: 2, disabled: 1, optIn: 0 });
+    expect(inventory.plugins).toEqual([
+      expect.objectContaining({ name: 'zoveli-core', tier: 'default', status: 'enabled' }),
+      expect.objectContaining({ name: 'zoveli-math', tier: 'default', status: 'disabled' }),
+      expect.objectContaining({ name: 'zoveli-guard', tier: 'optional', status: 'enabled' }),
+    ]);
+  });
+
+  it('resolvePlugins removes a real default plugin', () => {
+    const names = resolvePlugins({ ZOVELI_DISABLE_PLUGINS: 'zoveli-memory-store' }).map(
+      (plugin) => plugin.name
+    );
+    expect(names).not.toContain('zoveli-memory-store');
+    expect(names).toHaveLength(25);
+    expect(() => resolvePlugins({ ZOVELI_DISABLE_PLUGINS: 'zoveli-nope' })).toThrow(
+      /unknown plugin\(s\) to disable/
+    );
   });
 });

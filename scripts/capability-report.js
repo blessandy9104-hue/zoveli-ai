@@ -9,14 +9,17 @@
 const { CapabilityScanner } = require('../packages/capability/dist/scanner.js');
 const { CapabilityRegistry } = require('../packages/capability/dist/registry.js');
 const { CapabilityAdaptation } = require('../packages/capability/dist/adaptation.js');
+const { ZoveliHost, defaultPlugins } = require('../packages/host/dist/index.js');
 
 async function main() {
-  const ctx = { config: {}, plugins: [] };
+  const host = new ZoveliHost();
+  host.mount(defaultPlugins);
+  const ctx = host.ctx;
   const scanner = new CapabilityScanner(ctx);
   const registry = new CapabilityRegistry(ctx);
   const adaptation = new CapabilityAdaptation(ctx, scanner, registry);
 
-  const caps = await scanner.scanAll({ deep: false });
+  const caps = await scanner.scanAll();
   for (const cap of caps) registry.register(cap);
 
   const report = await adaptation.generateReport('markdown', true);
