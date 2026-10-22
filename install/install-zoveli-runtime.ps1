@@ -96,12 +96,20 @@ function Backup-ExistingRuntime($dir) {
   $homeDir = $(if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME })
   $backupDir = Join-Path (Join-Path $homeDir '.zoveli\backups') "pre-upgrade-$stamp-$suffix"
   Info "Backing up existing data to $backupDir ..."
-  $backupOutput = & $launcher backup --out $backupDir --json 2>&1
-  if ($LASTEXITCODE -ne 0) {
+  $previousPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $backupOutput = & $launcher backup --out $backupDir --json 2>&1
+    $backupCode = $LASTEXITCODE
+    $verifyOutput = & $launcher verify $backupDir --json 2>&1
+    $verifyCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  if ($backupCode -ne 0) {
     Fail "Pre-upgrade backup failed; the existing runtime was not changed.`n$($backupOutput -join "`n")"
   }
-  $verifyOutput = & $launcher verify $backupDir --json 2>&1
-  if ($LASTEXITCODE -ne 0) {
+  if ($verifyCode -ne 0) {
     Fail "Pre-upgrade backup failed verification; the existing runtime was not changed.`n$($verifyOutput -join "`n")"
   }
   Info "Backup verified: $backupDir"
