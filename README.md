@@ -148,9 +148,10 @@ pnpm perf:check        # startup/mount/tool-call budgets
 
 ## Launch it
 
-Portable install: `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows). If the
-installer did not link it into `~/.local/bin`, run the launcher from the
-install directory printed at the end.
+Portable install: `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows). The POSIX
+installer creates `~/.local/bin` when needed and links `zoveli` there, printing
+the exact `PATH` export if that directory is not already on `PATH`; Windows
+prints the full `zoveli.cmd` path.
 
 Source checkout:
 

@@ -64,8 +64,10 @@ It exercises the backup, checksum verification and restore path before you
 trust the install with notes. If it fails, run `zoveli health` and include the
 drill output when reporting the problem.
 
-If the installer did not create a `~/.local/bin/zoveli` link, run the launcher
-from the install directory printed at the end of the install.
+The POSIX installer creates `~/.local/bin` when needed and links `zoveli`
+there. If that directory is not on `PATH`, it prints the exact export to run;
+you can also run the full launcher path printed at the end of the install.
+Windows prints the `zoveli.cmd` path to run.
 
 Source checkout:
 

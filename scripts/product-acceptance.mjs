@@ -388,6 +388,15 @@ async function main() {
       runtime = readJson(join(installDir, 'runtime.json'));
       pass(checks, 'clean-install', `${runtime.version} ${runtime.platform}-${runtime.arch} in ${timings.installMs}ms`, installStart);
 
+      if (!IS_WIN) {
+        const linkStart = Date.now();
+        const linkPath = join(home, '.local', 'bin', 'zoveli');
+        assert(existsSync(linkPath), `installer did not link ${linkPath}`);
+        const linkedVersion = runLauncher(linkPath, ['--version'], env).trim();
+        assert(linkedVersion === `zoveli ${runtime.version}`, `linked launcher reported ${linkedVersion}`);
+        pass(checks, 'path-link', `${linkPath} runs ${linkedVersion}`, linkStart);
+      }
+
       const rollbackStart = Date.now();
       const rollbackArchive = makeRollbackUpgradeArchive(archive, sandbox);
       const backupsDir = join(home, '.zoveli', 'backups');

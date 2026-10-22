@@ -260,11 +260,22 @@ fi
 info "Installed $installed into $TARGET_DIR"
 
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
-if [ -d "$BIN_DIR" ] && [ -w "$BIN_DIR" ] && [ ! -e "$BIN_DIR/zoveli" ]; then
-  ln -s "$TARGET_DIR/zoveli" "$BIN_DIR/zoveli"
-  info "Linked $BIN_DIR/zoveli"
+if mkdir -p "$BIN_DIR" 2>/dev/null && [ -w "$BIN_DIR" ]; then
+  if [ -e "$BIN_DIR/zoveli" ] && [ ! -L "$BIN_DIR/zoveli" ]; then
+    warn "Left existing $BIN_DIR/zoveli untouched; run $TARGET_DIR/zoveli directly."
+  else
+    ln -sf "$TARGET_DIR/zoveli" "$BIN_DIR/zoveli"
+    info "Linked $BIN_DIR/zoveli"
+    case ":$PATH:" in
+      *":$BIN_DIR:"*) ;;
+      *)
+        warn "Add $BIN_DIR to PATH to run 'zoveli' from a new shell:"
+        warn "  export PATH=\"$BIN_DIR:\$PATH\""
+        ;;
+    esac
+  fi
 else
-  warn "Add $TARGET_DIR to PATH or run $TARGET_DIR/zoveli directly."
+  warn "Could not link into $BIN_DIR; run $TARGET_DIR/zoveli directly."
 fi
 
 printf '\nRun:\n  %s/zoveli\n' "$TARGET_DIR"
