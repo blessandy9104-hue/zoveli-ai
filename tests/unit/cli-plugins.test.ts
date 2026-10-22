@@ -21,6 +21,14 @@ function runCli(args: string[], extraEnv: Record<string, string> = {}) {
   });
 }
 
+function withoutNodeWarnings(stderr: string): string {
+  return stderr
+    .split(/\r?\n/)
+    .filter((line) => !/ExperimentalWarning: SQLite|trace-warnings/.test(line))
+    .join('\n')
+    .trim();
+}
+
 describe.skipIf(!READY)('zoveli plugins', () => {
   it('lists the default and optional plugin surface', () => {
     const run = runCli(['plugins']);
@@ -28,7 +36,7 @@ describe.skipIf(!READY)('zoveli plugins', () => {
     expect(run.stdout).toContain('26 enabled, 1 opt-in, 0 disabled');
     expect(run.stdout).toContain('zoveli-memory-store');
     expect(run.stdout).toContain('zoveli-guard');
-    expect(run.stderr).toBe('');
+    expect(withoutNodeWarnings(run.stderr)).toBe('');
   });
 
   it('reports disabled plugins in JSON', () => {
