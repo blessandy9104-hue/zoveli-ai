@@ -139,6 +139,12 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
+    # The image bundles Chromium/Firefox/WebKit and their OS dependencies for
+    # the pinned @playwright/test version, so no browser or apt install runs.
+    # Keep the tag in sync with the @playwright/test version in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -177,20 +183,6 @@ jobs:
 
       - name: Build packages
         run: pnpm run build
-
-      # Browser downloads dominate E2E variance (seconds to tens of minutes
-      # on a slow mirror). The lockfile pins the Playwright version, so it is
-      # the cache key; --with-deps still installs any missing OS packages.
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
-
-      - name: Install Playwright
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run E2E tests
         # Reporter outputs are configured in playwright.config.ts;
