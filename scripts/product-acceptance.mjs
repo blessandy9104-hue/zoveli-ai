@@ -259,13 +259,17 @@ function main() {
       copyFileSync(archive, tamperedArchive);
       writeFileSync(`${tamperedArchive}.sha256`, `${'0'.repeat(64)}  tampered.tar.gz\n`);
       const tamperedDir = join(sandbox, 'tampered-install');
-      let rejected = false;
+      let rejection = '';
       try {
         runInstaller(tamperedArchive, tamperedDir, env);
-      } catch {
-        rejected = true;
+      } catch (error) {
+        rejection = String(error?.message ?? error);
       }
-      assert(rejected, 'installer accepted a mismatched SHA-256 checksum');
+      assert(rejection !== '', 'installer accepted a mismatched SHA-256 checksum');
+      assert(
+        rejection.includes('SHA-256 verification failed'),
+        `installer refused the archive for an unexpected reason: ${tail(rejection, 5)}`
+      );
       assert(!existsSync(join(tamperedDir, 'runtime.json')), 'tampered install left a runtime behind');
       pass(checks, 'checksum-rejection', 'mismatched archive refused', tamperStart);
 

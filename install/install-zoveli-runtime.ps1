@@ -26,6 +26,13 @@ param(
   [switch]$SkipBackup
 )
 
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+  $env:PSModulePath = @(
+    (Join-Path $PSHOME 'Modules'),
+    (Join-Path $env:ProgramFiles 'WindowsPowerShell\Modules')
+  ) -join ';'
+}
+
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $Repo = 'blessandy9104-hue/zoveli-ai'
@@ -34,6 +41,20 @@ $Branch = $(if ($env:ZOVELI_BRANCH) { $env:ZOVELI_BRANCH } else { 'main' })
 function Info($m) { Write-Host $m -ForegroundColor Green }
 function Warn($m) { Write-Host $m -ForegroundColor Yellow }
 function Fail($m) { Write-Host $m -ForegroundColor Red; exit 1 }
+
+function Get-Sha256Hex($path) {
+  $stream = [System.IO.File]::OpenRead($path)
+  try {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      return ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+    } finally {
+      $sha.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
+  }
+}
 
 function Get-RuntimeVersion($launcher) {
   $previousPreference = $ErrorActionPreference
@@ -125,7 +146,7 @@ try {
       Fail "Checksum file not found: $archivePath.sha256. Use -NoVerify only for a trusted archive."
     }
     $expected = ((Get-Content -LiteralPath "$archivePath.sha256" -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
-    $actual = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-Sha256Hex $archivePath
     if ($expected -ne $actual) { Fail "SHA-256 verification failed for $archivePath" }
     Info 'Checksum verified.'
   }
