@@ -150,8 +150,9 @@ without touching real data.
 
 The CLI works fully offline for all local tools (verified math via
 mathcore, memory vault, sysinfo, languages, search, scheduler, ...).
-For free offline chat with no keys: install Ollama and run
-`ollama pull qwen3:4b` — Zoveli detects it automatically. Or set any API
+For free offline chat with no keys: install Ollama and pull a model
+(`qwen3:4b` is recommended). Zoveli uses `qwen3:4b` when it is installed and
+otherwise picks another installed chat model. Or set any API
 key (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
 `GROQ_API_KEY`, `TOGETHER_API_KEY` or `ZOVELI_API_KEY`) with optional
 `ZOVELI_MODEL` / `ZOVELI_API_BASE` to use any OpenAI-compatible model.

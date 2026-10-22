@@ -24,9 +24,10 @@ the new section **before** running `pnpm release:check --release`.
   check fails.
 - Clean-home product acceptance gate (`scripts/product-acceptance.mjs`,
   [runbook](docs/runbooks/product-acceptance.md)) installs the packaged archive
-  with the real installer, runs the local workflows, exercises rollback and
-  upgrade paths, and writes a JSON report; CI runs it on Linux, Windows and
-  macOS.
+  with the real installer, runs the local workflows, checks the tools-only
+  guidance, proves a first chat against a mock local Ollama endpoint, exercises
+  rollback and upgrade paths, and writes a JSON report; CI runs it on Linux,
+  Windows and macOS.
 - `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
   and mathcore health probe, and exercises the portable installer.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and
@@ -91,6 +92,10 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Changed
 
+- Ollama detection reads `/api/tags` and uses `qwen3:4b` when present, otherwise
+  the first installed chat model (embedding-only models are skipped). If Ollama
+  runs without a chat model, chat stays off and the first-run banner keeps the
+  exact pull command instead of failing on the first message.
 - Capability discovery now reads the live host tool inventory. Existing tools
   are reported; nonexistent filesystem, shell, browser, terminal and LSP
   capabilities are no longer invented, and scans populate the registry so

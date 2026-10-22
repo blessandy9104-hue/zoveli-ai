@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
 import {
   copyFileSync,
   existsSync,
@@ -101,6 +102,63 @@ function runLauncher(launcher, args, env, options = {}) {
   );
 }
 
+function runLauncherAsync(launcher, args, env, options = {}) {
+  const { input = '', timeout = 120000 } = options;
+  const command = IS_WIN ? process.env.ComSpec || 'cmd.exe' : launcher;
+  const commandArgs = IS_WIN
+    ? [
+        '/d',
+        '/s',
+        '/c',
+        args.length ? `""${launcher}" ${args.map(quoteArg).join(' ')}"` : `""${launcher}""`,
+      ]
+    : args;
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    const child = spawn(command, commandArgs, {
+      cwd: ROOT,
+      env,
+      windowsVerbatimArguments: IS_WIN,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(
+        new Error(
+          `${launcher} timed out after ${timeout}ms\n` +
+            `--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}`
+        )
+      );
+    }, timeout);
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(
+          new Error(
+            `${launcher} ${args.join(' ')} exited with code ${code}\n` +
+              `--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}`
+          )
+        );
+        return;
+      }
+      resolve(stdout);
+    });
+    child.stdin.on('error', () => {});
+    child.stdin.end(input);
+  });
+}
+
 function runInstaller(archive, dir, env) {
   if (IS_WIN) {
     return run(
@@ -132,6 +190,56 @@ function runInstaller(archive, dir, env) {
     ],
     { env, timeout: 300000 }
   );
+}
+
+function startMockOllama(models) {
+  const requests = [];
+  const server = createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/api/tags') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ models: models.map((name) => ({ name, model: name })) }));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/v1/chat/completions') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        try {
+          requests.push(JSON.parse(body));
+        } catch {
+          requests.push(null);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  role: 'assistant',
+                  content: 'Local mock reply: hello from your machine.',
+                },
+              },
+            ],
+          })
+        );
+      });
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end('{}');
+  });
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      resolve({
+        url: `http://127.0.0.1:${server.address().port}`,
+        requests,
+        close: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
 }
 
 function makeRollbackUpgradeArchive(archive, workDir) {
@@ -224,7 +332,7 @@ function tail(text, lines = 20) {
   return String(text || '').trim().split(/\r?\n/).slice(-lines).join('\n');
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(
@@ -322,7 +430,17 @@ function main() {
     const firstSessionStart = Date.now();
     const firstOut = runLauncher(launcher, [], env, {
       timeout: 180000,
-      input: ['/math 2+2', `/remember ${fact}`, `/recall ${token}`, '/sys', '/caps', '/health', '/quit', ''].join('\n'),
+      input: [
+        '/math 2+2',
+        `/remember ${fact}`,
+        `/recall ${token}`,
+        '/sys',
+        '/caps',
+        '/health',
+        'hello there',
+        '/quit',
+        '',
+      ].join('\n'),
     });
     timings.firstSessionMs = Date.now() - firstSessionStart;
     timings.firstTaskMs = Date.now() - startedAt;
@@ -342,6 +460,42 @@ function main() {
     assert(/health: (ok|warn)/.test(firstOut), `health did not report ok/warn:\n${tail(firstOut)}`);
     assert(!/health: fail/.test(firstOut), `health reported fail:\n${tail(firstOut)}`);
     pass(checks, 'repl-health', firstOut.match(/health: (ok|warn)/)[0], firstSessionStart);
+    assert(firstOut.includes('No chat model found'), `first-run banner hid the missing-model fix:\n${tail(firstOut)}`);
+    assert(
+      firstOut.includes('but no chat model is configured'),
+      `tools-only chat fallback is missing its guidance:\n${tail(firstOut)}`
+    );
+    pass(checks, 'offline-guidance', 'tools-only fallback explains the model fix', firstSessionStart);
+
+    const mock = await startMockOllama(['llama3.2:3b']);
+    try {
+      const chatStart = Date.now();
+      const chatOut = await runLauncherAsync(launcher, [], { ...env, ZOVELI_OLLAMA_URL: mock.url }, {
+        timeout: 120000,
+        input: 'hello there\n/quit\n',
+      });
+      timings.firstChatMs = Date.now() - chatStart;
+      assert(
+        chatOut.includes('Local Ollama detected'),
+        `first-run banner did not detect the local model:\n${tail(chatOut)}`
+      );
+      assert(
+        chatOut.includes('llama3.2:3b'),
+        `banner did not name the installed model:\n${tail(chatOut)}`
+      );
+      assert(
+        chatOut.includes('Local mock reply'),
+        `first chat did not return the model reply:\n${tail(chatOut)}`
+      );
+      assert(mock.requests.length === 1, `expected one chat request, saw ${mock.requests.length}`);
+      assert(
+        mock.requests[0]?.model === 'llama3.2:3b',
+        `chat used the wrong model: ${mock.requests[0]?.model}`
+      );
+      pass(checks, 'local-chat', `first reply in ${timings.firstChatMs}ms`, chatStart);
+    } finally {
+      await mock.close();
+    }
 
     const toolsStart = Date.now();
     const toolsOut = runLauncher(launcher, [], env, {
@@ -516,10 +670,8 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error('product acceptance: FAIL');
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
-}
+});

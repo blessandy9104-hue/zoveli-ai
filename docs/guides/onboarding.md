@@ -130,7 +130,10 @@ None of these need an account, API key, or network connection.
 ## 5. Enable chat (optional)
 
 Resolution order is: any API key, then a free local Ollama server, then
-tools-only offline mode.
+tools-only offline mode. Zoveli prefers `qwen3:4b` when it is installed and
+otherwise uses another installed chat model; set `ZOVELI_MODEL` to pin one.
+If Ollama runs but has no chat models, the banner keeps chat off and prints the
+pull command instead of failing on the first message.
 
 **Free and local (recommended):**
 

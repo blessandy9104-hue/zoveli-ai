@@ -93,12 +93,37 @@ export function ollamaBaseUrl(): string {
   return (process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
 }
 
+const NON_CHAT_MODEL = /(?:^|[-_/])(?:embed|embedding|bge|e5|minilm|whisper)(?:[-_/]|$)/i;
+
+function ollamaModelFromTags(
+  payload: unknown,
+  preferred: string,
+  explicit: boolean
+): string | null {
+  const models = (payload as { models?: unknown } | null)?.models;
+  if (!Array.isArray(models)) return preferred;
+  const names = models
+    .map((entry) => {
+      const model = entry as { name?: unknown; model?: unknown } | null;
+      if (typeof model?.name === 'string' && model.name) return model.name;
+      if (typeof model?.model === 'string' && model.model) return model.model;
+      return '';
+    })
+    .filter(Boolean);
+  if (names.length === 0) return null;
+  const exact = names.find((name) => name.toLowerCase() === preferred.toLowerCase());
+  if (exact) return exact;
+  if (explicit) return preferred;
+  return names.find((name) => !NON_CHAT_MODEL.test(name)) ?? null;
+}
+
 /**
  * Probe for a free local Ollama server. Returns a keyless config when one
- * answers, else null. Never throws. Retries once: on loaded machines the
- * server occasionally accepts but answers slowly, and a single retry rides
- * through the hiccup. Worst case ~2x timeoutMs, only when no API key is set
- * (keyed setups never reach the network here).
+ * answers, else null. Never throws. Picks the requested model when it is
+ * installed, otherwise the first installed chat model. Retries once: on loaded
+ * machines the server occasionally accepts but answers slowly, and a single
+ * retry rides through the hiccup. Worst case ~2x timeoutMs, only when no API key
+ * is set (keyed setups never reach the network here).
  */
 export async function probeOllama(timeoutMs = 2000, retries = 1): Promise<ChatConfig | null> {
   const base = ollamaBaseUrl();
@@ -106,11 +131,15 @@ export async function probeOllama(timeoutMs = 2000, retries = 1): Promise<ChatCo
     try {
       const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(timeoutMs) });
       if (!res.ok) return null;
+      const explicit = process.env.ZOVELI_MODEL || process.env.ZOVELI_OLLAMA_MODEL || '';
+      const preferred = explicit || DEFAULT_OLLAMA_MODEL;
+      const payload = await res.json().catch(() => null);
+      const model = ollamaModelFromTags(payload, preferred, !!explicit);
+      if (!model) return null;
       return {
         apiKey: 'ollama',
         baseUrl: `${base}/v1`,
-        model:
-          process.env.ZOVELI_MODEL || process.env.ZOVELI_OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL,
+        model,
         provider: 'ollama',
         maxSteps: 10,
       };

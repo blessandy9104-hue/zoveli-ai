@@ -216,13 +216,16 @@ describe('chatConfigFromEnv (any key)', () => {
   });
 });
 
-function startTagsStub(statusCode = 200): Promise<{ server: http.Server; port: number; hits: () => number }> {
+function startTagsStub(
+  statusCode = 200,
+  models = ['qwen3:4b']
+): Promise<{ server: http.Server; port: number; hits: () => number }> {
   let hits = 0;
   const server = http.createServer((req, res) => {
     if (req.url === '/api/tags') {
       hits++;
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ models: [{ name: 'qwen3:4b' }] }));
+      res.end(JSON.stringify({ models: models.map((name) => ({ name, model: name })) }));
     } else {
       res.writeHead(404);
       res.end('{}');
@@ -247,6 +250,62 @@ describe('probeOllama / resolveChatConfig', () => {
       expect(cfg?.apiKey).toBe('ollama');
       expect(cfg?.baseUrl).toBe(`http://127.0.0.1:${stub.port}/v1`);
       expect(cfg?.model).toBe('qwen3:4b');
+    } finally {
+      restoreChatEnv(snap);
+      stub.server.close();
+    }
+  });
+
+  it('uses an installed chat model when the default is absent', async () => {
+    const snap = snapshotChatEnv();
+    const stub = await startTagsStub(200, ['llama3.2:3b']);
+    try {
+      clearChatEnv();
+      process.env.ZOVELI_OLLAMA_URL = `http://127.0.0.1:${stub.port}`;
+      const cfg = await probeOllama();
+      expect(cfg?.provider).toBe('ollama');
+      expect(cfg?.model).toBe('llama3.2:3b');
+    } finally {
+      restoreChatEnv(snap);
+      stub.server.close();
+    }
+  });
+
+  it('keeps an explicitly configured Ollama model', async () => {
+    const snap = snapshotChatEnv();
+    const stub = await startTagsStub(200, ['llama3.2:3b', 'mistral:7b']);
+    try {
+      clearChatEnv();
+      process.env.ZOVELI_OLLAMA_URL = `http://127.0.0.1:${stub.port}`;
+      process.env.ZOVELI_MODEL = 'mistral:7b';
+      const cfg = await probeOllama();
+      expect(cfg?.model).toBe('mistral:7b');
+    } finally {
+      restoreChatEnv(snap);
+      stub.server.close();
+    }
+  });
+
+  it('returns null when Ollama has no models installed', async () => {
+    const snap = snapshotChatEnv();
+    const stub = await startTagsStub(200, []);
+    try {
+      clearChatEnv();
+      process.env.ZOVELI_OLLAMA_URL = `http://127.0.0.1:${stub.port}`;
+      expect(await probeOllama()).toBeNull();
+    } finally {
+      restoreChatEnv(snap);
+      stub.server.close();
+    }
+  });
+
+  it('ignores embedding-only models', async () => {
+    const snap = snapshotChatEnv();
+    const stub = await startTagsStub(200, ['nomic-embed-text:latest']);
+    try {
+      clearChatEnv();
+      process.env.ZOVELI_OLLAMA_URL = `http://127.0.0.1:${stub.port}`;
+      expect(await probeOllama()).toBeNull();
     } finally {
       restoreChatEnv(snap);
       stub.server.close();

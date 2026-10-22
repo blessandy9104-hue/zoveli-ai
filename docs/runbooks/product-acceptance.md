@@ -13,6 +13,10 @@ It exercises the packaged archive and the real installers, not the source tree.
 - The launcher reports the expected version and help text.
 - `/math 2+2` returns `VERIFIED` with `4` using the bundled mathcore.
 - `/remember <fact>` and `/recall <query>` work with no chat model.
+- The first-run banner prints the exact chat fix, and a plain message explains
+  the tools-only fallback without failing.
+- A loopback mock Ollama is detected with a non-default installed model, and the
+  first chat reply is served locally.
 - `/sys` returns a host snapshot and `/caps` reports every capability available.
 - `/health` reports `ok` or `warn`, never `fail`; `config-check` is ready.
 - The installed tool surface contains the core math, memory and system tools.
@@ -60,14 +64,15 @@ Useful flags:
 | `--keep` | Keep the isolated home and install for inspection |
 
 The run uses an isolated home directory, clears chat/API keys, points Ollama
-at an unused port, and disables mathcore pre-warm so results are deterministic.
-It does not touch your real `~/.zoveli` data.
+at an unused port for the tools-only check, then starts a loopback mock Ollama
+to prove model detection and the first chat. Mathcore pre-warm is disabled so
+results are deterministic. It does not touch your real `~/.zoveli` data.
 
 ## Reading the result
 
 ```text
 product acceptance: PASS (install 812ms, first task 6120ms, total 14820ms)
-runtime 0.1.0 windows-x64; 58 tools; 15/15 capabilities; 17 checks
+runtime 0.1.0 windows-x64; 58 tools; 15/15 capabilities; 19 checks
 report: acceptance-windows-latest.json
 ```
 
