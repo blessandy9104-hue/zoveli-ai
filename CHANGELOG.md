@@ -95,7 +95,9 @@ the new section **before** running `pnpm release:check --release`.
 - Ollama detection reads `/api/tags` and uses `qwen3:4b` when present, otherwise
   the first installed chat model (embedding-only models are skipped). If Ollama
   runs without a chat model, chat stays off and the first-run banner keeps the
-  exact pull command instead of failing on the first message.
+  exact pull command instead of failing on the first message. A pinned model
+  that is not installed is treated as unavailable and named with its own pull
+  command rather than advertised as ready.
 - Capability discovery now reads the live host tool inventory. Existing tools
   are reported; nonexistent filesystem, shell, browser, terminal and LSP
   capabilities are no longer invented, and scans populate the registry so

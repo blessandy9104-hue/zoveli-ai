@@ -11,6 +11,17 @@ describe('startup guidance', () => {
     expect(text).toContain('MATHCORE_MCP_COMMAND');
   });
 
+  it('names a pinned Ollama model that is not installed', () => {
+    const text = startupGuidance({
+      chat: null,
+      mathReady: true,
+      requestedModel: 'mistral:7b',
+    }).join('\n');
+    expect(text).toContain('Requested Ollama model "mistral:7b" is not available');
+    expect(text).toContain('ollama pull mistral:7b');
+    expect(text).not.toContain('ollama pull qwen3:4b');
+  });
+
   it('names the detected Ollama model and stays quiet when fully ready', () => {
     const lines = startupGuidance({
       chat: { provider: 'ollama', model: 'qwen3:4b' },

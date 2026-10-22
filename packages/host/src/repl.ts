@@ -1,6 +1,6 @@
 import * as readline from 'node:readline';
 import type { ZoveliHost } from './host.js';
-import { resolveChatConfig, chat } from './chat.js';
+import { configuredOllamaModel, resolveChatConfig, chat } from './chat.js';
 import { mathcore } from '@zoveli/core/mathcore-mcp';
 import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
 import { promptSectionsText } from '@zoveli/core';
@@ -26,6 +26,7 @@ function looksLikeMath(text: string): boolean {
 export interface StartupFacts {
   chat: { provider?: string; model: string } | null;
   mathReady: boolean;
+  requestedModel?: string;
 }
 
 /**
@@ -36,9 +37,21 @@ export function startupGuidance(facts: StartupFacts): string[] {
   const lines: string[] = [];
   if (!facts.chat) {
     lines.push(
-      'No chat model found: all local tools work (math, memory, sysinfo, languages, search, scheduler, ...). ' +
-        'For free offline chat install Ollama (https://ollama.com) and run: ollama pull qwen3:4b. ' +
-        'Or set any API key: OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, ' +
+      'No chat model found: all local tools work (math, memory, sysinfo, languages, search, scheduler, ...).'
+    );
+    const requested = (facts.requestedModel || '').trim();
+    if (requested) {
+      lines.push(
+        `Requested Ollama model "${requested}" is not available. ` +
+          `Install Ollama (https://ollama.com) and run: ollama pull ${requested}.`
+      );
+    } else {
+      lines.push(
+        'For free offline chat install Ollama (https://ollama.com) and run: ollama pull qwen3:4b.'
+      );
+    }
+    lines.push(
+      'Or set any API key: OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, ' +
         'GROQ_API_KEY, TOGETHER_API_KEY or ZOVELI_API_KEY.'
     );
   } else if (facts.chat.provider === 'ollama') {
@@ -99,7 +112,13 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
   ].join('\n\n');
 
   console.log('zoveli — local-first assistant. Type /help for commands, /quit to exit.'); // banner: keep 'local-first assistant' substring (e2e asserts it)
-  for (const line of startupGuidance({ chat: chatCfg, mathReady })) console.log(line);
+  for (const line of startupGuidance({
+    chat: chatCfg,
+    mathReady,
+    requestedModel: configuredOllamaModel(),
+  })) {
+    console.log(line);
+  }
   // First-30-seconds starters (TTY only, so piped/batch output stays
   // byte-identical for scripts and tests): show what to try first.
   if (process.stdin.isTTY) {

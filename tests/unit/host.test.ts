@@ -286,6 +286,20 @@ describe('probeOllama / resolveChatConfig', () => {
     }
   });
 
+  it('does not claim readiness for a missing explicitly configured model', async () => {
+    const snap = snapshotChatEnv();
+    const stub = await startTagsStub(200, ['llama3.2:3b']);
+    try {
+      clearChatEnv();
+      process.env.ZOVELI_OLLAMA_URL = `http://127.0.0.1:${stub.port}`;
+      process.env.ZOVELI_MODEL = 'mistral:7b';
+      expect(await probeOllama()).toBeNull();
+    } finally {
+      restoreChatEnv(snap);
+      stub.server.close();
+    }
+  });
+
   it('returns null when Ollama has no models installed', async () => {
     const snap = snapshotChatEnv();
     const stub = await startTagsStub(200, []);

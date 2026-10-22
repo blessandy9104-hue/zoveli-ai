@@ -493,6 +493,33 @@ async function main() {
         `chat used the wrong model: ${mock.requests[0]?.model}`
       );
       pass(checks, 'local-chat', `first reply in ${timings.firstChatMs}ms`, chatStart);
+
+      const pinnedStart = Date.now();
+      const pinnedOut = await runLauncherAsync(
+        launcher,
+        [],
+        { ...env, ZOVELI_OLLAMA_URL: mock.url, ZOVELI_MODEL: 'missing:1b' },
+        { timeout: 120000, input: '/quit\n' }
+      );
+      assert(
+        pinnedOut.includes('Requested Ollama model "missing:1b" is not available'),
+        `pinned-model guidance did not name the missing model:\n${tail(pinnedOut)}`
+      );
+      assert(
+        pinnedOut.includes('ollama pull missing:1b'),
+        `pinned-model guidance hid the exact pull command:\n${tail(pinnedOut)}`
+      );
+      assert(
+        !pinnedOut.includes('Local Ollama detected'),
+        `pinned-model banner claimed chat was ready:\n${tail(pinnedOut)}`
+      );
+      assert(mock.requests.length === 1, 'missing pinned model sent a chat request');
+      pass(
+        checks,
+        'pinned-model-guidance',
+        'missing pinned model named with its pull command',
+        pinnedStart
+      );
     } finally {
       await mock.close();
     }

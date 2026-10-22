@@ -132,8 +132,9 @@ None of these need an account, API key, or network connection.
 Resolution order is: any API key, then a free local Ollama server, then
 tools-only offline mode. Zoveli prefers `qwen3:4b` when it is installed and
 otherwise uses another installed chat model; set `ZOVELI_MODEL` to pin one.
-If Ollama runs but has no chat models, the banner keeps chat off and prints the
-pull command instead of failing on the first message.
+If the pinned model is not installed, or Ollama has no chat models, the banner
+keeps chat off and prints the exact pull command instead of failing on the
+first message.
 
 **Free and local (recommended):**
 
@@ -183,6 +184,7 @@ same state as JSON for scripts. Install missing pieces, then restart the app.
 | --- | --- |
 | `mathcore-mcp not found` | Activate the venv and run `python -m pip install -e ./mathcore`, or set `MATHCORE_MCP_COMMAND`; verify with `pnpm run doctor` |
 | `No chat model found` | Install Ollama and `ollama pull qwen3:4b`, or set an API key; local tools still work |
+| `Requested Ollama model ... is not available` | Run the printed `ollama pull <model>`, or unset `ZOVELI_MODEL` to use another installed model |
 | Ollama answers but chat errors | Pull the model named in the banner (`ollama pull qwen3:4b`) |
 | Chat hangs | Check the endpoint / run `ollama serve`; raise `ZOVELI_CHAT_TIMEOUT_MS` for slow first tokens |
 | Config seems ignored | `pnpm config:check` flags typos, bad values, and vault drift |
