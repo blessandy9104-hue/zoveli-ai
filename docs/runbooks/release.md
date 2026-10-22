@@ -79,8 +79,9 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
   clean-install acceptance.
 - The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
   matching `.sha256` files where the runner supports that architecture.
-- `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai` finds a
-  build-provenance attestation for each published archive.
+- `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai
+  --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`
+  finds a build-provenance attestation for each published archive.
 - The acceptance reports show every core workflow green and a first-task time
   under ten minutes.
 - Download one archive on a clean machine (or clean container), run the
