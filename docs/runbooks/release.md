@@ -51,7 +51,8 @@ pnpm run acceptance:runtime -- --archive release/zoveli-X.Y.Z-<platform>-<arch>.
 Do not publish unless the archive smoke and clean-install acceptance checks are
 green. The acceptance report records install time, first-task time and the
 core workflow results; the first task must stay under ten minutes. Archives are
-checksummed but not yet code-signed or notarized.
+checksummed and receive a GitHub build-provenance attestation, but are not yet
+code-signed or notarized.
 
 ## 3. Tag and publish
 
@@ -78,6 +79,8 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
   clean-install acceptance.
 - The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
   matching `.sha256` files where the runner supports that architecture.
+- `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai` finds a
+  build-provenance attestation for each published archive.
 - The acceptance reports show every core workflow green and a first-task time
   under ten minutes.
 - Download one archive on a clean machine (or clean container), run the

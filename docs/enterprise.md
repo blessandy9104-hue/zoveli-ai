@@ -16,7 +16,7 @@
 - Optional JSONL tool trace: set `ZOVELI_TRACE_LOG` and `/trace`/host events
   record redacted tool calls.
 - Math certificates: hash-chained `audit.jsonl` (`mathcore verify-log` detects edits).
-- SBOM per release (CI `sbom` job); images and release archives are not signed yet.
+- SBOM per release (CI `sbom` job); release archives carry GitHub build-provenance attestations, but images and archives are not code-signed yet.
 - EU AI Act Art.12 logging/retention is not implemented; a durable audit log is roadmap work.
 
 ## FIPS / regulated

@@ -71,6 +71,18 @@ below. Review
 before running; both are source-visible and telemetry-free. No release archive
 yet? Use the developer source install below.
 
+Every archive ships with a SHA-256 sidecar and a GitHub build-provenance
+attestation. The installer checks the checksum itself; to audit a manual
+download, compare the sidecar (on Windows use
+`Get-FileHash <archive> -Algorithm SHA256`) and, with the GitHub CLI installed,
+confirm where it was built:
+
+```bash
+sha256sum --check zoveli-<version>-<platform>-<arch>.tar.gz.sha256
+gh attestation verify zoveli-<version>-<platform>-<arch>.tar.gz \
+  --repo blessandy9104-hue/zoveli-ai
+```
+
 Developers installing from a source checkout need Node.js 22.16+, Python 3.11+,
 pnpm 11.7.0+, and Git.
 

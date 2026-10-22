@@ -45,6 +45,10 @@ jobs:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +103,12 @@ jobs:
         run: |
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
           node scripts/product-acceptance.mjs --archive $archive --report "acceptance-${{ matrix.os }}.json"
+
+      - name: Attest runtime archive
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/*.tar.gz
 
       - uses: actions/upload-artifact@v4
         with:

@@ -32,7 +32,9 @@ irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/i
 
 Re-running the installer stages and preflights the new runtime, writes a
 verified backup under `~/.zoveli/backups`, and rolls back automatically if the
-new runtime fails after the swap.
+new runtime fails after the swap. Manual downloads are checksummed and carry a
+GitHub build-provenance attestation; the
+[README](../../README.md#download--install) shows both checks.
 
 Source install (developers), from a manual clone:
 

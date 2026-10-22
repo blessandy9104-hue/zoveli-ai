@@ -29,7 +29,9 @@ the new section **before** running `pnpm release:check --release`.
   rollback and upgrade paths, and writes a JSON report; CI runs it on Linux,
   Windows and macOS.
 - `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
-  and mathcore health probe, and exercises the portable installer.
+  and mathcore health probe, and exercises the portable installer. Push and
+  release builds attach GitHub build-provenance attestations so downloads can
+  be checked with `gh attestation verify`.
 - Desktop Playwright e2e starts an isolated server with a loopback Ollama,
   proves the detected model appears in onboarding, and sends the first chat
   message end-to-end.
