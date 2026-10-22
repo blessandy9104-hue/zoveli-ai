@@ -91,7 +91,7 @@ export { ZoveliHost } from './host.js';
 export type { HostOptions, ToolCallTrace, ToolCallStats } from './host.js';
 export { StructuredLogSink, resolveStructuredLog } from './structured-log.js';
 export type { StructuredLogOptions, StructuredLogStats } from './structured-log.js';
-export { chatConfigFromEnv, resolveChatConfig, probeOllama, chat, chatTemperature, buildMemoryBrief, isLocalProvider, memoryBriefAllowed } from './chat.js';
+export { chatConfigFromEnv, configuredOllamaModel, resolveChatConfig, probeOllama, chat, chatTemperature, buildMemoryBrief, isLocalProvider, memoryBriefAllowed } from './chat.js';
 export type { ChatConfig } from './chat.js';
 
 

@@ -133,8 +133,8 @@ Resolution order is: any API key, then a free local Ollama server, then
 tools-only offline mode. Zoveli prefers `qwen3:4b` when it is installed and
 otherwise uses another installed chat model; set `ZOVELI_MODEL` to pin one.
 If the pinned model is not installed, or Ollama has no chat models, the banner
-keeps chat off and prints the exact pull command instead of failing on the
-first message.
+and desktop setup panel keep chat off and print the exact pull command instead
+of failing on the first message.
 
 **Free and local (recommended):**
 
@@ -164,8 +164,9 @@ pnpm run desktop
 
 The desktop shell starts the same local server on `127.0.0.1:3080` and opens it
 in a window. The page shows a readiness line and, when something is missing, a
-**Finish setup** panel with the same commands. `GET /api/onboarding` exposes the
-same state as JSON for scripts. Install missing pieces, then restart the app.
+**Finish setup** panel with the same commands, including the pull command for a
+pinned model that is not installed. `GET /api/onboarding` exposes the same state
+as JSON for scripts. Install missing pieces, then restart the app.
 
 ## What to expect locally
 

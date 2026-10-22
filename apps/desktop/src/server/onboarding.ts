@@ -3,6 +3,7 @@ export interface OnboardingState {
     ready: boolean;
     provider?: string | null;
     model?: string | null;
+    requestedModel?: string | null;
   };
   math: {
     ready: boolean;
@@ -12,6 +13,20 @@ export interface OnboardingState {
 export interface OnboardingMarkup {
   status: string;
   panel: string;
+}
+
+const DEFAULT_CHAT_MODEL = 'qwen3:4b';
+
+/** Plain-text setup reply for a chat attempt before a model is configured. */
+export function chatSetupReply(requestedModel?: string | null): string {
+  const requested = (requestedModel || '').trim();
+  return (
+    'Chat is not configured yet. Local tools and verified math work now. ' +
+    (requested ? `The requested Ollama model "${requested}" is not installed. ` : '') +
+    'For free offline chat, install Ollama (https://ollama.com), run ' +
+    `ollama pull ${requested || DEFAULT_CHAT_MODEL}, then restart Zoveli. ` +
+    'Any OpenAI-compatible API key also works.'
+  );
 }
 
 function escapeHtml(value: string): string {
@@ -57,10 +72,17 @@ export function onboardingMarkup(state: OnboardingState): OnboardingMarkup {
     );
   }
   if (!state.chat.ready) {
+    const requested = (state.chat.requestedModel || '').trim();
+    const lead = requested
+      ? `The requested Ollama model <code>${escapeHtml(requested)}</code> is not installed. `
+      : '';
+    const pull = escapeHtml(requested || DEFAULT_CHAT_MODEL);
     items.push(
-      '<li><strong>Chat</strong> — local tools work now. For free offline chat, install ' +
-        '<a href="https://ollama.com">Ollama</a>, run <code>ollama pull qwen3:4b</code>, ' +
-        'then restart Zoveli. Any OpenAI-compatible API key also works.</li>'
+      '<li><strong>Chat</strong> — local tools work now. ' +
+        lead +
+        'For free offline chat, install <a href="https://ollama.com">Ollama</a>, run ' +
+        `<code>ollama pull ${pull}</code>, then restart Zoveli. ` +
+        'Any OpenAI-compatible API key also works.</li>'
     );
   }
   const panel =

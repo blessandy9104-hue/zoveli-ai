@@ -1,5 +1,12 @@
 import * as http from 'node:http';
-import { ZoveliHost, resolvePlugins, resolveChatConfig, chat, isLocalProvider } from '@zoveli/host';
+import {
+  ZoveliHost,
+  resolvePlugins,
+  resolveChatConfig,
+  configuredOllamaModel,
+  chat,
+  isLocalProvider,
+} from '@zoveli/host';
 import { promptSectionsText } from '@zoveli/core';
 import {
   zoveliAuth, issueCode, verifyCode, mintSession,
@@ -8,7 +15,7 @@ import {
 } from '@zoveli/auth';
 import { redactSecrets } from '@zoveli/secscan';
 import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
-import { onboardingMarkup, type OnboardingMarkup } from './onboarding.js';
+import { chatSetupReply, onboardingMarkup, type OnboardingMarkup } from './onboarding.js';
 import {
   withSecurityHeaders,
   isHostAllowed,
@@ -350,9 +357,15 @@ async function main(): Promise<void> {
   // Any API key wins; otherwise a free local Ollama server when one answers;
   // otherwise tools-only offline mode (probe refuses instantly when absent).
   const chatCfg = await resolveChatConfig();
+  const requestedModel = configuredOllamaModel();
   const mathReady = mathcoreCommandAvailable();
   const onboarding = onboardingMarkup({
-    chat: { ready: !!chatCfg, provider: chatCfg?.provider, model: chatCfg?.model },
+    chat: {
+      ready: !!chatCfg,
+      provider: chatCfg?.provider,
+      model: chatCfg?.model,
+      requestedModel,
+    },
     math: { ready: mathReady },
   });
   const baseSystem = [
@@ -545,6 +558,7 @@ ${themeBootScript(unicornProjectId())}
             ready: !!chatCfg,
             provider: chatCfg?.provider || null,
             model: chatCfg?.model || null,
+            requestedModel: requestedModel || null,
           },
           math: { ready: mathReady },
           tools: host.tools().length,
@@ -643,10 +657,7 @@ ${themeBootScript(unicornProjectId())}
             ok: true,
             verified: false,
             setup: true,
-            reply:
-              'Chat is not configured yet. Local tools and verified math work now. ' +
-              'For free offline chat, install Ollama (https://ollama.com), run ' +
-              'ollama pull qwen3:4b, then restart Zoveli. Any OpenAI-compatible API key also works.',
+            reply: chatSetupReply(requestedModel),
           });
           return;
         }
