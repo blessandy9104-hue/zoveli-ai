@@ -30,6 +30,9 @@ the new section **before** running `pnpm release:check --release`.
   Windows and macOS.
 - `Runtime Artifacts` CI builds each platform archive, runs the packaged CLI
   and mathcore health probe, and exercises the portable installer.
+- Desktop Playwright e2e starts an isolated server with a loopback Ollama,
+  proves the detected model appears in onboarding, and sends the first chat
+  message end-to-end.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and
   `pnpm health:check` cover runtime, env drift, vault schema, MCP pool and
   capability availability (`--json`/`--offline` supported).
