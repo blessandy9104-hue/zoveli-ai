@@ -168,14 +168,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install mathcore (vendored in ./mathcore)
-        run: pip install -e ./mathcore
+        # Use `python -m pip`: the Playwright container does not put a `pip`
+        # shim on PATH for the non-root user.
+        run: python -m pip install -e ./mathcore
 
       - name: Run mathcore fast tests (known answers + CLI)
         # Full adversarial/property suites are slow and run locally;
         # these 66 tests prove the vendored copy computes correctly.
         # The [test] extra provides pytest itself (not installed otherwise).
         run: |
-          pip install -e "./mathcore[test]"
+          python -m pip install -e "./mathcore[test]"
           python -m pytest mathcore/tests/test_known_answers.py mathcore/tests/test_cli.py -q
 
       - name: Install dependencies
