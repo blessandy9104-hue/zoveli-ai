@@ -31,6 +31,7 @@ const CLEARED_ENV = [
   'ZOVELI_OLLAMA_MODEL',
   'ZOVELI_MEMORY_DB',
   'ZOVELI_VAULT_PATH',
+  'XDG_BIN_HOME',
   'ZOVELI_MEMORY_EXPORT',
   'ZOVELI_AUTH_REQUIRED',
   'ZOVELI_AUTH_DIR',
@@ -390,7 +391,7 @@ async function main() {
 
       if (!IS_WIN) {
         const linkStart = Date.now();
-        const linkPath = join(home, '.local', 'bin', 'zoveli');
+        const linkPath = join(env.XDG_BIN_HOME || join(home, '.local', 'bin'), 'zoveli');
         assert(existsSync(linkPath), `installer did not link ${linkPath}`);
         const linkedVersion = runLauncher(linkPath, ['--version'], env).trim();
         assert(linkedVersion === `zoveli ${runtime.version}`, `linked launcher reported ${linkedVersion}`);

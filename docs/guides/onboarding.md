@@ -54,7 +54,7 @@ pnpm run build
 Portable install:
 
 ```bash
-zoveli health          # or zoveli.cmd health on Windows
+zoveli health          # Linux/macOS; on Windows use the printed zoveli.cmd path
 zoveli config-check
 zoveli recovery-check  # proves backup/restore in an isolated temp vault
 ```

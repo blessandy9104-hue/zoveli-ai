@@ -11,6 +11,8 @@ It exercises the packaged archive and the real installers, not the source tree.
 - The published archive extracts and the installer verifies its SHA-256.
 - A mismatched checksum is refused and leaves no runtime behind.
 - The launcher reports the expected version and help text.
+- On Linux and macOS, the installer creates `~/.local/bin/zoveli` and the
+  linked command runs the bundled runtime.
 - `/math 2+2` returns `VERIFIED` with `4` using the bundled mathcore.
 - `/remember <fact>` and `/recall <query>` work with no chat model.
 - The first-run banner prints the exact chat fix, and a plain message explains
