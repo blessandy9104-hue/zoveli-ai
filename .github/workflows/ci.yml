@@ -178,6 +178,17 @@ jobs:
       - name: Build packages
         run: pnpm run build
 
+      # Browser downloads dominate E2E variance (seconds to tens of minutes
+      # on a slow mirror). The lockfile pins the Playwright version, so it is
+      # the cache key; --with-deps still installs any missing OS packages.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install Playwright
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
