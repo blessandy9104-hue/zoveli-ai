@@ -265,14 +265,19 @@ if mkdir -p "$BIN_DIR" 2>/dev/null && [ -w "$BIN_DIR" ]; then
     warn "Left existing $BIN_DIR/zoveli untouched; run $TARGET_DIR/zoveli directly."
   else
     ln -sf "$TARGET_DIR/zoveli" "$BIN_DIR/zoveli"
-    info "Linked $BIN_DIR/zoveli"
-    case ":$PATH:" in
-      *":$BIN_DIR:"*) ;;
-      *)
-        warn "Add $BIN_DIR to PATH to run 'zoveli' from a new shell:"
-        warn "  export PATH=\"$BIN_DIR:\$PATH\""
-        ;;
-    esac
+    if "$BIN_DIR/zoveli" --version >/dev/null 2>&1; then
+      info "Linked $BIN_DIR/zoveli"
+      case ":$PATH:" in
+        *":$BIN_DIR:"*) ;;
+        *)
+          warn "Add $BIN_DIR to PATH to run 'zoveli' from a new shell:"
+          warn "  export PATH=\"$BIN_DIR:\$PATH\""
+          ;;
+      esac
+    else
+      warn "Linked $BIN_DIR/zoveli does not run; removed it. Use $TARGET_DIR/zoveli directly."
+      rm -f "$BIN_DIR/zoveli"
+    fi
   fi
 else
   warn "Could not link into $BIN_DIR; run $TARGET_DIR/zoveli directly."

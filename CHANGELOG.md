@@ -22,8 +22,8 @@ the new section **before** running `pnpm release:check --release`.
   runtime, create and verify a pre-upgrade backup, swap only after both pass,
   and automatically restore the previous runtime if the installed launcher
   check fails. The POSIX installer creates `~/.local/bin` when needed, links
-  `zoveli` there, and prints the exact `PATH` export when that directory is
-  not already on `PATH`.
+  `zoveli` there, verifies the linked command runs, and prints the exact `PATH`
+  export when that directory is not already on `PATH`.
 - Clean-home product acceptance gate (`scripts/product-acceptance.mjs`,
   [runbook](docs/runbooks/product-acceptance.md)) installs the packaged archive
   with the real installer, runs the local workflows, checks the tools-only
