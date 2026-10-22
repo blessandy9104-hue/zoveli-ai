@@ -85,7 +85,15 @@ function writeLaunchers(target, hasMathcore) {
   const unixLauncher = [
     '#!/bin/sh',
     'set -eu',
-    'DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)',
+    'SELF=$0',
+    'while [ -L "$SELF" ]; do',
+    '  LINK=$(readlink "$SELF")',
+    '  case "$LINK" in',
+    '    /*) SELF=$LINK ;;',
+    '    *) SELF=$(dirname -- "$SELF")/$LINK ;;',
+    '  esac',
+    'done',
+    'DIR=$(CDPATH= cd -- "$(dirname -- "$SELF")" && pwd)',
     hasMathcore
       ? 'MATHCORE_MCP_COMMAND="$DIR/mathcore/mathcore-mcp"'
       : ':',

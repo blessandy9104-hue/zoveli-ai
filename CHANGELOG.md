@@ -127,6 +127,8 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- The POSIX runtime launcher follows symlinks, so `~/.local/bin/zoveli` finds
+  the bundled Node runtime instead of looking for `node` next to the link.
 - Mathcore command lines with quoted paths containing spaces (for example
   `"C:\Program Files\...\python.exe" -m mathcore.mcp_server`).
 - `config-check` now accepts an existing unquoted mathcore path containing
