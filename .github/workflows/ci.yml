@@ -301,9 +301,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'release' || github.event_name == 'push' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' || github.event_name == 'push' }}
             type=sha,prefix=
 
       - name: Build and push CLI
