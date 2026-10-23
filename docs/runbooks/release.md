@@ -34,7 +34,8 @@ node apps/cli/dist/cli.js --version   # must print the new version
 ```
 
 CI runs the same gate plus Docker, SBOM, e2e, and security scans. Do not tag
-with any check red.
+with any check red. The Docker job also boots the image and checks
+`zoveli --version` and `mathcore ops`.
 
 The Docker build fetches pnpm dependencies from the lockfile and installs
 mathcore before copying app sources, so source-only changes reuse those
