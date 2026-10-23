@@ -223,6 +223,28 @@ importers:
         specifier: 'catalog:'
         version: 1.6.1(@types/node@26.6.5)(@vitest/ui@1.6.1)(happy-dom@20.14.6)
 
+  packages/daily-brief:
+    dependencies:
+      '@deepseek-ai/dsh-core':
+        specifier: workspace:*
+        version: link:../shim-dsh-core
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 0.18.1
+      tsdown:
+        specifier: ^0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 1.6.1(@types/node@24.19.2)(@vitest/ui@1.6.1)(happy-dom@20.14.6)
+
   packages/diagnostics:
     dependencies:
       '@deepseek-ai/dsh-core':
@@ -359,6 +381,9 @@ importers:
       '@zoveli/core':
         specifier: workspace:*
         version: link:../core
+      '@zoveli/daily-brief':
+        specifier: workspace:*
+        version: link:../daily-brief
       '@zoveli/diagnostics':
         specifier: workspace:*
         version: link:../diagnostics

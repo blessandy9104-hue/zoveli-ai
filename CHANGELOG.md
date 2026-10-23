@@ -96,6 +96,9 @@ the new section **before** running `pnpm release:check --release`.
   existing database, checksum-verified backup/verify/restore and
   `pnpm migrate:vault`.
 - Plugin scaffolder: `pnpm create:plugin <name> --mount`.
+- Opt-in `@zoveli/daily-brief` plugin with a local `daily_brief_get` tool
+  (date, weekday, time, time zone, greeting; no network). It stays out of
+  `defaultPlugins` until an ADR and maintainer sign-off promote it.
 - `zoveli --version` / `--help`; release metadata guard
   (`pnpm release:check`) verifies workspace versions, the runtime version
   constant and tsconfig references; upgrade and release runbooks.
@@ -150,6 +153,10 @@ the new section **before** running `pnpm release:check --release`.
   session is created, so capability tools are populated before the first turn.
 - Plugin scaffolding no longer emits a shebang that breaks Windows checkouts
   under CRLF.
+- `pnpm create:plugin --mount` now recognizes the host's typed
+  `optionalPlugins` declaration instead of silently leaving the plugin out of
+  `packages/host/src/index.ts`.
+- Product acceptance exercises home and install paths containing spaces.
 - `security_scan` now scans `.env` files instead of skipping every dotfile.
 - Formatter/test helpers use `npx --no-install`, so they never fetch packages
   from the network.

@@ -71,6 +71,11 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `sysinfo_network {}` → local interfaces only, never probes externally
 - `sysinfo_check {minFreeMemBytes?, minFreeDiskBytes?, maxCpuPercent?}` → budget gate
 
+## Daily brief (`@zoveli/daily-brief`, optional, local-only)
+- `daily_brief_get {timeZone?}` → date, weekday, time, time zone, greeting, message, and ISO timestamp
+- Uses the system clock and `Intl` time-zone data; no network requests
+- Enable with `ZOVELI_PLUGINS=zoveli-daily-brief pnpm start`
+
 ## Legacy skills (unmounted)
 - `@zoveli/skills` still exports `daily-briefing`, `research`, `task-planning`,
   and `code-review` placeholders for compatibility, but it is not in the

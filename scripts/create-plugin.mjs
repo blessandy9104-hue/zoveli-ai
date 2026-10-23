@@ -205,8 +205,13 @@ export function mountHostPlugin(text, importName, packageName) {
     insertAt = text.indexOf('\n', lastImport + 1);
   }
   let out = text.slice(0, insertAt) + `\nimport { ${importName} } from '${packageName}';` + text.slice(insertAt);
-  const arrayStart = out.indexOf('export const optionalPlugins = [');
-  if (arrayStart === -1) {
+  const declaration = /export const optionalPlugins\b/.exec(out);
+  if (!declaration) {
+    throw new Error('optionalPlugins array not found in packages/host/src/index.ts');
+  }
+  const equals = out.indexOf('=', declaration.index);
+  const arrayStart = out.indexOf('[', equals);
+  if (equals === -1 || arrayStart === -1) {
     throw new Error('optionalPlugins array not found in packages/host/src/index.ts');
   }
   const arrayEnd = out.indexOf('];', arrayStart);

@@ -19,6 +19,7 @@ import { zoveliGuard } from '@zoveli/guard';
 import { zoveliPersona } from '@zoveli/persona';
 import { zoveliWebResearch } from '@zoveli/webresearch';
 import { zoveliDiagnostics } from '@zoveli/diagnostics';
+import { zoveliDailyBrief } from '@zoveli/daily-brief';
 
 /**
  * The default tool-bearing plugin set. Config-only plugins (agent loop,
@@ -60,7 +61,7 @@ export const defaultPlugins = [
  * plugin can be removed with `ZOVELI_DISABLE_PLUGINS=<plugin-name,...>`;
  * promoting one to `defaultPlugins` is a core change (see docs/core-plugins.md).
  */
-export const optionalPlugins: ZoveliPlugin[] = [zoveliGuard];
+export const optionalPlugins: ZoveliPlugin[] = [zoveliGuard, zoveliDailyBrief];
 
 /**
  * Resolve defaults plus plugins requested in `ZOVELI_PLUGINS`, minus plugins

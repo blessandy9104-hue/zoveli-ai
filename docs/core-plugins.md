@@ -36,8 +36,10 @@ contains placeholder implementations.
 ## Experimental (opt-in)
 
 `guard` is opt-in: mount it with `ZOVELI_PLUGINS=zoveli-guard` only when a
-custom `shell_exec` tool is present. It has no effect on the default tools.
-The other experimental packages were removed as dead code (see git history).
+custom `shell_exec` tool is present. `daily-brief` is also opt-in
+(`ZOVELI_PLUGINS=zoveli-daily-brief`) and adds the local `daily_brief_get`
+tool. Neither has any effect on the default tools. The other experimental
+packages were removed as dead code (see git history).
 New packages start here: safe to use, but may change without notice and not
 covered by the core stability promise. If an experimental package grows a
 second independent consumer or a public surface worth keeping, propose

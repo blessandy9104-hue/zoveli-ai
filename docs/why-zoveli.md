@@ -24,7 +24,7 @@
 - Exact computation (homework, engineering, finance) where a confident wrong
   answer is worse than no answer — `/math` and `/check` give VERIFIED/MATCH/MISMATCH.
 - Planes, labs, and locked-down networks — the local tool loop works offline.
-- Tinkerers: 24 packages, a plugin surface, and an HTTP API you can extend in an afternoon.
+- Tinkerers: 25 packages, a plugin surface, and an HTTP API you can extend in an afternoon.
 
 ## Honest limits
 
@@ -38,7 +38,7 @@
 
 **Does Zoveli need a chat model to work?**
 No. Chat is an optional adapter; the core — verified math, SQLite memory,
-sysinfo, scheduler, 24 packages — runs with no model; local tools need no network.
+sysinfo, scheduler, 25 packages — runs with no model; local tools need no network.
 
 **What does "verified math" mean?**
 Every computation runs through independent methods (e.g. symbolic solve +

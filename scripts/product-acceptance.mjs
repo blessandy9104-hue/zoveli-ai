@@ -365,8 +365,8 @@ async function main() {
   assert(!archive || existsSync(`${archive}.sha256`), `checksum file not found: ${archive}.sha256`);
 
   const sandbox = mkdtempSync(join(tmpdir(), 'zoveli-acceptance-'));
-  const home = join(sandbox, 'home');
-  const installDir = options.dir ?? join(sandbox, 'install');
+  const home = join(sandbox, 'home dir');
+  const installDir = options.dir ?? join(sandbox, 'install dir');
   const env = makeEnv(home);
   const launcher = join(installDir, IS_WIN ? 'zoveli.cmd' : 'zoveli');
   let reportPath = options.report;
@@ -586,8 +586,11 @@ async function main() {
     const disabledPlugin = (pluginOut.plugins ?? []).find(
       (plugin) => plugin.name === 'zoveli-webresearch'
     );
+    const dailyBriefPlugin = (pluginOut.plugins ?? []).find(
+      (plugin) => plugin.name === 'zoveli-daily-brief'
+    );
     assert(
-      pluginOut.enabled === 25 && pluginOut.optIn === 1 && pluginOut.disabled === 1,
+      pluginOut.enabled === 25 && pluginOut.optIn === 2 && pluginOut.disabled === 1,
       `unexpected plugin inventory: ${JSON.stringify({
         enabled: pluginOut.enabled,
         optIn: pluginOut.optIn,
@@ -595,7 +598,13 @@ async function main() {
       })}`
     );
     assert(disabledPlugin?.status === 'disabled', 'zoveli-webresearch was not disabled');
-    pass(checks, 'plugin-disable', '27 plugins; webresearch disabled', pluginStart);
+    assert(dailyBriefPlugin?.status === 'opt-in', 'zoveli-daily-brief was not listed as opt-in');
+    pass(
+      checks,
+      'plugin-disable',
+      `${(pluginOut.plugins ?? []).length} plugins; webresearch disabled`,
+      pluginStart
+    );
 
     const recoveryStart = Date.now();
     const recovery = JSON.parse(

@@ -33,9 +33,10 @@ describe.skipIf(!READY)('zoveli plugins', () => {
   it('lists the default and optional plugin surface', () => {
     const run = runCli(['plugins']);
     expect(run.status).toBe(0);
-    expect(run.stdout).toContain('26 enabled, 1 opt-in, 0 disabled');
+    expect(run.stdout).toContain('26 enabled, 2 opt-in, 0 disabled');
     expect(run.stdout).toContain('zoveli-memory-store');
     expect(run.stdout).toContain('zoveli-guard');
+    expect(run.stdout).toContain('zoveli-daily-brief');
     expect(withoutNodeWarnings(run.stderr)).toBe('');
   });
 

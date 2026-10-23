@@ -41,7 +41,8 @@
     "@zoveli/guard": "workspace:*",
     "@zoveli/persona": "workspace:*",
     "@zoveli/webresearch": "workspace:*",
-    "@zoveli/diagnostics": "workspace:*"
+    "@zoveli/diagnostics": "workspace:*",
+    "@zoveli/daily-brief": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.3.0",
@@ -51,5 +52,3 @@
     "@types/node": "^20.10.0"
   }
 }
-
-

@@ -40,6 +40,11 @@ const HOST_FIXTURE = [
   '',
 ].join('\n');
 
+const TYPED_HOST_FIXTURE = HOST_FIXTURE.replace(
+  'export const optionalPlugins = [',
+  'export const optionalPlugins: ZoveliPlugin[] = ['
+);
+
 const TSCONFIG_FIXTURE = `{
   "compilerOptions": {},
   "references": [
@@ -166,5 +171,14 @@ describe('plugin scaffolder', () => {
     expect(JSON.parse(ts.text).references).toContainEqual({ path: './packages/x' });
     expect(mountTsReference(ts.text, './packages/x').changed).toBe(false);
     expect(() => mountTsReference('{"compilerOptions": {}}', './packages/x')).toThrow(/references/);
+  });
+
+  it('mounts into an explicitly typed optionalPlugins array', () => {
+    const host = mountHostPlugin(TYPED_HOST_FIXTURE, 'zoveliX', '@zoveli/x');
+    expect(host.changed).toBe(true);
+    expect(host.text).toContain(
+      'export const optionalPlugins: ZoveliPlugin[] = [\n  zoveliX,\n];'
+    );
+    expect(host.text).toMatch(/export const defaultPlugins = \[\n  zoveliCore,\n\];/);
   });
 });
