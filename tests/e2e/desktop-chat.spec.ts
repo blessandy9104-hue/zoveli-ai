@@ -1,22 +1,29 @@
 import { test, expect } from '@playwright/test';
-import { spawn, type ChildProcess } from 'node:child_process';
-import { createServer, type Server } from 'node:http';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const MODEL = 'llama3.2:3b';
+const MISSING_MODEL = 'missing:1b';
 const REPLY = 'Local mock reply: hello from the desktop.';
 
-// This spec owns its desktop server and mock Ollama so the shared webServer
-// keeps its offline/tools-only state for the other e2e tests.
-let mock: Server;
-let app: ChildProcess;
-let appUrl: string;
-let appOutput = '';
+interface MockOllama {
+  port: number;
+  chatRequests: Array<{ model?: string }>;
+  close: () => Promise<void>;
+}
+
+interface DesktopApp {
+  url: string;
+  close: () => void;
+}
+
+let mock: MockOllama;
+let app: DesktopApp;
 let workDir: string;
-let chatRequests: Array<{ model?: string }> = [];
 
 async function freePort(): Promise<number> {
   const probe = createServer();
@@ -28,11 +35,16 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-async function startMockOllama(): Promise<number> {
-  mock = createServer((req, res) => {
+async function startMockOllama(models: string[]): Promise<MockOllama> {
+  const chatRequests: Array<{ model?: string }> = [];
+  const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/api/tags') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ models: [{ name: MODEL, model: MODEL }] }));
+      res.end(
+        JSON.stringify({
+          models: models.map((name) => ({ name, model: name })),
+        })
+      );
       return;
     }
     if (req.method === 'POST' && req.url === '/v1/chat/completions') {
@@ -58,11 +70,19 @@ async function startMockOllama(): Promise<number> {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end('{}');
   });
-  await new Promise<void>((resolve) => mock.listen(0, '127.0.0.1', resolve));
-  return (mock.address() as AddressInfo).port;
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    port: (server.address() as AddressInfo).port,
+    chatRequests,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
 }
 
-async function waitForHealth(url: string, timeoutMs = 45000): Promise<void> {
+async function waitForHealth(
+  url: string,
+  output: () => string,
+  timeoutMs = 45000
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
@@ -73,15 +93,10 @@ async function waitForHealth(url: string, timeoutMs = 45000): Promise<void> {
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(`desktop server did not become healthy at ${url}\n${appOutput}`);
+  throw new Error(`desktop server did not become healthy at ${url}\n${output()}`);
 }
 
-test.beforeAll(async () => {
-  const ollamaPort = await startMockOllama();
-  const appPort = await freePort();
-  appUrl = `http://127.0.0.1:${appPort}`;
-  workDir = mkdtempSync(join(tmpdir(), 'zoveli-e2e-desktop-chat-'));
-
+function baseEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const key of [
     'OPENAI_API_KEY',
@@ -98,33 +113,47 @@ test.beforeAll(async () => {
   ]) {
     delete env[key];
   }
-  Object.assign(env, {
-    PORT: String(appPort),
+  return env;
+}
+
+async function startDesktop(env: NodeJS.ProcessEnv): Promise<DesktopApp> {
+  const port = await freePort();
+  const url = `http://127.0.0.1:${port}`;
+  let output = '';
+  const child = spawn(process.execPath, ['apps/desktop/dist/server/server.js'], {
+    env: { ...env, PORT: String(port) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  child.stdout?.on('data', (chunk) => {
+    output += chunk;
+  });
+  child.stderr?.on('data', (chunk) => {
+    output += chunk;
+  });
+  await waitForHealth(url, () => output);
+  return { url, close: () => child.kill() };
+}
+
+// This spec owns its desktop servers and mock Ollama so the shared webServer
+// keeps its offline/tools-only state for the other e2e tests.
+test.beforeAll(async () => {
+  mock = await startMockOllama([MODEL]);
+  workDir = mkdtempSync(join(tmpdir(), 'zoveli-e2e-desktop-chat-'));
+  app = await startDesktop({
+    ...baseEnv(),
     NODE_ENV: 'test',
-    ZOVELI_OLLAMA_URL: `http://127.0.0.1:${ollamaPort}`,
+    ZOVELI_OLLAMA_URL: `http://127.0.0.1:${mock.port}`,
     ZOVELI_VAULT_PATH: join(workDir, 'vault'),
     ZOVELI_MEMORY_DB: join(workDir, 'memory.db'),
     ZOVELI_MEMORY_EXPORT: '0',
     ZOVELI_AUTH_DIR: join(workDir, 'auth'),
     MATHCORE_AUDIT: join(workDir, 'audit.jsonl'),
   });
-
-  app = spawn(process.execPath, ['apps/desktop/dist/server/server.js'], {
-    env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  app.stdout?.on('data', (chunk) => {
-    appOutput += chunk;
-  });
-  app.stderr?.on('data', (chunk) => {
-    appOutput += chunk;
-  });
-  await waitForHealth(appUrl);
 });
 
 test.afterAll(async () => {
-  app?.kill();
-  if (mock) await new Promise<void>((resolve) => mock.close(() => resolve()));
+  app?.close();
+  await mock?.close();
   if (workDir) {
     try {
       rmSync(workDir, { recursive: true, force: true });
@@ -136,7 +165,7 @@ test.afterAll(async () => {
 
 test('detects a local model and answers the first desktop message', async ({ page }) => {
   test.slow();
-  await page.goto(appUrl);
+  await page.goto(app.url);
   await expect(page.getByTestId('onboarding-status')).toContainText(
     `chat ready (${MODEL})`
   );
@@ -145,6 +174,49 @@ test('detects a local model and answers the first desktop message', async ({ pag
   await page.getByTestId('send-button').click();
   await expect(page.getByTestId('assistant-message').last()).toContainText(REPLY);
 
-  expect(chatRequests).toHaveLength(1);
-  expect(chatRequests[0]?.model).toBe(MODEL);
+  expect(mock.chatRequests).toHaveLength(1);
+  expect(mock.chatRequests[0]?.model).toBe(MODEL);
+});
+
+test('names a pinned model that is missing and sends no chat request', async ({ page }) => {
+  test.slow();
+  const pinnedMock = await startMockOllama([MODEL]);
+  const pinnedWorkDir = mkdtempSync(join(tmpdir(), 'zoveli-e2e-desktop-pinned-'));
+  let pinnedApp: DesktopApp | undefined;
+  try {
+    pinnedApp = await startDesktop({
+      ...baseEnv(),
+      NODE_ENV: 'test',
+      ZOVELI_MODEL: MISSING_MODEL,
+      ZOVELI_OLLAMA_URL: `http://127.0.0.1:${pinnedMock.port}`,
+      ZOVELI_VAULT_PATH: join(pinnedWorkDir, 'vault'),
+      ZOVELI_MEMORY_DB: join(pinnedWorkDir, 'memory.db'),
+      ZOVELI_MEMORY_EXPORT: '0',
+      ZOVELI_AUTH_DIR: join(pinnedWorkDir, 'auth'),
+      MATHCORE_AUDIT: join(pinnedWorkDir, 'audit.jsonl'),
+    });
+
+    await page.goto(pinnedApp.url);
+    await expect(page.getByTestId('onboarding-status')).toContainText('chat needs a model');
+    await expect(page.getByTestId('onboarding')).toContainText(
+      `ollama pull ${MISSING_MODEL}`
+    );
+
+    await page.getByLabel('Message').fill('hello there');
+    await page.getByTestId('send-button').click();
+    const reply = page.getByTestId('assistant-message').last();
+    await expect(reply).toContainText(
+      `The requested Ollama model "${MISSING_MODEL}" is not installed.`
+    );
+    await expect(reply).toContainText(`ollama pull ${MISSING_MODEL}`);
+    expect(pinnedMock.chatRequests).toHaveLength(0);
+  } finally {
+    pinnedApp?.close();
+    await pinnedMock.close();
+    try {
+      rmSync(pinnedWorkDir, { recursive: true, force: true });
+    } catch {
+      // Windows may still hold the SQLite file briefly
+    }
+  }
 });
