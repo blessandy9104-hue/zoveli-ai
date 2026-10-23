@@ -1,5 +1,5 @@
 import { definePlugin } from '@deepseek-ai/dsh-core';
-import { issueCode, verifyCode } from './otp.js';
+import { issueCode, verifyCode, normalizeEmail } from './otp.js';
 import { mintSession, verifySession } from './session.js';
 import { deliverCode } from './deliver.js';
 
@@ -63,8 +63,6 @@ export const zoveliAuth = definePlugin({
 });
 
 export default zoveliAuth;
-export { issueCode, verifyCode } from './otp.js';
+export { issueCode, verifyCode, normalizeEmail } from './otp.js';
 export { mintSession, verifySession, sessionEmailFromCookie, sessionCookie, clearSessionCookie, COOKIE_NAME } from './session.js';
 export { deliverCode } from './deliver.js';
-
-
