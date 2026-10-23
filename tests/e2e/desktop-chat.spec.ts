@@ -110,6 +110,7 @@ function baseEnv(): NodeJS.ProcessEnv {
     'ZOVELI_OLLAMA_MODEL',
     'ZOVELI_OLLAMA_URL',
     'ZOVELI_AUTH_REQUIRED',
+    'ZOVELI_AUTH_DEV_ECHO',
   ]) {
     delete env[key];
   }
@@ -219,4 +220,24 @@ test('names a pinned model that is missing and sends no chat request', async ({ 
       // Windows may still hold the SQLite file briefly
     }
   }
+});
+
+test('validates auth emails before applying rate limits', async ({ request }) => {
+  test.slow();
+  for (let i = 0; i < 31; i++) {
+    const res = await request.post(`${app.url}/api/auth/request`, {
+      data: { email: 'not-an-email' },
+    });
+    expect(res.status()).toBe(400);
+  }
+  const verify = await request.post(`${app.url}/api/auth/verify`, {
+    data: { email: 'not-an-email', code: '123456' },
+  });
+  expect(verify.status()).toBe(400);
+
+  const valid = await request.post(`${app.url}/api/auth/request`, {
+    data: { email: `rate-limit-${Date.now()}@proton.me` },
+  });
+  expect(valid.status()).toBe(200);
+  expect(await valid.json()).toMatchObject({ ok: true });
 });

@@ -133,6 +133,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- Auth endpoints validate emails before rate limiting, so malformed attempts
+  return `400` without consuming the login budget. Dev/test echo mode also
+  bypasses the per-email request cap and the login page fills the echoed code.
 - Docker Compose keeps vault, session and audit data in a writable
   `zoveli-data` volume, documents the correct `-f docker/docker-compose.yml`
   commands, and runs Ollama on CPU unless the GPU reservation is uncommented.

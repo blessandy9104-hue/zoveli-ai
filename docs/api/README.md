@@ -62,7 +62,8 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
   Proton" button by design — email codes work with every provider instead.
   Set `ZOVELI_SMTP_URL` (+`ZOVELI_SMTP_FROM`) for real delivery, else codes go to
   the server console (dev mode). `ZOVELI_AUTH_DEV_ECHO=1` echoes codes in API
-  responses — test-only, never production.
+  responses and lifts login rate limits — test-only, never production.
+  Malformed emails return `400` before any rate limit is consumed.
 
 ## System & hardware (`@zoveli/sysinfo`, local-only)
 - `sysinfo_snapshot {diskPath?, fresh?}` → full host snapshot (30s cache)

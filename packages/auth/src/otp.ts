@@ -74,7 +74,7 @@ export function issueCode(rawEmail: string): { email: string; code: string } {
   const now = Date.now();
   const store = loadStore();
   const recent = (store.requests[email] ?? []).filter((t) => now - t < 3600_000);
-  if (recent.length >= MAX_REQUESTS_PER_HOUR) {
+  if (process.env.ZOVELI_AUTH_DEV_ECHO !== '1' && recent.length >= MAX_REQUESTS_PER_HOUR) {
     throw new Error('too many codes requested; try again later');
   }
   recent.push(now);

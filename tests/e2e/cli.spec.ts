@@ -293,14 +293,9 @@ test.describe('Auth (email OTP, proton.me compatible)', () => {
       'Code sent'
     );
 
-    // In test mode the server echoes the code via the API — standing in
-    // for the email a real SMTP sink would deliver to the proton.me inbox.
-    const codeRes = await page.request.post('/api/auth/request', {
-      data: { email: addr },
-    });
-    const { devCode } = await codeRes.json();
-    expect(devCode).toMatch(/^\d{6}$/);
-    await page.fill('[data-testid="login-code"]', devCode);
+    // In test mode the server echoes the code and the page fills it in,
+    // standing in for the email a real SMTP sink would deliver.
+    await expect(page.getByTestId('login-code')).toHaveValue(/^\d{6}$/);
     await page.click('[data-testid="login-verify"]');
     await expect(page.locator('[data-testid="login-status"]')).toContainText(
       `Signed in as ${addr}`
@@ -312,6 +307,10 @@ test.describe('Auth (email OTP, proton.me compatible)', () => {
       data: { email: 'not-an-email' },
     });
     expect(res.status()).toBe(400);
+    const verify = await request.post('/api/auth/verify', {
+      data: { email: 'not-an-email', code: '123456' },
+    });
+    expect(verify.status()).toBe(400);
   });
 });
 

@@ -53,6 +53,20 @@ describe('email OTP (proton.me compatible)', () => {
     expect(() => issueCode('not-an-email')).toThrow('invalid email');
   });
 
+  it('skips per-email request throttling in dev echo mode', () => {
+    const previous = process.env.ZOVELI_AUTH_DEV_ECHO;
+    process.env.ZOVELI_AUTH_DEV_ECHO = '1';
+    try {
+      const email = uniq('devecho');
+      for (let i = 0; i < 6; i++) {
+        expect(() => issueCode(email)).not.toThrow();
+      }
+    } finally {
+      if (previous === undefined) delete process.env.ZOVELI_AUTH_DEV_ECHO;
+      else process.env.ZOVELI_AUTH_DEV_ECHO = previous;
+    }
+  });
+
   it('codes are single-use', () => {
     const email = uniq('singleuse');
     const { code } = issueCode(email);

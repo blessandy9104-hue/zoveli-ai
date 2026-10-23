@@ -9,7 +9,7 @@ import {
 } from '@zoveli/host';
 import { promptSectionsText } from '@zoveli/core';
 import {
-  zoveliAuth, issueCode, verifyCode, mintSession,
+  zoveliAuth, issueCode, verifyCode, mintSession, normalizeEmail,
   sessionEmailFromCookie, sessionCookie, clearSessionCookie,
   deliverCode,
 } from '@zoveli/auth';
@@ -73,8 +73,12 @@ const apiLimiter = new RateLimiter(120, 60_000);
 // one server, which would legitimately trip per-IP budgets (auth PROVEN to
 // 429 the last project on CI). DEV_ECHO already marks test mode — it echoes
 // OTP codes — so limits stay enforced everywhere else, including production.
+function devEchoEnabled(): boolean {
+  return process.env.ZOVELI_AUTH_DEV_ECHO === '1';
+}
+
 function rateLimitsEnabled(): boolean {
-  return process.env.ZOVELI_AUTH_DEV_ECHO !== '1';
+  return !devEchoEnabled();
 }
 
 function clientIp(req: http.IncomingMessage): string {
@@ -494,6 +498,7 @@ emailForm.addEventListener('submit', async (e) => {
       status.textContent = 'Could not send a code: ' + requestFailed(res, data) + '.';
       return;
     }
+    if (typeof data.devCode === 'string') codeInput.value = data.devCode;
     status.textContent = 'Code sent — check your inbox.';
     codeForm.style.display = 'block';
     codeInput.focus();
@@ -686,6 +691,14 @@ ${themeBootScript(unicornProjectId())}
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/auth/request') {
+        const body = await readBody(req);
+        let email: string;
+        try {
+          email = normalizeEmail(String(body?.email ?? ''));
+        } catch {
+          json(res, 400, { ok: false, error: 'invalid email address' });
+          return;
+        }
         if (rateLimitsEnabled() && !authLimiter.allow(`auth:${clientIp(req)}`)) {
           res.writeHead(429, withSecurityHeaders({
             'Content-Type': 'application/json; charset=utf-8',
@@ -694,16 +707,15 @@ ${themeBootScript(unicornProjectId())}
           res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
           return;
         }
-        const body = await readBody(req);
         try {
-          const { code, email } = issueCode(String(body.email ?? ''));
+          const { code } = issueCode(email);
           const delivery = await deliverCode(email, code);
           json(res, 200, {
             ok: true,
             emailed: delivery.delivered,
             // Test-only escape hatch: echo the code so e2e can complete the
             // flow without an SMTP server. Never enable in production.
-            ...(process.env.ZOVELI_AUTH_DEV_ECHO === '1' ? { devCode: code } : {}),
+            ...(devEchoEnabled() ? { devCode: code } : {}),
           });
         } catch (e) {
           json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
@@ -711,6 +723,14 @@ ${themeBootScript(unicornProjectId())}
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/auth/verify') {
+        const body = await readBody(req);
+        let email: string;
+        try {
+          email = normalizeEmail(String(body?.email ?? ''));
+        } catch {
+          json(res, 400, { ok: false, error: 'invalid email address' });
+          return;
+        }
         if (rateLimitsEnabled() && !authLimiter.allow(`auth:${clientIp(req)}`)) {
           res.writeHead(429, withSecurityHeaders({
             'Content-Type': 'application/json; charset=utf-8',
@@ -719,8 +739,7 @@ ${themeBootScript(unicornProjectId())}
           res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
           return;
         }
-        const body = await readBody(req);
-        const verdict = verifyCode(String(body.email ?? ''), String(body.code ?? ''));
+        const verdict = verifyCode(email, String(body?.code ?? ''));
         if (!verdict.ok) {
           json(res, 401, { ok: false, reason: verdict.reason });
           return;
