@@ -193,6 +193,21 @@ function runInstaller(archive, dir, env) {
   );
 }
 
+function readUserPath() {
+  const result = spawnSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      "[Environment]::GetEnvironmentVariable('Path','User')",
+    ],
+    { encoding: 'utf8' }
+  );
+  assert(result.status === 0, `could not read the user PATH: ${tail(result.stderr)}`);
+  return result.stdout.trim();
+}
+
 function startMockOllama(models) {
   const requests = [];
   const server = createServer((req, res) => {
@@ -363,6 +378,7 @@ async function main() {
 
   try {
     if (archive) {
+      const userPathBefore = IS_WIN ? readUserPath() : null;
       const tamperStart = Date.now();
       const tamperedArchive = join(sandbox, 'tampered.tar.gz');
       copyFileSync(archive, tamperedArchive);
@@ -396,6 +412,14 @@ async function main() {
         const linkedVersion = runLauncher(linkPath, ['--version'], env).trim();
         assert(linkedVersion === `zoveli ${runtime.version}`, `linked launcher reported ${linkedVersion}`);
         pass(checks, 'path-link', `${linkPath} runs ${linkedVersion}`, linkStart);
+      } else {
+        const pathStart = Date.now();
+        const userPathAfter = readUserPath();
+        assert(
+          userPathAfter === userPathBefore,
+          'installer changed the user PATH without -AddToPath'
+        );
+        pass(checks, 'user-path-unchanged', 'default install leaves the user PATH untouched', pathStart);
       }
 
       const rollbackStart = Date.now();

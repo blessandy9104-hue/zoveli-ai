@@ -30,6 +30,17 @@ PowerShell:
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
+The Windows installer leaves your `PATH` unchanged by default and prints the
+full `zoveli.cmd` path. To add the install directory to your user `PATH`
+(opt-in), save the script and run it with `-AddToPath`:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 -OutFile install-zoveli-runtime.ps1
+powershell -ExecutionPolicy Bypass -File .\install-zoveli-runtime.ps1 -AddToPath
+```
+
+Then open a new terminal and run `zoveli`.
+
 Re-running the installer stages and preflights the new runtime, writes a
 verified backup under `~/.zoveli/backups`, and rolls back automatically if the
 new runtime fails after the swap. Manual downloads are checksummed and carry a
@@ -54,7 +65,7 @@ pnpm run build
 Portable install:
 
 ```bash
-zoveli health          # Linux/macOS; on Windows use the printed zoveli.cmd path
+zoveli health          # Windows: after -AddToPath; otherwise use the printed zoveli.cmd path
 zoveli config-check
 zoveli recovery-check  # proves backup/restore in an isolated temp vault
 ```
@@ -67,7 +78,9 @@ drill output when reporting the problem.
 The POSIX installer creates `~/.local/bin` when needed and links `zoveli`
 there. If that directory is not on `PATH`, it prints the exact export to run;
 you can also run the full launcher path printed at the end of the install.
-Windows prints the `zoveli.cmd` path to run.
+Windows leaves `PATH` unchanged unless you pass `-AddToPath`; the installer
+prints the `zoveli.cmd` path either way. With `-AddToPath`, open a new terminal
+and run `zoveli`.
 
 Source checkout:
 

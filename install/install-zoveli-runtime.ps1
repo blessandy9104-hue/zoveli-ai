@@ -6,13 +6,17 @@
   Downloads the matching GitHub release archive, verifies its SHA-256
   checksum, and extracts it. Upgrades first create and verify a backup of the
   existing vault under ~/.zoveli/backups. No Git, Node, pnpm, Python, or
-  compiler toolchain is required on the target machine.
+  compiler toolchain is required on the target machine. The user PATH is not
+  changed unless -AddToPath is passed.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 
 .EXAMPLE
   .\install-zoveli-runtime.ps1 -Yes -Archive .\zoveli-0.1.0-windows-x64.tar.gz -Dir "$env:LOCALAPPDATA\Zoveli"
+
+.EXAMPLE
+  .\install-zoveli-runtime.ps1 -Yes -AddToPath
 #>
 [CmdletBinding()]
 param(
@@ -23,7 +27,8 @@ param(
   [string]$Url = $env:ZOVELI_RUNTIME_URL,
   [switch]$NoVerify,
   [switch]$Force,
-  [switch]$SkipBackup
+  [switch]$SkipBackup,
+  [switch]$AddToPath
 )
 
 if ($PSVersionTable.PSEdition -eq 'Desktop') {
@@ -81,6 +86,80 @@ function Test-SafeTarget($path) {
   return ($protected -notcontains $full)
 }
 
+function Test-PathEntry([string]$pathValue, [string]$dir) {
+  $needle = $dir.TrimEnd('\')
+  foreach ($entry in ($pathValue -split ';')) {
+    $candidate = [Environment]::ExpandEnvironmentVariables($entry.Trim()).Trim('"').TrimEnd('\')
+    if ($candidate -and [string]::Equals($candidate, $needle, [StringComparison]::OrdinalIgnoreCase)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Get-UserPathRaw {
+  $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $false)
+  if (-not $key) { return '' }
+  try {
+    return [string]$key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+  } finally {
+    $key.Dispose()
+  }
+}
+
+function Add-UserPath([string]$dir) {
+  $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+  if (-not $key) {
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
+  }
+  if (-not $key) { throw 'could not open HKCU\Environment' }
+  try {
+    $current = [string]$key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+    if (Test-PathEntry $current $dir) { return $false }
+
+    $existingKind = $null
+    try { $existingKind = $key.GetValueKind('Path') } catch { }
+    $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
+    if ($existingKind -eq [Microsoft.Win32.RegistryValueKind]::String -or
+        $existingKind -eq [Microsoft.Win32.RegistryValueKind]::ExpandString) {
+      $kind = $existingKind
+    } elseif ($null -ne $existingKind) {
+      throw "unsupported user PATH value kind: $existingKind"
+    }
+
+    $trimmed = $current.TrimEnd(';')
+    $next = $(if ([string]::IsNullOrWhiteSpace($trimmed)) { $dir } else { "$trimmed;$dir" })
+    $key.SetValue('Path', $next, $kind)
+    $verified = [string]$key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+    if (-not (Test-PathEntry $verified $dir)) { throw 'user PATH write did not persist' }
+    return $true
+  } finally {
+    $key.Dispose()
+  }
+}
+
+function Send-EnvironmentChange {
+  if (-not ('Zoveli.EnvironmentBroadcast' -as [type])) {
+    Add-Type -Namespace Zoveli -Name EnvironmentBroadcast -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint Msg, System.UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out System.UIntPtr lpdwResult);
+'@
+  }
+  $result = [System.UIntPtr]::Zero
+  [void][Zoveli.EnvironmentBroadcast]::SendMessageTimeout([System.IntPtr]0xffff, 0x001A, [System.UIntPtr]::Zero, 'Environment', 0x0002, 5000, [ref]$result)
+}
+
+function Test-LauncherOnPath([string]$dir) {
+  $previous = $env:Path
+  try {
+    $env:Path = "$dir;$previous"
+    $command = Get-Command 'zoveli' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    return ($command -and [string]::Equals($command.Source, (Join-Path $dir 'zoveli.cmd'), [StringComparison]::OrdinalIgnoreCase))
+  } finally {
+    $env:Path = $previous
+  }
+}
+
 function Backup-ExistingRuntime($dir) {
   if (-not (Test-Path -LiteralPath (Join-Path $dir 'runtime.json'))) { return }
   if ($SkipBackup) {
@@ -121,6 +200,7 @@ if (-not $Yes) {
 }
 
 if (-not (Test-SafeTarget $Dir)) { Fail "Refusing to install into protected directory: $Dir" }
+$Dir = [System.IO.Path]::GetFullPath($Dir).TrimEnd('\')
 
 if (-not $Archive) {
   if (-not $Version) {
@@ -233,8 +313,42 @@ try {
   }
   Info "Installed $installed into $Dir"
   Write-Host ''
-  Write-Host "Run:"
-  Write-Host "  $(Join-Path $Dir 'zoveli.cmd')"
+  if ($AddToPath) {
+    $added = $null
+    try {
+      $added = Add-UserPath $Dir
+    } catch {
+      Warn "Could not add $Dir to your user PATH: $($_.Exception.Message)"
+    }
+    if ($null -ne $added) {
+      try { Send-EnvironmentChange } catch { }
+      if ($added) {
+        Info "Added $Dir to your user PATH."
+      } else {
+        Info "$Dir is already on your user PATH."
+      }
+      if (-not (Test-LauncherOnPath $Dir)) {
+        Warn 'The launcher was not discoverable in this process; open a new terminal to pick up the PATH change.'
+      }
+      Write-Host 'Open a new terminal, then run:'
+      Write-Host '  zoveli'
+    } else {
+      Write-Host 'Run it with the full path instead:'
+      Write-Host "  $(Join-Path $Dir 'zoveli.cmd')"
+    }
+  } else {
+    $onUserPath = $false
+    try { $onUserPath = Test-PathEntry (Get-UserPathRaw) $Dir } catch { }
+    if ($onUserPath) {
+      Write-Host 'Already on your user PATH. Open a new terminal, then run:'
+      Write-Host '  zoveli'
+    } else {
+      Write-Host 'Run:'
+      Write-Host "  $(Join-Path $Dir 'zoveli.cmd')"
+      Write-Host ''
+      Write-Host "To run 'zoveli' from any new terminal, reinstall with -AddToPath."
+    }
+  }
 } finally {
   if ($stageRoot -and (Test-Path -LiteralPath $stageRoot)) {
     Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue

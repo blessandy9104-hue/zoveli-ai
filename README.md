@@ -56,6 +56,17 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
+The Windows installer leaves your `PATH` unchanged by default and prints the
+full `zoveli.cmd` path. To add the install directory to your user `PATH`,
+download and run it with `-AddToPath`:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 -OutFile install-zoveli-runtime.ps1
+powershell -ExecutionPolicy Bypass -File .\install-zoveli-runtime.ps1 -AddToPath
+```
+
+Then open a new terminal and run `zoveli`.
+
 The installer downloads the matching prebuilt archive, verifies its SHA-256,
 and installs to `~/.local/share/zoveli` (Linux/macOS) or
 `%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli`
@@ -150,8 +161,9 @@ pnpm perf:check        # startup/mount/tool-call budgets
 
 Portable install: `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows). The POSIX
 installer creates `~/.local/bin` when needed and links `zoveli` there, printing
-the exact `PATH` export if that directory is not already on `PATH`; Windows
-prints the full `zoveli.cmd` path.
+the exact `PATH` export if that directory is not already on `PATH`. Windows
+prints the full `zoveli.cmd` path; pass `-AddToPath` to add the install
+directory to your user `PATH`, then open a new terminal and run `zoveli`.
 
 Source checkout:
 

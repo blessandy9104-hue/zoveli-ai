@@ -13,6 +13,8 @@ It exercises the packaged archive and the real installers, not the source tree.
 - The launcher reports the expected version and help text.
 - On Linux and macOS, the installer creates `~/.local/bin/zoveli` and the
   linked command runs the bundled runtime.
+- On Windows, the default install leaves the user `PATH` untouched; adding it
+  is opt-in via `-AddToPath`.
 - `/math 2+2` returns `VERIFIED` with `4` using the bundled mathcore.
 - `/remember <fact>` and `/recall <query>` work with no chat model.
 - The first-run banner prints the exact chat fix, and a plain message explains
@@ -77,7 +79,7 @@ not touch your real `~/.zoveli` data.
 
 ```text
 product acceptance: PASS (install 812ms, first task 6120ms, total 14820ms)
-runtime 0.1.0 windows-x64; 58 tools; 15/15 capabilities; 20 checks
+runtime 0.1.0 windows-x64; 58 tools; 15/15 capabilities; 21 checks
 report: acceptance-windows-latest.json
 ```
 

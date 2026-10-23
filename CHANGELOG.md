@@ -23,7 +23,10 @@ the new section **before** running `pnpm release:check --release`.
   and automatically restore the previous runtime if the installed launcher
   check fails. The POSIX installer creates `~/.local/bin` when needed, links
   `zoveli` there, verifies the linked command runs, and prints the exact `PATH`
-  export when that directory is not already on `PATH`.
+  export when that directory is not already on `PATH`. The Windows installer
+  has an opt-in `-AddToPath` flag that idempotently adds the install directory
+  to the user `PATH` while preserving existing `%VAR%` entries; the default
+  install leaves `PATH` untouched.
 - Clean-home product acceptance gate (`scripts/product-acceptance.mjs`,
   [runbook](docs/runbooks/product-acceptance.md)) installs the packaged archive
   with the real installer, runs the local workflows, checks the tools-only
