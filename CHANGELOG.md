@@ -130,6 +130,10 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- Docker Compose keeps vault, session and audit data in a writable
+  `zoveli-data` volume, documents the correct `-f docker/docker-compose.yml`
+  commands, and runs Ollama on CPU unless the GPU reservation is uncommented.
+- Release builds publish the `latest` Docker tag.
 - The Docker image ships the CLI's pnpm workspace links, so `zoveli` starts
   instead of failing with `MODULE_NOT_FOUND: @zoveli/core/version`; CI boots
   the image and checks `zoveli --version`, the plugin inventory, and

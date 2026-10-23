@@ -17,7 +17,8 @@ This guide covers a safe upgrade and rollback.
 
 ## Before upgrading
 
-1. Stop the assistant (Ctrl+C in the REPL or `docker compose down`).
+1. Stop the assistant (Ctrl+C in the REPL or
+   `docker compose -f docker/docker-compose.yml down`).
 2. Back up and verify:
    ```bash
    zoveli backup                     # portable

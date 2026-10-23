@@ -77,13 +77,17 @@ ZOVELI_MODEL=gpt-4o-mini pnpm start     # pick any model name
 ZOVELI_API_BASE=https://my-proxy/v1 ZOVELI_API_KEY=... pnpm start  # custom endpoint
 
 # Docker: ollama runs as a sibling service, already wired:
-docker compose --profile local-llm up ollama
+docker compose -f docker/docker-compose.yml --profile local-llm up -d ollama
 docker exec zoveli-ollama ollama pull qwen3:4b
-docker compose --profile cli up --build
+docker compose -f docker/docker-compose.yml --profile cli up --build
 ```
 
 `ZOVELI_OLLAMA_URL` overrides the Ollama address (default
 `http://localhost:11434`; Docker Compose sets it to `http://ollama:11434`).
+Ollama uses CPU by default; uncomment the `deploy` block in
+`docker/docker-compose.yml` for NVIDIA GPU acceleration. Vault, sessions and
+audit data live in the `zoveli-data` volume; `docker compose down` keeps it and
+`docker compose down -v` deletes it.
 
 ## Data maintenance
 

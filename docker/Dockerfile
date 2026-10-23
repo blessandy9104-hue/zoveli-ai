@@ -41,7 +41,8 @@ RUN apk add --no-cache --virtual .build-deps build-base cmake && \
     pip install --break-system-packages --no-cache-dir ./mathcore && \
     apk del .build-deps
 
-# Copy built artifacts (workspace symlinks in node_modules resolve into packages/)
+# Copy built artifacts. pnpm's isolated linker keeps workspace links under each
+# package's node_modules, including apps/cli/node_modules.
 COPY --from=builder --chown=zoveli:zoveli /app/package.json ./
 COPY --from=builder --chown=zoveli:zoveli /app/pnpm-lock.yaml ./
 COPY --from=builder --chown=zoveli:zoveli /app/node_modules ./node_modules

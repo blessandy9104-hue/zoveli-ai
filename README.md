@@ -172,6 +172,14 @@ pnpm start            # CLI assistant (local tools work offline, Windows/macOS/L
 pnpm run desktop      # Electron desktop shell (dev mode, spawns local server internally)
 ```
 
+Container (source checkout; state lives in the `zoveli-data` volume):
+
+```bash
+docker compose -f docker/docker-compose.yml --profile local-llm up -d ollama
+docker exec zoveli-ollama ollama pull qwen3:4b
+docker compose -f docker/docker-compose.yml --profile cli up --build
+```
+
 Before trusting the install with notes, run `zoveli recovery-check` (or
 `node apps/cli/dist/cli.js recovery-check` from a source checkout). It proves
 backup, checksum verification and restore in an isolated temporary vault

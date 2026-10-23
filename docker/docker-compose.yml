@@ -1,23 +1,20 @@
-version: '3.8'
-
 services:
   # Main Zoveli CLI application
   zoveli-cli:
+    image: ${ZOVELI_CLI_IMAGE:-zoveli-cli:local}
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: zoveli-cli
     volumes:
-      - ./data/vault:/app/data/vault
-      - ./data/sessions:/app/data/sessions
-      - ./data/audit:/app/data/audit
+      # Named volume inherits /app/data ownership from the image, so the
+      # non-root zoveli user can write the vault, sessions and audit log.
+      - zoveli-data:/app/data
       - ../knowledge-vault:/app/knowledge-vault:ro
     environment:
-      - NODE_ENV=development
-      - ZOVELI_VAULT_PATH=/app/data/vault
-      - MATHCORE_AUDIT=/app/data/audit/audit.jsonl
       # Free local chat: points the app at the `ollama` service below.
-      # Bring it up with: docker compose --profile local-llm up ollama
+      # Bring it up with:
+      # docker compose -f docker/docker-compose.yml --profile local-llm up ollama
       # then: docker exec zoveli-ollama ollama pull qwen3:4b
       - ZOVELI_OLLAMA_URL=http://ollama:11434
     stdin_open: true
@@ -35,13 +32,14 @@ services:
       - ollama-data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # CPU inference works out of the box. To use an NVIDIA GPU, uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     profiles:
       - local-llm
 
@@ -117,9 +115,9 @@ services:
       - monitoring
 
 volumes:
+  zoveli-data:
   ollama-data:
   postgres-data:
   redis-data:
   prometheus-data:
   grafana-data:
-

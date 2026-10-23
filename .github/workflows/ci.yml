@@ -301,7 +301,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' || github.event_name == 'push' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=
@@ -332,6 +332,14 @@ jobs:
           docker run --rm "$image" node apps/cli/dist/cli.js plugins --json >/dev/null
           docker run --rm "$image" mathcore ops >/dev/null
           echo "CLI and mathcore smoke passed"
+
+      - name: Smoke test Compose data volume
+        shell: bash
+        run: |
+          image="$(printf '%s\n' "$TAGS" | head -n 1)"
+          ZOVELI_CLI_IMAGE="$image" docker compose -f docker/docker-compose.yml --profile cli run --rm -T --pull never zoveli-cli \
+            node -e "require('node:fs').writeFileSync('/app/data/vault/.smoke','ok');require('node:fs').unlinkSync('/app/data/vault/.smoke')"
+          echo "Compose data volume smoke passed"
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
 
