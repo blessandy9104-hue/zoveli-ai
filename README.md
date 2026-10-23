@@ -1,4 +1,5 @@
 # Zoveli AI — local-first personal assistant
+[![M8ven Score](https://m8ven.ai/badge/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?v=a871bb4a46ab2bd9a64bf585d0dc5ffe)](https://m8ven.ai/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?s=readme)
 
 > The assistant that proves its math, runs on your hardware, and never trains on your data.
 
