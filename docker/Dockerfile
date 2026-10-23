@@ -9,17 +9,16 @@ WORKDIR /app
 # Install pnpm (must match packageManager in package.json)
 RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 
+# Fetch dependencies from the lockfile into the store. Source changes do not
+# invalidate this layer; only a lockfile/workspace-policy change does.
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm fetch
+
 # Copy source (.dockerignore keeps node_modules/dist/.git out).
-# Single COPY keeps all 60 workspace manifests aligned with sources;
-# split manifest/source layers cannot enumerate 60 package.json paths
-# with Docker's glob rules, so we trade a little layer caching for
-# correctness.
 COPY . .
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
-
-# Build all packages (tsc emit)
+# Link dependencies from the fetched store, then build.
+RUN pnpm install --prefer-offline --frozen-lockfile --prod=false
 RUN pnpm run build
 
 # Runtime stage
@@ -35,6 +34,13 @@ RUN apk add --no-cache dumb-init python3 py3-pip
 RUN addgroup -S zoveli && \
     adduser -S zoveli -G zoveli
 
+# Install mathcore before the app artifacts: this layer depends only on
+# mathcore/, so ordinary source changes reuse it.
+COPY mathcore ./mathcore
+RUN apk add --no-cache --virtual .build-deps build-base cmake && \
+    pip install --break-system-packages --no-cache-dir ./mathcore && \
+    apk del .build-deps
+
 # Copy built artifacts (workspace symlinks in node_modules resolve into packages/)
 COPY --from=builder --chown=zoveli:zoveli /app/package.json ./
 COPY --from=builder --chown=zoveli:zoveli /app/pnpm-lock.yaml ./
@@ -43,13 +49,6 @@ COPY --from=builder --chown=zoveli:zoveli /app/packages ./packages
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/package.json ./apps/cli/package.json
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/dist ./apps/cli/dist
 COPY --from=builder --chown=zoveli:zoveli /app/knowledge-vault ./knowledge-vault
-COPY --from=builder --chown=zoveli:zoveli /app/mathcore ./mathcore
-
-# Install minimal build dependencies to allow z3-solver and other
-# pyproject-based packages to build, install mathcore, then remove build deps.
-RUN apk add --no-cache --virtual .build-deps build-base cmake && \
-    pip install --break-system-packages --no-cache-dir ./mathcore && \
-    apk del .build-deps
 
 # Create directories
 RUN mkdir -p /app/data/vault /app/data/sessions /app/data/audit && \
