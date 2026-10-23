@@ -326,7 +326,7 @@ jobs:
             docker pull "$image"
           fi
           echo "image=$image"
-          version="$(docker run --rm "$image" --version)"
+          version="$(docker run --rm "$image" node apps/cli/dist/cli.js --version)"
           echo "$version"
           [[ "$version" == zoveli* ]]
           docker run --rm "$image" mathcore ops >/dev/null
