@@ -132,7 +132,8 @@ the new section **before** running `pnpm release:check --release`.
 
 - The Docker image ships the CLI's pnpm workspace links, so `zoveli` starts
   instead of failing with `MODULE_NOT_FOUND: @zoveli/core/version`; CI boots
-  the image and checks `zoveli --version` and `mathcore ops`.
+  the image and checks `zoveli --version`, the plugin inventory, and
+  `mathcore ops`.
 - The POSIX runtime launcher follows symlinks, so `~/.local/bin/zoveli` finds
   the bundled Node runtime instead of looking for `node` next to the link.
 - Mathcore command lines with quoted paths containing spaces (for example

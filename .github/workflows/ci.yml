@@ -329,6 +329,7 @@ jobs:
           version="$(docker run --rm "$image" node apps/cli/dist/cli.js --version)"
           echo "$version"
           [[ "$version" == zoveli* ]]
+          docker run --rm "$image" node apps/cli/dist/cli.js plugins --json >/dev/null
           docker run --rm "$image" mathcore ops >/dev/null
           echo "CLI and mathcore smoke passed"
         env:
