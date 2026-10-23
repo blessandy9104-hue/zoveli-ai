@@ -47,6 +47,7 @@ COPY --from=builder --chown=zoveli:zoveli /app/pnpm-lock.yaml ./
 COPY --from=builder --chown=zoveli:zoveli /app/node_modules ./node_modules
 COPY --from=builder --chown=zoveli:zoveli /app/packages ./packages
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/package.json ./apps/cli/package.json
+COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/node_modules ./apps/cli/node_modules
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/dist ./apps/cli/dist
 COPY --from=builder --chown=zoveli:zoveli /app/knowledge-vault ./knowledge-vault
 
