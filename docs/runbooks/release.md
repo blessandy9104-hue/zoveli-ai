@@ -36,6 +36,11 @@ node apps/cli/dist/cli.js --version   # must print the new version
 CI runs the same gate plus Docker, SBOM, e2e, and security scans. Do not tag
 with any check red.
 
+The Docker build fetches pnpm dependencies from the lockfile and installs
+mathcore before copying app sources, so source-only changes reuse those
+layers. Changing `pnpm-lock.yaml`, `pnpm-workspace.yaml`, or `mathcore/`
+invalidates them.
+
 The `Runtime Artifacts` workflow builds the portable archives on Linux, macOS,
 and Windows, then runs the clean-install acceptance gate against each archive.
 Locally, after building mathcore:
