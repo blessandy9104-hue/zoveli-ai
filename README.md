@@ -26,6 +26,56 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/**
 
 Details: [docs/why-zoveli.md](docs/why-zoveli.md).
 
+## Strategic platform upgrades we are adopting
+
+Zoveli is already differentiated by a stronger trust model: verified math, explicit auditability, local execution, and privacy-first personal assistant behavior. To make that trust easier to ship and easier to use, we are adopting the strongest productization patterns from modern local assistant platforms without losing the core identity.
+
+### 1. Installer and onboarding maturity
+
+- Add first-run setup flows that guide users from install to working assistant in a few steps.
+- Support smooth Windows/macOS/Linux installation paths with clear verification and troubleshooting guidance.
+- Prefer guided onboarding over raw technical setup so the product feels approachable to non-expert users.
+
+### 2. Multi-surface product architecture
+
+- Keep the core CLI as the primary user surface, but add TUI, desktop, and web/dashboard surfaces as secondary layers.
+- Use a clear gateway/control-plane or runtime orchestration model so local tools, sessions, and device-aware capabilities remain connected without making the core fragile.
+- Treat every app surface as a portal to the same local runtime, not a separate product identity.
+
+### 3. Device-aware assistant capabilities
+
+- Support local app/node patterns for device-aware actions, permissions, and OS-level capabilities.
+- Keep device access explicit, permission-gated, and user-controllable.
+- Build the foundation for phone, desktop, and local node integrations without weakening the privacy-first contract.
+
+### 4. Product polish and supportability
+
+- Improve documentation navigation, startup guides, and troubleshooting flows.
+- Make release packaging, signing, versioning, and validation easier to follow and harder to break.
+- Add operational guardrails around build provenance, checksums, and reproducible releases.
+
+### 5. Distribution and release discipline
+
+- Borrow the maturity of modern release pipelines: versioning, artifact validation, provenance, and clean local/CI release checks.
+- Keep release flows deterministic and auditable, so users can trust packaged builds.
+- Use automation to verify the runtime, config, and installation path before shipping.
+
+### 6. Channel and platform reach
+
+- Extend the product to meet the user where they already are, while preserving the local-first core.
+- Explore messaging and app integrations as optional reach expansions rather than defining the product around them.
+- Keep the core identity intact: verified local reasoning first, wider distribution second.
+
+### Why this is a better path for Zoveli
+
+OpenClaw shows how to productize a local assistant into a polished multi-surface platform. Zoveli retains the stronger differentiator: explicit trust, verified math, private local memory, and auditability. The goal is not to become a generic chatbot platform; it is to become the trusted local assistant that users can rely on while also gaining the operational maturity needed to ship well.
+
+The strategic direction is simple:
+
+- Zoveli brings the trust and reasoning guarantee.
+- Platform maturity brings the usability and distribution gains.
+- Together they produce a product that is both dependable and usable.
+
 ## Try it in 30 seconds
 
 ```bash
@@ -205,9 +255,9 @@ remove any default or optional plugin with
 
 ## Features (all runnable today)
 
-- **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, calculus, statistics, logic, units, discrete, arithmetic, geometry, trigonometry, probability, linear, number) that memorize verified proofs and recall them (keyword + semantic)
+- **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, cal[...]
 - **🧠 Local-First Memory** — SQLite store with FTS5 ranked search, wiki-links and tags (Markdown vault kept as human-readable export mirror)
-- **🤖 Full Agent Framework** — 25 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 58 default tools; desktop adds 2 auth tools)
+- **🤖 Full Agent Framework** — 25 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 58 default tools; desktop adds 2 a[...]
 - **🖥️ System & Hardware Awareness** — local OS/CPU/memory/disk/GPU/battery/network insight with budget checks (`@zoveli/sysinfo`)
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
 - **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports
@@ -233,6 +283,7 @@ remove any default or optional plugin with
 - [ADRs](docs/adr/)
 - [Security policy](SECURITY.md)
 - [First-run guide](docs/guides/onboarding.md) · [Desktop guide](docs/guides/desktop.md) · [CLI guide](docs/guides/cli.md)
+- [Platform maturity strategy](docs/strategy-platform-upgrades.md)
 
 ## Contributing
 
