@@ -1,96 +1,123 @@
 # AGENTS.md
 
-This repository is the Zoveli AI monorepo: a local-first personal assistant with a verified-math core, CLI-first UX, and optional desktop/web surfaces. Keep changes aligned with that mission: the offline core must remain reliable and privacy-preserving.
+This repository is the Zoveli AI monorepo: a local-first personal assistant with a verified-math core, CLI-first UX, and optional desktop/web surfaces. Keep every change aligned with that mission: local privacy, reliable offline behavior, and explicit verification must remain the default.
 
-## Product and architecture priorities
+## Mission and product priorities
 
-- Keep the local-first, offline core as the primary contract. Web, desktop, and broader integrations are secondary and must not regress the CLI/runtime core.
-- Preserve the verified-math story: tools that touch `mathcore`, audit results, or checked outputs must remain deterministic, explicit, and transparent.
-- Prefer the smallest, most local, most inspectable implementation that satisfies the requirement.
-- Do not add cloud dependencies or telemetry that changes the product’s privacy-first operating model without a clear justification.
+- The CLI and local runtime are the primary product surface. Web, desktop, and broader integrations are secondary and must not degrade the core experience.
+- Preserve the local-first contract: core flows must work without cloud services, and optional network features must remain non-blocking for the core path.
+- Preserve the verified-math story: any change touching `mathcore`, audit logic, trust boundaries, or claim verification must remain explicit, deterministic, and inspectable.
+- Prefer the smallest, most local, most understandable implementation that meets the requirement.
+- Do not add cloud dependencies, telemetry, or privacy regressions without a clear product and security justification.
 
-## Repository shape
+## Repository map
 
-- `apps/cli`: command-line experience and primary user entrypoint.
-- `apps/desktop`: Electron shell for desktop use.
-- `packages/*`: shared libraries, tool implementations, runtime capabilities, and support modules.
-- `mathcore`: offline verified math subsystem; treat it as a critical safety boundary.
-- `scripts/`: build, validation, packaging, plugin, and health checks.
-- `docs/`: architecture, usage, runbooks, and product guidance.
+- `apps/cli`: primary CLI user experience and runtime entrypoint.
+- `apps/desktop`: Electron desktop shell for local desktop use.
+- `packages/*`: shared runtime packages, tools, system capabilities, and support libraries.
+- `mathcore`: safety-critical verified math backend; treat as a core trust boundary.
+- `scripts/`: build, validation, packaging, plugin, health, and release automation.
+- `docs/`: architecture, usage, runbooks, onboarding, and product guidance.
+- `test-vault`: scratch vault used by automated tests; do not treat as user data.
 
-## Coding expectations
+## Team workflow and engineering expectations
 
-- Keep runtime dependencies and package boundaries sane: shared packages should not depend on app-specific shell code; app code should depend on shared capability layers rather than each other.
-- Favor the existing workspace conventions in this repo (`pnpm`, TypeScript, package-local modules) over ad hoc patterns.
-- Do not create new global state or hidden side effects just to make a feature easier to test.
-- Prefer explicit, readable code over clever abstraction. If a helper exists to explain a real responsibility, keep it; otherwise inline it.
-- Avoid `any`; prefer narrow, inferred, typed values.
-- Avoid unnecessary destructuring and premature abstraction. Keep the code easy to follow.
-- Keep generated or build artifacts out of hand-edited source changes unless the task specifically requires generation.
+- Start by reading the relevant existing implementation and neighboring tests before changing behavior.
+- Keep the scope small and reviewable. Avoid unrelated refactors in the same patch.
+- Prefer the repo’s existing patterns over introducing a new framework, wrapper, or helper.
+- When touching multiple layers, keep the patch coherent: minimal changes, consistent names, and clear ownership of each responsibility.
+- If a change is speculative or high-risk, explain the concrete failure mode, likelihood, and cost before proceeding.
 
-## Verified math and safety-sensitive changes
+## Architecture boundaries
 
-- If a change affects mathematical verification, audit logic, tool trust boundaries, CLI output, or local security/privacy behavior, validate the concrete failure mode before patching.
-- For math-related changes, preserve the existing principle: verified answers should be explicit and auditable, not guessed or silently approximated.
-- Do not weaken the claims or safety checks around offline execution, vault data, or security-sensitive actions.
+- Keep runtime dependencies from shared packages toward the app/runtime surfaces rather than the reverse.
+- Do not let app-specific code leak into shared libraries unless there is a strong, explicit reason.
+- Keep CLI and local runtime behavior understandable for a user who expects privacy and offline-first behavior.
+- Keep security-sensitive and vault-related logic explicit and reviewable; do not hide side effects in broad abstractions.
 
-## CLI and local runtime expectations
+## Coding standards
 
-- The CLI is the canonical user interface for the core product. Changes should not degrade the local experience or require a hosted service for core workflows.
-- Preserve the “works offline for local tools” contract. If a feature relies on network access, make that dependency explicit and non-blocking for the core path.
-- Keep commands, output, and health checks understandable and actionable for developers and end users.
+- Favor explicit, readable TypeScript over clever abstractions.
+- Avoid `any`; prefer inferred, narrow, typed values.
+- Avoid unnecessary destructuring and premature abstraction.
+- Prefer inline logic unless the helper clearly owns a real responsibility.
+- Do not create global state, hidden runtime coupling, or implicit test-only seams.
+- Do not add generated or build artifacts as hand-edited source changes unless the task specifically requires generation.
+- Aim for deterministic code paths and consistent naming.
 
-## Testing and verification
+## Verified math and safety-sensitive work
 
-Run the relevant validation command before finishing a change.
+- If a change affects `mathcore`, verification logic, audit output, trust boundaries, CLI output, storage/vault behavior, or security/privacy-sensitive paths, validate the concrete risk before patching.
+- Preserve the principle that verified answers are explicit and auditable, not guessed, silently approximated, or superficially “good enough.”
+- Do not weaken the offline, local-only, or trusted-output guarantees.
+- Any change to the safety boundary should be explained in terms of observable behavior, failure modes, and verification steps.
 
-- Use the repo’s standard checks from the root:
+## Testing and validation
+
+Before finishing a change, run the relevant validation command.
+
+- Canonical repo checks from the root:
   - `pnpm test`
   - `pnpm lint`
   - `pnpm typecheck`
   - `pnpm run build`
-- For focused iteration, run the narrowest relevant command in the affected package or app instead of broad suites.
-- Do not add tests that merely assert mocks or implementation details. Test the real observable behavior.
-- If a fix affects the runtime, plugin surface, config, vault, or CLI behavior, add or update focused tests in the relevant area.
+- For focused iteration, prefer the narrowest relevant script or package-level validation over broad suites.
+- Do not add tests that only assert mock behavior or implementation details. Test the real observable contract.
+- If a fix affects runtime behavior, plugin surfaces, config, vault logic, CLI behavior, or verification pathways, update the relevant tests in the same area.
 
-## Branches, commits, and PRs
+## Branches and commit workflow
 
 - Default branch: `main`.
 - Use short branch names, ideally no more than three words, hyphen-separated, without slashes or type prefixes.
   - Good: `math-verify-fix`, `vault-health`, `plugin-check`
   - Avoid: `feat/foo`, `fix/thing`, `feature/xyz`
-- Use conventional commit titles: `type(scope): summary`
+- Use conventional commit style: `type(scope): summary`
   - Valid types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
-  - Examples: `fix(cli): preserve offline startup fallback`, `feat(mathcore): add new verification check`, `docs: update local setup guide`
+  - Examples:
+    - `fix(cli): preserve offline startup fallback`
+    - `feat(mathcore): add new verification check`
+    - `docs: update local setup guide`
 
-## Tooling and commands
+## Pull requests and review expectations
 
-- Prefer the project scripts already defined in `package.json`:
-  - `pnpm install`
-  - `pnpm run build`
-  - `pnpm test`
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - `pnpm run doctor`
-  - `pnpm config:check`
-  - `pnpm health:check`
-  - `pnpm release:check`
-  - `pnpm plugin:check`
-  - `pnpm perf:check`
-- Use the existing package structure instead of introducing new top-level build tools or one-off scripts unless the task clearly requires it.
-- Keep scripts and validation steps deterministic and CI-friendly.
+- Keep PRs targeted and easy to reason about.
+- Include the user-visible effect of the change, especially for CLI, local-only tools, security, or math-related behavior.
+- Do not merge a patch that weakens the local-first or verified-math contract without explicit review.
+- Prefer proof over claims: reference tests, commands run, and any key safety validation performed.
+
+## Tooling and project scripts
+
+Prefer the repo’s existing scripts in `package.json` rather than introducing new top-level tooling unless the task clearly requires it.
+
+- `pnpm install`
+- `pnpm run build`
+- `pnpm test`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm run doctor`
+- `pnpm config:check`
+- `pnpm health:check`
+- `pnpm release:check`
+- `pnpm plugin:check`
+- `pnpm perf:check`
+
+Keep validation steps deterministic and CI-friendly.
 
 ## Security, privacy, and data handling
 
 - Do not weaken local-only privacy expectations.
-- Treat vault, memory, config, auth, and secrets with care. Avoid accidental persistence of sensitive data in docs or logs.
-- Any security-sensitive or data-handling change should be explicit about the risk and the mitigation.
+- Treat vaults, memory stores, config files, auth data, and secrets with care.
+- Avoid accidentally persisting sensitive values in logs, docs, screenshots, or test fixtures.
+- Any change with security implications should be explicit about the risk and the mitigation.
 
-## Notes for AI-assisted contributors
+## AI-assisted contribution rules
 
 - Follow the repo’s existing conventions before inventing new patterns.
-- When a task touches multiple layers, prefer the minimal patch that keeps the architecture coherent.
-- When proposing a change, explain the user-visible or runtime impact, especially for offline/local-only features.
-- Do not assume a feature is safe just because it is “easy” to add. Validate the downstream effect on reliability, privacy, or math correctness.
+- When a task spans multiple layers, prefer the minimal patch that preserves architecture coherence.
+- Before proposing a broad or risky change, explain the concrete user-visible or runtime impact.
+- Do not assume a feature is safe just because it is easy to add. Validate the downstream effect on reliability, privacy, or verification integrity.
+- If a task involves product, CLI, math, security, or data sensitivity, treat it as higher-risk and validate accordingly.
 
-This file is the local policy for working in this repo. Respect it when making code, tests, docs, or release-related changes.
+## Working agreement for this team
+
+This file is the working policy for contributors and AI assistants in this repository. Respect it when making code, tests, docs, release-related changes, or automation work. The team’s priority is a reliable local-first assistant with verifiable math, clear boundaries, and a low-risk path to shipping.
