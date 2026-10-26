@@ -98,8 +98,8 @@ importers:
         version: link:../../packages/secscan
     devDependencies:
       electron:
-        specifier: ^44.9.1
-        version: 44.9.1
+        specifier: ^44.9.3
+        version: 44.9.3
       oxlint:
         specifier: 'catalog:'
         version: 0.18.1
@@ -113,8 +113,8 @@ importers:
         specifier: workspace:*
         version: link:../shim-dsh-core
       nodemailer:
-        specifier: ^10.1.4
-        version: 10.1.4
+        specifier: ^10.2.1
+        version: 10.2.1
     devDependencies:
       '@types/node':
         specifier: ^20.10.0
@@ -1547,8 +1547,8 @@ packages:
       oxc-resolver:
         optional: true
 
-  electron@44.9.1:
-    resolution: {integrity: sha512-x/tECFFDa2OFNjMObFH0EGKWrCnFZPOR1wP2iMIVt0STecGl8FmDXdaiaryY0kf8mtw9kSLP2yK8dfdaWkfDmw==}
+  electron@44.9.3:
+    resolution: {integrity: sha512-Cv9/yMnZxNWsMlIe8T4v//NKHdUvbeyoTJoXE3BIcRxus2meeFaO9h/P3zB5d4cBXum51IgAYrT2QjpIDWKpJA==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -1707,8 +1707,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nodemailer@10.1.4:
-    resolution: {integrity: sha512-EsMnOR2oRv4LGnWvHgcVYkkQ4O2j8KO4WTw6l+PHR4sOXo8SAgIraxtEnGDmotjbhv0hDsu3IuDIFZm8iXwO4A==}
+  nodemailer@10.2.1:
+    resolution: {integrity: sha512-ZrDNsPFoDMwefNs7sJwrYiEJ/CG4ClJWDZv05iNJsEBWa8GRDry1QJHTJxsuTAY9eDDKjX4k+q3SxslXJOao7w==}
     engines: {node: '>=20.0.0'}
 
   npm-run-path@5.3.0:
@@ -2599,7 +2599,7 @@ snapshots:
 
   dts-resolver@3.0.0: {}
 
-  electron@44.9.1:
+  electron@44.9.3:
     dependencies:
       '@electron-internal/extract-zip': 1.0.6
       '@electron/get': 5.1.0
@@ -2797,7 +2797,7 @@ snapshots:
 
   nanoid@3.3.20: {}
 
-  nodemailer@10.1.4: {}
+  nodemailer@10.2.1: {}
 
   npm-run-path@5.3.0:
     dependencies:
