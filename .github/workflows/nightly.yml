@@ -10,18 +10,30 @@ permissions:
   packages: read
   actions: read
 
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.11'
+  # Must match packageManager in package.json.
+  PNPM_VERSION: '11.7.0'
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # setup-node's pnpm cache needs pnpm on PATH, so install it first.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
-      - name: Install pnpm
-        run: npm install -g pnpm@11.7.0
+
       - name: Install project dependencies
         run: pnpm install --frozen-lockfile
       - name: Build
@@ -29,9 +41,9 @@ jobs:
       - name: Test
         run: pnpm test --if-present
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install mathcore test deps
         working-directory: ./mathcore
         run: |

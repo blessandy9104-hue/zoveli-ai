@@ -59,7 +59,7 @@ jobs:
         run: bash install/install-zoveli.sh --help
 
       - name: Run installer (non-privileged, reuses checkout)
-        run: bash install/install-zoveli.sh --yes --dir "$GITHUB_WORKSPACE"
+        run: bash install/install-zoveli.sh --yes --dir "$GITHUB_WORKSPACE" --skip-update
         env:
           ZOVELI_SKIP_PREREQ_INSTALL: '1'
 
@@ -73,16 +73,33 @@ jobs:
           node apps/cli/dist/cli.js --version
           node apps/cli/dist/cli.js --help
 
-  powershell-syntax:
-    name: PowerShell Syntax (.ps1)
+  powershell-install:
+    name: PowerShell Install (no sudo)
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Parse install-zoveli.ps1 (no execution)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Parse install-zoveli.ps1
         shell: pwsh
         run: |
           $errors = $null
@@ -92,6 +109,33 @@ jobs:
             exit 1
           }
           Write-Output ".ps1 parses clean"
+
+      - name: Run installer (Windows PowerShell 5.1, reuses checkout)
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install-zoveli.ps1 -Yes -Dir "$env:GITHUB_WORKSPACE" -SkipUpdate
+          if ($LASTEXITCODE -ne 0) { throw "installer exited with $LASTEXITCODE" }
+
+      - name: Verify install artifacts
+        shell: pwsh
+        run: |
+          if (-not (Test-Path '.zoveli-install-done')) { throw 'missing install marker' }
+          if (-not (Test-Path 'node_modules')) { throw 'missing node_modules' }
+          if (-not (Test-Path 'apps/cli/dist')) { throw 'missing CLI build output' }
+          & .\.venv\Scripts\python.exe -c "import mathcore; print('mathcore OK')"
+          if ($LASTEXITCODE -ne 0) { throw 'mathcore import failed' }
+          node apps/cli/dist/cli.js --version
+          if ($LASTEXITCODE -ne 0) { throw 'CLI --version failed' }
+          node apps/cli/dist/cli.js --help
+          if ($LASTEXITCODE -ne 0) { throw 'CLI --help failed' }
+
+      - name: Verify installer is idempotent
+        shell: pwsh
+        run: |
+          $output = powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install-zoveli.ps1 -Yes -Dir "$env:GITHUB_WORKSPACE" -SkipUpdate 6>&1 | Out-String
+          Write-Output $output
+          if ($LASTEXITCODE -ne 0) { throw "second installer run exited with $LASTEXITCODE" }
+          if ($output -notmatch 'Already installed') { throw 'second run did not use the install marker' }
 
   docker-build:
     name: Docker Build (CLI, no push)

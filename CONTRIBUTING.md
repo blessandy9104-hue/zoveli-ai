@@ -35,6 +35,8 @@ pnpm run build
 pnpm run lint
 pnpm run typecheck
 pnpm run plugin:check
+pnpm run release:check
+pnpm run perf:check
 pnpm test
 
 # Start the CLI assistant

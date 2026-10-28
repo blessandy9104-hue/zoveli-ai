@@ -9,7 +9,7 @@
 Website: **https://blessandy9104-hue.github.io/zoveli-ai/**
 
 [![CI](https://github.com/blessandy9104-hue/zoveli-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/blessandy9104-hue/zoveli-ai/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/blessandy9104-hue/zoveli-ai/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node-22%2B-green.svg)](https://nodejs.org/)
 
@@ -78,180 +78,90 @@ The strategic direction is simple:
 
 ## Try it in 30 seconds
 
-```bash
+**Windows PowerShell:**
+
+```powershell
 git clone https://github.com/blessandy9104-hue/zoveli-ai.git
 cd zoveli-ai
-pip install -e ./mathcore   # verified-math backend
-pnpm install && pnpm run build
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .\mathcore
+pnpm install --frozen-lockfile
+pnpm run build
 pnpm start                  # then type: /math solve x^2 - 5x + 6 = 0
 ```
 
-No account, no API key needed — local tools (math, memory, sysinfo, …) work fully offline.
-The stable first path is five commands: `/math 2+2`, `/remember <fact>`,
-`/recall <query>`, `/sys`, and `/tools`. New here? Follow the
-[first-run guide](docs/guides/onboarding.md) for the install check, expected
-output, and exact fixes for a missing chat or math backend.
+**macOS / Linux:**
+
+```bash
+git clone https://github.com/blessandy9104-hue/zoveli-ai.git
+cd zoveli-ai
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ./mathcore
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm start
+```
+
+No account, API key, or network is needed for local tools. Start with `/math 2+2`, `/remember <fact>`, `/recall <query>`, `/sys`, or `/tools`. See the [first-run guide](docs/guides/onboarding.md) for expected output and fixes.
 
 ## Download & install
 
-Portable install (no Git, Node, Python, compiler, or pnpm required):
+Portable installers are available for Linux, Windows, and macOS. Review the script before running it.
+
+**Linux / macOS:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
 ```
 
-Windows PowerShell:
+**Windows PowerShell:**
 
 ```powershell
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 ```
 
-The Windows installer leaves your `PATH` unchanged by default and prints the
-full `zoveli.cmd` path. To add the install directory to your user `PATH`,
-download and run it with `-AddToPath`:
+The Windows installer leaves `PATH` unchanged by default and prints the full `zoveli.cmd` path. Pass `-AddToPath` to add its directory to your user `PATH`; then open a new terminal.
+
+The installer verifies the downloaded archive and installs to `~/.local/share/zoveli` (Linux/macOS) or `%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli` (`%USERPROFILE%\.zoveli` on Windows) and survives upgrades. Re-running stages and preflights the new runtime, creates a backup, and restores the previous runtime if the swap fails.
+
+## Developer verification
 
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 -OutFile install-zoveli-runtime.ps1
-powershell -ExecutionPolicy Bypass -File .\install-zoveli-runtime.ps1 -AddToPath
-```
-
-Then open a new terminal and run `zoveli`.
-
-The installer downloads the matching prebuilt archive, verifies its SHA-256,
-and installs to `~/.local/share/zoveli` (Linux/macOS) or
-`%LOCALAPPDATA%\Zoveli` (Windows). State defaults to `~/.zoveli`
-(`%USERPROFILE%\.zoveli` on Windows: vault mirror and memory database) and
-survives upgrades. Re-running the installer stages and preflights the new
-runtime, creates and verifies a pre-upgrade backup under `~/.zoveli/backups`,
-and automatically restores the previous runtime if the swap or installed
-launcher check fails. CI currently publishes Linux x64,
-Windows x64, and macOS arm64 archives; other targets use the source install
-below. Review
-[`install/install-zoveli-runtime.sh`](install/install-zoveli-runtime.sh) and
-[`install/install-zoveli-runtime.ps1`](install/install-zoveli-runtime.ps1)
-before running; both are source-visible and telemetry-free. No release archive
-yet? Use the developer source install below.
-
-Every archive ships with a SHA-256 sidecar and a GitHub build-provenance
-attestation. The installer checks the checksum itself; to audit a manual
-download, compare the sidecar (on Windows use
-`Get-FileHash <archive> -Algorithm SHA256`) and, with the GitHub CLI installed,
-confirm where it was built:
-
-```bash
-sha256sum --check zoveli-<version>-<platform>-<arch>.tar.gz.sha256
-gh attestation verify zoveli-<version>-<platform>-<arch>.tar.gz \
-  --repo blessandy9104-hue/zoveli-ai \
-  --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml
-```
-
-Pinning `--signer-workflow` proves the archive came from this repository's
-release pipeline, not merely from some workflow in the repository.
-
-Developers installing from a source checkout need Node.js 22.16+, Python 3.11+,
-pnpm 11.7.0+, and Git.
-
-**Windows (source checkout, PowerShell):**
-
-```powershell
-# 1. Toolchain
-winget install OpenJS.NodeJS.LTS Python.Python.3.11 Git.Git
-npm install -g pnpm@11.7.0
-
-# 2. Download
-git clone https://github.com/blessandy9104-hue/zoveli-ai.git
-cd zoveli-ai
-
-# 3. Verified-math backend (vendored in ./mathcore, optional but recommended)
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .\mathcore
-
-# 4. Install + build + verify
-pnpm install
+pnpm install --frozen-lockfile
 pnpm run build
 pnpm test
-pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
-pnpm config:check      # env + vault drift (typos, ignored values, schema)
-pnpm health:check      # runtime/config/vault/MCP health rollup
-pnpm release:check     # version/tsconfig/changelog consistency
-pnpm plugin:check      # plugin contract, naming and tool collisions
-pnpm perf:check        # startup/mount/tool-call budgets
+pnpm run doctor
+pnpm config:check
+pnpm health:check -- --offline
+pnpm run release:check
+pnpm run plugin:check
+pnpm perf:check
 ```
 
-**macOS / Linux (source checkout):**
+`doctor` checks the local toolchain, importable mathcore, resolved `mathcore-mcp` binary, and Ollama. Ollama is optional for local tools and verified math.
 
-```bash
-# 1. Toolchain (macOS shown; apt/dnf equivalents on Linux)
-brew install node@22 python@3.11 git
-npm install -g pnpm@11.7.0
-
-# 2. Download
-git clone https://github.com/blessandy9104-hue/zoveli-ai.git
-cd zoveli-ai
-
-# 3. Verified-math backend (vendored in ./mathcore, optional but recommended)
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ./mathcore
-
-# 4. Install + build + verify
-pnpm install
-pnpm run build
-pnpm test
-pnpm run doctor        # Node/pnpm/python/mathcore/Ollama report
-pnpm config:check      # env + vault drift (typos, ignored values, schema)
-pnpm health:check      # runtime/config/vault/MCP health rollup
-pnpm release:check     # version/tsconfig/changelog consistency
-pnpm plugin:check      # plugin contract, naming and tool collisions
-pnpm perf:check        # startup/mount/tool-call budgets
-```
+From a source checkout, run the recovery drill directly with `node apps/cli/dist/cli.js recovery-check`; the `zoveli recovery-check` shorthand is available after installing the portable launcher.
 
 ## Launch it
 
-Portable install: `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows). The POSIX
-installer creates `~/.local/bin` when needed and links `zoveli` there, printing
-the exact `PATH` export if that directory is not already on `PATH`. Windows
-prints the full `zoveli.cmd` path; pass `-AddToPath` to add the install
-directory to your user `PATH`, then open a new terminal and run `zoveli`.
+From a source checkout:
 
-Source checkout:
-
-```bash
-pnpm start            # CLI assistant (local tools work offline, Windows/macOS/Linux terminals)
-pnpm run desktop      # Electron desktop shell (dev mode, spawns local server internally)
+```powershell
+pnpm start
+pnpm run desktop
 ```
 
-Container (source checkout; state lives in the `zoveli-data` volume):
+The CLI is the core product. Local tools include verified math, private SQLite memory with a Markdown vault mirror, system information, programming-language tools, search, and scheduling. Run `/help` in the terminal to see commands.
 
-```bash
-docker compose -f docker/docker-compose.yml --profile local-llm up -d ollama
-docker exec zoveli-ollama ollama pull qwen3:4b
-docker compose -f docker/docker-compose.yml --profile cli up --build
-```
+The Playwright web server runs with `NODE_ENV=test`, which deliberately disables live Ollama probing. E2E tests cover the web app and mock/provider-resolution paths without loading the local model into RAM.
 
-Before trusting the install with notes, run `zoveli recovery-check` (or
-`node apps/cli/dist/cli.js recovery-check` from a source checkout). It proves
-backup, checksum verification and restore in an isolated temporary vault
-without touching real data.
+Optional local-model chat uses Ollama. The Windows source installer already configured by this project pins `qwen3.5:0.8b` for this low-memory, CPU-only machine. First start may be slow while the model loads; keep the request timeout configured and avoid concurrent model requests. On a faster machine, choose another installed Ollama model via `ZOVELI_OLLAMA_MODEL`.
 
-The CLI works fully offline for all local tools (verified math via
-mathcore, memory vault, sysinfo, languages, search, scheduler, ...).
-For free offline chat with no keys: install Ollama and pull a model
-(`qwen3:4b` is recommended). Zoveli uses `qwen3:4b` when it is installed and
-otherwise picks another installed chat model; a pinned model that is not
-pulled is reported with its exact `ollama pull` command, not advertised as
-ready. Or set any API
-key (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
-`GROQ_API_KEY`, `TOGETHER_API_KEY` or `ZOVELI_API_KEY`) with optional
-`ZOVELI_MODEL` / `ZOVELI_API_BASE` to use any OpenAI-compatible model.
-Try: `/math solve x^2 - 5x + 6 = 0` · `/remember My spare key is in the blue drawer` · `/recall blue drawer` · `/sys` · `/tools`.
+For Docker, see [docker/docker-compose.yml](docker/docker-compose.yml) and [Dockerfile](docker/Dockerfile). Keep secrets out of images and source control.
 
-Extend it with the [plugin SDK](docs/plugin-sdk/README.md):
-`pnpm create:plugin <name> --mount`, then enable the opt-in plugin with
-`ZOVELI_PLUGINS=zoveli-<name>`. Inspect the surface with `zoveli plugins`, and
-remove any default or optional plugin with
-`ZOVELI_DISABLE_PLUGINS=zoveli-<name>`.
+## Features
 
 ## Features (all runnable today)
 
@@ -273,6 +183,7 @@ remove any default or optional plugin with
 - **🔑 Passwordless login** — optional email OTP for any inbox incl. @proton.me, `GET /login`; enable the gate with `ZOVELI_AUTH_REQUIRED=1`
 - **🔒 Privacy-First** — runs locally, no cloud required, MIT licensed
 
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
@@ -287,9 +198,7 @@ remove any default or optional plugin with
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Every PR runs lint, strict
-typecheck, unit + integration tests, Playwright e2e (Chromium, Firefox,
-WebKit), Trivy + secret scans, and Docker builds.
+See [CONTRIBUTING.md](CONTRIBUTING.md). CI runs lint, typecheck, unit and integration tests, browser E2E, security scans, and Docker builds.
 
 ## License
 

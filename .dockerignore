@@ -1,17 +1,45 @@
+# Dependencies, local environments, and build artifacts
 node_modules
+**/node_modules
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.py[cod]
+
+# Generated output and test artifacts
 dist
+**/dist
 coverage
+**/coverage
 playwright-report
 test-results
+.test-results
+*.log
+npm-debug.log*
+
+# Local configuration and credentials: inject at runtime instead
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Git/editor metadata
 .git
 .github
 .vscode
 .idea
-*.log
-npm-debug.log*
-knowledge-vault/.obsidian
+.DS_Store
+
+# Private or local data must never enter the build context/image
+knowledge-vault
 test-vault
 test-auth-data
 test-audit.jsonl
-.DS_Store
+
+# Build/release and local working data
 release
+.tmp
+.hypothesis
+.venv

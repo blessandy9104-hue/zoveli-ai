@@ -18,7 +18,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/<branch>/install/install-zoveli.sh | bash -s -- --yes
-#   bash install/install-zoveli.sh [--yes] [--dir <path>] [--branch <branch>]
+#   bash install/install-zoveli.sh [--yes] [--dir <path>] [--branch <branch>] [--skip-update]
 #
 # Security: review before running curl|bash. This script only clones from the
 # official repo URL below, never executes other remote code, never runs sudo
@@ -39,6 +39,7 @@ ORANGE='\033[38;2;255;140;0m'
 NC='\033[0m' # No Color
 
 ASSUME_YES=false
+SKIP_UPDATE=false
 TARGET_DIR="$DEFAULT_DIR"
 BRANCH="${ZOVELI_BRANCH:-$DEFAULT_BRANCH}"
 
@@ -62,6 +63,7 @@ Options:
   -y, --yes            Non-interactive: assume yes for prompts (incl. sudo prereq installs)
       --dir <path>     Install directory (default: $DEFAULT_DIR)
       --branch <name>  Git branch to clone (default: $DEFAULT_BRANCH, or \$ZOVELI_BRANCH)
+      --skip-update    Reuse an existing checkout without fetching or switching branches
   -h, --help           Display this help message
 Examples:
   curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.sh | bash -s -- --yes
@@ -74,6 +76,7 @@ while [ $# -gt 0 ]; do
     -y|--yes) ASSUME_YES=true; shift ;;
     --dir) TARGET_DIR="${2:?--dir requires a path}"; shift 2 ;;
     --branch) BRANCH="${2:?--branch requires a name}"; shift 2 ;;
+    --skip-update) SKIP_UPDATE=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) print_message error "Unknown option: $1 (see --help)"; exit 1 ;;
   esac
@@ -172,9 +175,13 @@ fi
 # --- Clone or reuse checkout (temp-dir hygiene like opencode's opencodetmp) ---
 if [ -d "$TARGET_DIR/.git" ] && [ -f "$TARGET_DIR/package.json" ]; then
   print_message info "Reusing existing checkout at $TARGET_DIR"
-  (cd "$TARGET_DIR" && git fetch origin && git checkout "$BRANCH" && git pull --ff-only origin "$BRANCH") || {
-    print_message warning "Could not fast-forward existing checkout; continuing with current files."
-  }
+  if [ "$SKIP_UPDATE" = true ]; then
+    print_message info "Skipping git update (--skip-update)."
+  else
+    (cd "$TARGET_DIR" && git fetch origin && git checkout "$BRANCH" && git pull --ff-only origin "$BRANCH") || {
+      print_message warning "Could not fast-forward existing checkout; continuing with current files."
+    }
+  fi
 else
   mkdir -p "$(dirname "$TARGET_DIR")"
   if [ -d "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then

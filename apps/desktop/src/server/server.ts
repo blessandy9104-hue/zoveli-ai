@@ -38,7 +38,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 const PORT = parseInt(process.env.PORT || '3080', 10);
-const HOST = '127.0.0.1';
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Vendored Lenis smooth-scroll runtime (same origin, pinned version).
 // Resolves from dist/../../vendor in production and apps/desktop/vendor in dev.
@@ -552,7 +552,12 @@ ${themeBootScript(unicornProjectId())}
         json(
           res,
           200,
-          host.tools().map((t) => ({ name: t.name, description: t.description, plugin: t.plugin }))
+          host.tools().map((t) => ({
+            name: t.name,
+            description: t.description,
+            plugin: t.plugin,
+            inputSchema: t.parameters ?? { type: 'object', properties: {}, additionalProperties: false },
+          }))
         );
         return;
       }

@@ -1,28 +1,37 @@
 services:
-  # Main Zoveli CLI application
+  # Interactive Zoveli CLI terminal; local tools run without network services.
   zoveli-cli:
     image: ${ZOVELI_CLI_IMAGE:-zoveli-cli:local}
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: zoveli-cli
+    entrypoint: ["dumb-init", "--", "node", "apps/cli/dist/cli.js"]
+    command: []
+    restart: "no"
+    healthcheck:
+      disable: true
+    stdin_open: true
+    tty: true
+    depends_on:
+      ollama:
+        condition: service_healthy
     volumes:
-      # Named volume inherits /app/data ownership from the image, so the
-      # non-root zoveli user can write the vault, sessions and audit log.
       - zoveli-data:/app/data
       - ../knowledge-vault:/app/knowledge-vault:ro
     environment:
-      # Free local chat: points the app at the `ollama` service below.
-      # Bring it up with:
-      # docker compose -f docker/docker-compose.yml --profile local-llm up ollama
-      # then: docker exec zoveli-ollama ollama pull qwen3:4b
+      # The Ollama container is attached to the same Compose network.
       - ZOVELI_OLLAMA_URL=http://ollama:11434
-    stdin_open: true
-    tty: true
+      - ZOVELI_OLLAMA_MODEL=qwen3.5:0.8b
+      - ZOVELI_CHAT_TIMEOUT_MS=600000
+      - ZOVELI_VAULT_PATH=/app/data/vault
+      - MATHCORE_AUDIT=/app/data/audit/audit.jsonl
+      # Clear the obsolete variable present in the published runtime image.
+      - ZOVELI_SESSION_PATH=
     profiles:
       - cli
 
-  # Ollama for local LLM inference
+  # Optional local Ollama chat; it is not needed to use local CLI tools.
   ollama:
     image: ollama/ollama:latest
     container_name: zoveli-ollama
@@ -32,18 +41,23 @@ services:
       - ollama-data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
-    # CPU inference works out of the box. To use an NVIDIA GPU, uncomment:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+      - OLLAMA_CONTEXT_LENGTH=2048
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_KEEP_ALIVE=24h
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
     profiles:
+      - cli
       - local-llm
 
-  # PostgreSQL for session persistence (optional)
+  # Optional PostgreSQL for session persistence.
   postgres:
     image: postgres:16-alpine
     container_name: zoveli-postgres
@@ -63,7 +77,7 @@ services:
     profiles:
       - postgres
 
-  # Redis for caching (optional)
+  # Optional Redis cache.
   redis:
     image: redis:7-alpine
     container_name: zoveli-redis
@@ -79,33 +93,30 @@ services:
     profiles:
       - redis
 
-  # Prometheus for metrics
+  # Optional monitoring services.
   prometheus:
     image: prom/prometheus:latest
     container_name: zoveli-prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
     profiles:
       - monitoring
 
-  # Grafana for dashboards
   grafana:
     image: grafana/grafana:latest
     container_name: zoveli-grafana
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
       - grafana-data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin

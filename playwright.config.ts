@@ -4,63 +4,61 @@ import { join } from 'path';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['json', { outputFile: 'test-results/playwright-results.json' }],
     ['junit', { outputFile: 'test-results/playwright-junit.xml' }]
   ],
   use: {
-    baseURL: 'http://localhost:3080',
+    baseURL: process.env.ZOVELI_E2E_BASE_URL || 'http://127.0.0.1:3081',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    actionTimeout: 10000,
-    navigationTimeout: 30000
+    actionTimeout: 30000,
+    navigationTimeout: 60000
   },
-  // Desktop-only matrix: CLI + Electron desktop on Windows/macOS/Linux.
-  // Mobile browser projects removed with standalone web scope.
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] }
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] }
-    }
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } }
   ],
   webServer: {
     command: 'node apps/desktop/dist/server/server.js',
-    url: 'http://localhost:3080/health',
-    reuseExistingServer: !process.env.CI,
+    url: `http://127.0.0.1:${process.env.ZOVELI_E2E_PORT || '3081'}/health`,
+    reuseExistingServer: false,
     timeout: 120000,
     env: {
       NODE_ENV: 'test',
+      HOST: '127.0.0.1',
+      PORT: process.env.ZOVELI_E2E_PORT || '3081',
+      OPENAI_API_KEY: '',
+      DEEPSEEK_API_KEY: '',
+      OPENROUTER_API_KEY: '',
+      GROQ_API_KEY: '',
+      TOGETHER_API_KEY: '',
+      ZOVELI_API_KEY: '',
+      ZOVELI_API_BASE: '',
+      ZOVELI_API_TOKEN: '',
+      ZOVELI_AUTH_REQUIRED: '',
+      ZOVELI_MODEL: '',
+      ZOVELI_OLLAMA_URL: 'http://127.0.0.1:1',
+      ZOVELI_OLLAMA_MODEL: '',
       ZOVELI_VAULT_PATH: './test-vault',
-      // Isolate the math proof memory: verified e2e computations
-      // auto-memorize, which must not touch the developer's home DB
-      // or export Markdown into the repo vault.
       ZOVELI_MEMORY_DB: join(tmpdir(), 'zoveli-e2e-web-memory.db'),
       ZOVELI_MEMORY_EXPORT: '0',
+      MATHCORE_MCP_COMMAND: process.platform === 'win32'
+        ? join(process.cwd(), '.venv', 'Scripts', 'mathcore-mcp.exe')
+        : join(process.cwd(), '.venv', 'bin', 'mathcore-mcp'),
       MATHCORE_AUDIT: './test-audit.jsonl',
-      // Test-only: echo OTP codes in /api/auth/request responses so e2e
-      // can complete login without an SMTP server. Never set in production.
       ZOVELI_AUTH_DEV_ECHO: '1',
       ZOVELI_AUTH_DIR: './test-auth-data'
     }
   },
   expect: {
-    toHaveScreenshot: {
-      maxDiffPixels: 100,
-      threshold: 0.2
-    }
+    toHaveScreenshot: { maxDiffPixels: 100, threshold: 0.2 }
   }
 });

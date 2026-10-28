@@ -1,0 +1,37 @@
+services:
+  app:
+    image: zoveli:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:3080"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      ZOVELI_VAULT_PATH: /app/data/vault
+      ZOVELI_SESSION_PATH: /app/data/sessions
+      MATHCORE_AUDIT: /app/data/audit/audit.jsonl
+      MATHCORE_MCP_COMMAND: /opt/venv/bin/mathcore-mcp
+      ZOVELI_API_KEY: ${ZOVELI_API_KEY:-}
+      ZOVELI_API_BASE: ${ZOVELI_API_BASE:-}
+      ZOVELI_API_TOKEN: ${ZOVELI_API_TOKEN:-}
+      ZOVELI_MODEL: ${ZOVELI_MODEL:-}
+      ZOVELI_OLLAMA_URL: ${ZOVELI_OLLAMA_URL:-}
+    volumes:
+      - zoveli-data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    init: true
+
+volumes:
+  zoveli-data:

@@ -7,6 +7,8 @@
   pip-installs vendored ./mathcore, ensures Node 22 + pnpm 11.7.0,
   runs pnpm install + build, then prints run instructions.
   No telemetry. Only clones from the official repo URL.
+  Use -SkipUpdate to install from an existing checkout without fetching or
+  switching branches (CI uses this to test the checked-out revision).
   NOTE: ASCII-only on purpose - Windows PowerShell 5.1 reads .ps1 files
   as ANSI without a BOM, so non-ASCII chars can break parsing.
 .EXAMPLE
@@ -18,7 +20,8 @@
 param(
   [Alias('y')][switch]$Yes,
   [string]$Dir = (Join-Path $env:USERPROFILE 'zoveli-ai'),
-  [string]$Branch = $(if ($env:ZOVELI_BRANCH) { $env:ZOVELI_BRANCH } else { 'main' })
+  [string]$Branch = $(if ($env:ZOVELI_BRANCH) { $env:ZOVELI_BRANCH } else { 'main' }),
+  [switch]$SkipUpdate
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,29 +61,46 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Missing Node 
 
 if (Test-Path (Join-Path $Dir '.git')) {
   Info "Reusing existing checkout at $Dir"
-  Push-Location $Dir
-  git fetch origin
-  git checkout $Branch
-  git pull --ff-only origin $Branch
-  Pop-Location
+  if ($SkipUpdate) {
+    Info 'Skipping git update (-SkipUpdate).'
+  } else {
+    Push-Location $Dir
+    try {
+      git fetch origin
+      if ($LASTEXITCODE -ne 0) { Fail 'git fetch failed.' }
+      git checkout $Branch
+      if ($LASTEXITCODE -ne 0) { Fail "git checkout $Branch failed." }
+      git pull --ff-only origin $Branch
+      if ($LASTEXITCODE -ne 0) { Fail "git pull --ff-only origin $Branch failed." }
+    } finally {
+      Pop-Location
+    }
+  }
 } else {
   if ((Test-Path $Dir) -and (Get-ChildItem $Dir -Force | Select-Object -First 1)) { Fail "Target $Dir exists and is not a Zoveli checkout. Use -Dir <empty-or-new-path>." }
   Info "Cloning $RepoUrl (branch $Branch)..."
   git clone --branch $Branch --depth 1 $RepoUrl $Dir
+  if ($LASTEXITCODE -ne 0) { Fail 'git clone failed.' }
 }
 Set-Location $Dir
 
-if (-not (Test-Path '.venv')) { Info 'Creating Python venv (.venv)...'; python -m venv .venv }
-& '.\.venv\Scripts\Activate.ps1'
-python -m pip install --upgrade pip
+if (-not (Test-Path '.venv')) {
+  Info 'Creating Python venv (.venv)...'
+  python -m venv .venv
+  if ($LASTEXITCODE -ne 0) { Fail 'python -m venv failed.' }
+}
+$VenvPython = Join-Path $Dir '.venv\Scripts\python.exe'
+& $VenvPython -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) { Fail 'pip upgrade failed.' }
 Info 'Installing vendored mathcore (verified-math backend)...'
-pip install -e .\mathcore
+& $VenvPython -m pip install -e .\mathcore
 if ($LASTEXITCODE -ne 0) { Fail 'pip install ./mathcore failed. Install Visual Studio Build Tools (C++ workload) + CMake, then re-run.' }
 
 if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
   Info "Installing pnpm@$PnpmVersion..."
   if (Get-Command corepack -ErrorAction SilentlyContinue) { corepack enable; corepack prepare "pnpm@$PnpmVersion" --activate }
   else { npm install -g "pnpm@$PnpmVersion" }
+  if ($LASTEXITCODE -ne 0) { Fail 'pnpm installation failed.' }
 }
 $nodeMajor = (node -p "process.versions.node.split('.')[0]")
 $nodeMinor = (node -p "process.versions.node.split('.')[1]")
@@ -89,8 +109,10 @@ if (([int]$nodeMajor -lt 22) -or (([int]$nodeMajor -eq 22) -and ([int]$nodeMinor
 
 Info 'Installing JS dependencies (pnpm install)...'
 pnpm install --frozen-lockfile --prod=false
+if ($LASTEXITCODE -ne 0) { Fail 'pnpm install failed.' }
 Info 'Building packages (pnpm run build)...'
 pnpm run build
+if ($LASTEXITCODE -ne 0) { Fail 'pnpm run build failed.' }
 
 (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') + " zoveli-ai $Branch" | Out-File $Marker -Encoding ascii
 Info "Zoveli AI installed successfully into $Dir"

@@ -11,6 +11,8 @@ release/
 .env
 .env.local
 .env.*.local
+.venv/
+.zoveli-install-done
 
 # IDE
 .vscode/

@@ -21,6 +21,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 - **No target toolchain**: `[done]` the portable installer needs only `curl`/`tar` (POSIX) or PowerShell + `tar.exe` (Windows); no Git, Node, pnpm, Python, venv, compiler, or workspace build.
 - **Verified download**: `[done]` installers verify the published SHA-256 before extraction and refuse to replace a non-Zoveli directory.
 - **Clean-machine smoke**: `[done]` `.github/workflows/runtime-artifacts.yml` builds and smoke-tests Linux, macOS, and Windows archives, including the portable installer.
+- **Source-installer smoke**: `[done]` `.github/workflows/installer-check.yml` runs the Bash and Windows PowerShell source installers without privileges, verifies the built CLI and mathcore import, and checks the Windows installer is idempotent.
 - **Build provenance**: `[done]` push/release builds attest each archive with `actions/attest-build-provenance`; verify a download with `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`.
 - **Signed installers**: `[planned]` archives are checksummed and attested but not code-signed/notarized yet.
 - **Updater / rollback**: `[planned]` no in-app update channel or automatic previous-version rollback.

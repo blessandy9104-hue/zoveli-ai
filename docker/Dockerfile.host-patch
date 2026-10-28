@@ -1,0 +1,4 @@
+FROM zoveli-cli:local
+
+# Replace just the changed host package; retain the existing runtime and deps.
+COPY --chown=zoveli:zoveli packages/host/dist/ /app/packages/host/dist/

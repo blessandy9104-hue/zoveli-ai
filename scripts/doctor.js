@@ -55,15 +55,24 @@ else warn('git', 'not on PATH', 'install git to clone and version the repo');
 
 // Python >= 3.11 (only needed for the vendored verified-math backend).
 // Candidates are the launcher first (Windows), then the common names.
+const projectVenv = process.env.VIRTUAL_ENV || path.join(process.cwd(), '.venv');
+const projectVenvPython =
+  process.platform === 'win32'
+    ? path.join(projectVenv, 'Scripts', 'python.exe')
+    : path.join(projectVenv, 'bin', 'python');
 const pythonCandidates = [
+  ...(fs.existsSync(projectVenvPython) ? [{ bin: projectVenvPython, args: [], projectVenv: true }] : []),
   { bin: 'py', args: ['-3'] },
   { bin: 'python', args: [] },
   { bin: 'python3', args: [] },
 ];
 let python = null;
 for (const candidate of pythonCandidates) {
+  const env = candidate.projectVenv
+    ? { ...process.env, PYTHONPATH: [path.join(process.cwd(), 'mathcore', 'src'), process.env.PYTHONPATH].filter(Boolean).join(path.delimiter) }
+    : undefined;
   try {
-    const out = run(candidate.bin, [...candidate.args, '--version']);
+    const out = run(candidate.bin, [...candidate.args, '--version'], env ? { env } : {});
     const m = out.match(/Python (\d+)\.(\d+)/);
     if (m && (parseInt(m[1], 10) > 3 || (m[1] === '3' && parseInt(m[2], 10) >= 11))) {
       python = { ...candidate, version: m[0] };
@@ -85,7 +94,7 @@ if (python) {
       ...python.args,
       '-c',
       'import mathcore; print(mathcore.__version__)',
-    ]).trim();
+    ], python.projectVenv ? { cwd: process.cwd() } : {}).trim();
     ok(`mathcore ${mathcoreVersion}`, `importable from ${python.bin} (verified-math engine)`);
   } catch {
     warn(
@@ -137,9 +146,11 @@ if (mathcoreMcp) {
 }
 
 // Ollama (optional: free local chat; tools work without any model)
+const ollamaProbeBase = (process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
+
 function probeOllama() {
   return new Promise((resolve) => {
-    const req = http.get('http://localhost:11434/api/tags', { timeout: 2000 }, (res) => {
+    const req = http.get(`${ollamaProbeBase}/api/tags`, { timeout: 2000 }, (res) => {
       res.resume();
       resolve(res.statusCode === 200);
     });

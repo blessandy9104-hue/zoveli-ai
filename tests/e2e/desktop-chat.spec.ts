@@ -9,6 +9,7 @@ import { join } from 'node:path';
 const MODEL = 'llama3.2:3b';
 const MISSING_MODEL = 'missing:1b';
 const REPLY = 'Local mock reply: hello from the desktop.';
+const API_TOKEN = 'zoveli-e2e-api-token-0123456789';
 
 interface MockOllama {
   port: number;
@@ -111,6 +112,7 @@ function baseEnv(): NodeJS.ProcessEnv {
     'ZOVELI_OLLAMA_URL',
     'ZOVELI_AUTH_REQUIRED',
     'ZOVELI_AUTH_DEV_ECHO',
+    'ZOVELI_API_TOKEN',
   ]) {
     delete env[key];
   }
@@ -240,4 +242,59 @@ test('validates auth emails before applying rate limits', async ({ request }) =>
   });
   expect(valid.status()).toBe(200);
   expect(await valid.json()).toMatchObject({ ok: true });
+});
+
+test('run API enforces bearer auth and rejects malformed JSON', async ({ request }) => {
+  test.slow();
+  const gateWorkDir = mkdtempSync(join(tmpdir(), 'zoveli-e2e-run-gate-'));
+  let gatedApp: DesktopApp | undefined;
+  try {
+    gatedApp = await startDesktop({
+      ...baseEnv(),
+      NODE_ENV: 'test',
+      ZOVELI_API_TOKEN: API_TOKEN,
+      ZOVELI_VAULT_PATH: join(gateWorkDir, 'vault'),
+      ZOVELI_MEMORY_DB: join(gateWorkDir, 'memory.db'),
+      ZOVELI_MEMORY_EXPORT: '0',
+      ZOVELI_AUTH_DIR: join(gateWorkDir, 'auth'),
+      MATHCORE_AUDIT: join(gateWorkDir, 'audit.jsonl'),
+    });
+
+    const unauthorized = await request.post(`${gatedApp.url}/api/run`, {
+      data: { tool: 'sysinfo_snapshot', args: {} },
+    });
+    expect(unauthorized.status()).toBe(401);
+    expect(await unauthorized.json()).toMatchObject({ ok: false });
+
+    const wrong = await request.post(`${gatedApp.url}/api/run`, {
+      headers: { authorization: 'Bearer wrong-token' },
+      data: { tool: 'sysinfo_snapshot', args: {} },
+    });
+    expect(wrong.status()).toBe(401);
+
+    const malformed = await fetch(`${gatedApp.url}/api/run`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${API_TOKEN}`,
+        'content-type': 'application/json',
+      },
+      body: '{"tool":',
+    });
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toMatchObject({ ok: false, error: 'invalid JSON body' });
+
+    const authorized = await request.post(`${gatedApp.url}/api/run`, {
+      headers: { authorization: `Bearer ${API_TOKEN}` },
+      data: { tool: 'sysinfo_snapshot', args: {} },
+    });
+    expect(authorized.status()).toBe(200);
+    expect(await authorized.json()).toMatchObject({ ok: true });
+  } finally {
+    gatedApp?.close();
+    try {
+      rmSync(gateWorkDir, { recursive: true, force: true });
+    } catch {
+      // Windows may still hold the SQLite file briefly
+    }
+  }
 });

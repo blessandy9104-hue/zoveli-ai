@@ -16,6 +16,10 @@ the new section **before** running `pnpm release:check --release`.
 - Prebuilt runtime archives for Linux, macOS and Windows: `app.cjs` plus a
   matching Node runtime and a PyInstaller mathcore sidecar, so target machines
   need no Git/Node/pnpm/Python/compiler toolchain.
+- Source installers accept `--skip-update`/`-SkipUpdate` to reuse an existing
+  checkout without fetching or switching branches. `Installer Check` now runs
+  the real Windows `.ps1` source installer end-to-end and verifies a second
+  run is idempotent.
 - Portable installers (`install/install-zoveli-runtime.sh` and `.ps1`) that
   download the matching release archive, verify its SHA-256, and install
   without changing system packages. Upgrades stage and preflight the new
@@ -38,8 +42,9 @@ the new section **before** running `pnpm release:check --release`.
   release builds attach GitHub build-provenance attestations so downloads can
   be checked with `gh attestation verify`.
 - Desktop Playwright e2e starts an isolated server with a loopback Ollama,
-  proves the detected model appears in onboarding, and sends the first chat
-  message end-to-end.
+  proves the detected model appears in onboarding, sends the first chat
+  message end-to-end, and verifies `/api/run` enforces bearer auth and rejects
+  malformed JSON.
 - Runtime health rollup: `health_report` tool, REPL `/health`, and
   `pnpm health:check` cover runtime, env drift, vault schema, MCP pool and
   capability availability (`--json`/`--offline` supported).
@@ -133,6 +138,11 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- Nightly CI installs pnpm before enabling the `setup-node` pnpm cache, so the
+  scheduled job reaches the build and test steps instead of failing during
+  setup.
+- The Windows source installer stops on failed git or pnpm steps instead of
+  writing the success marker after a failed clone, install, or build.
 - Auth endpoints validate emails before rate limiting, so malformed attempts
   return `400` without consuming the login budget. Dev/test echo mode also
   bypasses the per-email request cap and the login page fills the echoed code.

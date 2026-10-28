@@ -1,0 +1,1 @@
+{"name":"zoveli-local","version":"0.1.0","description":"Expose local Zoveli tools over MCP stdio","type":"module","openclaw":{"extensions":["./index.js"]}}
