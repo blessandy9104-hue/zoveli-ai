@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/memory-store",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SQLite-backed local-first memory store with FTS5 (replaces Obsidian flat-file vault as source of truth)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

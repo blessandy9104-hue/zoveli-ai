@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/webresearch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Trusted-source web retrieval: guarded fetch and search for grounding answers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

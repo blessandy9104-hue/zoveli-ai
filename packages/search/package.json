@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/search",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Legacy SQLite FTS5 search service for the Zoveli knowledge store",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

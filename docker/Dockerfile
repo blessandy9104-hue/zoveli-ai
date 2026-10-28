@@ -27,8 +27,9 @@ COPY --from=builder --chown=zoveli:zoveli /app/packages ./packages
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/package.json ./apps/cli/package.json
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/node_modules ./apps/cli/node_modules
 COPY --from=builder --chown=zoveli:zoveli /app/apps/cli/dist ./apps/cli/dist
-COPY --chown=zoveli:zoveli knowledge-vault ./knowledge-vault
 
+# Never copy a local vault into the image: `.dockerignore` excludes it, and
+# the runtime uses the writable /app/data volume instead.
 RUN mkdir -p /app/data/vault /app/data/sessions /app/data/audit \
     && chown -R zoveli:zoveli /app/data
 

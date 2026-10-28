@@ -9,6 +9,21 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-28
+
+### Security
+
+- Closed all 29 open CodeQL alerts: backtracking-prone parsing in auth,
+  language tooling, memory store, secscan, webresearch and math intelligence
+  was replaced with linear scans; API error responses now return fixed
+  client-safe text instead of exception details; the acceptance harness uses
+  safe Windows argument quoting and no longer logs environment-derived data;
+  CI workflows declare explicit `GITHUB_TOKEN` permissions.
+- Upgraded the test toolchain to Vitest 4.1.12 with `@vitest/coverage-v8`,
+  happy-dom 21.0.4 and a pinned patched Vite 6.4.4. This clears the critical
+  and high Dependabot advisories for vitest, tinypool, vite, esbuild and
+  happy-dom; `pnpm audit --prod` reports no known vulnerabilities.
+
 ### Added
 
 - Offline `/remember <fact>` and `/recall <query>` REPL commands backed by the
@@ -140,7 +155,11 @@ the new section **before** running `pnpm release:check --release`.
 
 - Nightly CI installs pnpm before enabling the `setup-node` pnpm cache, so the
   scheduled job reaches the build and test steps instead of failing during
-  setup.
+  setup. It also no longer forwards pnpm's `--if-present` flag to `tsc` and
+  `vitest`, which those tools reject.
+- CI now enforces coverage thresholds on the Ubuntu unit-test leg (lines 72%,
+  statements 70%, functions 71%, branches 58%) using the recorded baseline,
+  instead of leaving the thresholds unenforced.
 - The Windows source installer stops on failed git or pnpm steps instead of
   writing the success marker after a failed clone, install, or build.
 - Auth endpoints validate emails before rate limiting, so malformed attempts
@@ -150,6 +169,10 @@ the new section **before** running `pnpm release:check --release`.
   `zoveli-data` volume, documents the correct `-f docker/docker-compose.yml`
   commands, and runs Ollama on CPU unless the GPU reservation is uncommented.
 - Release builds publish the `latest` Docker tag.
+- The Docker image no longer copies `knowledge-vault` into the image or mounts
+  the host vault into the CLI container; both were unnecessary because the
+  runtime uses the writable `/app/data` volume. This also fixes the Docker build
+  failure caused by the path being excluded by `.dockerignore`.
 - The Docker image ships the CLI's pnpm workspace links, so `zoveli` starts
   instead of failing with `MODULE_NOT_FOUND: @zoveli/core/version`; CI boots
   the image and checks `zoveli --version`, the plugin inventory, and

@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/memory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Legacy memory service compatibility wrapper over @zoveli/memory-store",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

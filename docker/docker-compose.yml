@@ -18,7 +18,6 @@ services:
         condition: service_healthy
     volumes:
       - zoveli-data:/app/data
-      - ../knowledge-vault:/app/knowledge-vault:ro
     environment:
       # The Ollama container is attached to the same Compose network.
       - ZOVELI_OLLAMA_URL=http://ollama:11434
