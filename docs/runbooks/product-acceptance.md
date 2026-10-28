@@ -44,7 +44,7 @@ From a release archive:
 
 ```bash
 pnpm run package:runtime
-pnpm run acceptance:runtime -- --archive release/zoveli-0.1.0-linux-x64.tar.gz
+pnpm run acceptance:runtime -- --archive release/zoveli-0.1.1-linux-x64.tar.gz
 ```
 
 Or let the script pick the newest archive under `release/`:
@@ -79,7 +79,7 @@ not touch your real `~/.zoveli` data.
 
 ```text
 product acceptance: PASS (install 812ms, first task 6120ms, total 14820ms)
-runtime 0.1.0 windows-x64; 58 tools; 15/15 capabilities; 21 checks
+runtime 0.1.1 windows-x64; 58 tools; 15/15 capabilities; 21 checks
 report: acceptance-windows-latest.json
 ```
 

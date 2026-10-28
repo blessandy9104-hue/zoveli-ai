@@ -172,7 +172,9 @@ the new section **before** running `pnpm release:check --release`.
 - The Docker image no longer copies `knowledge-vault` into the image or mounts
   the host vault into the CLI container; both were unnecessary because the
   runtime uses the writable `/app/data` volume. This also fixes the Docker build
-  failure caused by the path being excluded by `.dockerignore`.
+  failure caused by the path being excluded by `.dockerignore`. The Compose
+  smoke test now uses `--no-deps`, so the data-volume check does not require the
+  optional Ollama sidecar.
 - The Docker image ships the CLI's pnpm workspace links, so `zoveli` starts
   instead of failing with `MODULE_NOT_FOUND: @zoveli/core/version`; CI boots
   the image and checks `zoveli --version`, the plugin inventory, and

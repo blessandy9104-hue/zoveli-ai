@@ -346,7 +346,7 @@ jobs:
         shell: bash
         run: |
           image="$(printf '%s\n' "$TAGS" | head -n 1)"
-          ZOVELI_CLI_IMAGE="$image" docker compose -f docker/docker-compose.yml --profile cli run --rm -T --pull never zoveli-cli \
+          ZOVELI_CLI_IMAGE="$image" docker compose -f docker/docker-compose.yml --profile cli run --rm -T --no-deps --pull never zoveli-cli \
             node -e "require('node:fs').writeFileSync('/app/data/vault/.smoke','ok');require('node:fs').unlinkSync('/app/data/vault/.smoke')"
           echo "Compose data volume smoke passed"
         env:
