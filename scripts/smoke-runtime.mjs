@@ -7,6 +7,28 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+function quoteArg(value) {
+  const text = String(value);
+  if (text.includes('\0') || /[\r\n%]/.test(text)) {
+    throw new Error('unsafe control character in argument');
+  }
+  if (!/[ \t"]/.test(text)) return text;
+  const escaped = text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
+  return `"${escaped}"`;
+}
+
+function safeExecutablePath(value) {
+  if (
+    typeof value !== 'string' ||
+    !value ||
+    value.includes('\0') ||
+    /["\r\n%]/.test(value)
+  ) {
+    throw new Error('unsafe executable path');
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const options = {};
   for (let i = 0; i < argv.length; i += 1) {
@@ -78,8 +100,15 @@ function main() {
   const runLauncher = (args, options = {}) =>
     process.platform === 'win32'
       ? run(
-          process.env.ComSpec || 'cmd.exe',
-          ['/d', '/s', '/c', `""${launcher}" ${args.join(' ')}"`],
+          'cmd.exe',
+          [
+            '/d',
+            '/s',
+            '/c',
+            args.length
+              ? `""${safeExecutablePath(launcher)}" ${args.map(quoteArg).join(' ')}"`
+              : `""${safeExecutablePath(launcher)}""`,
+          ],
           { windowsVerbatimArguments: true, ...options }
         )
       : run(launcher, args, options);

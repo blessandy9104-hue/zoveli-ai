@@ -94,6 +94,13 @@ function json(res: http.ServerResponse, status: number, body: unknown): void {
   res.end(text);
 }
 
+/** Map request-parse failures to fixed, client-safe text (no exception text). */
+function parseErrorMessage(e: unknown): string {
+  return e instanceof Error && e.message === 'invalid JSON body'
+    ? 'invalid JSON body'
+    : 'invalid request body';
+}
+
 function readBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -596,7 +603,7 @@ ${themeBootScript(unicornProjectId())}
         try {
           ({ tool, args } = parseRunCall(await readBody(req)));
         } catch (e) {
-          json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
+          json(res, 400, { ok: false, error: parseErrorMessage(e) });
           return;
         }
         if (!apiRequestAuthorized(req)) {
@@ -611,14 +618,16 @@ ${themeBootScript(unicornProjectId())}
           res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
           return;
         }
+        if (!host.tools().some((t) => t.name === tool)) {
+          json(res, 200, { ok: false, error: `unknown tool: ${tool.slice(0, 100)}` });
+          return;
+        }
         try {
           const result = await host.runTool(tool, args);
           json(res, 200, { ok: true, result });
-        } catch (e) {
-          json(res, 200, {
-            ok: false,
-            error: redactSecrets(e instanceof Error ? e.message : String(e)),
-          });
+        } catch {
+          // Never echo exception internals (stack traces, paths) to clients.
+          json(res, 200, { ok: false, error: 'tool execution failed' });
         }
         return;
       }
@@ -627,7 +636,7 @@ ${themeBootScript(unicornProjectId())}
         try {
           message = parseChatMessage(await readBody(req));
         } catch (e) {
-          json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
+          json(res, 400, { ok: false, error: parseErrorMessage(e) });
           return;
         }
         if (!apiRequestAuthorized(req)) {
@@ -654,11 +663,8 @@ ${themeBootScript(unicornProjectId())}
               provider: 'local',
               local: true,
             });
-          } catch (e) {
-            json(res, 200, {
-              ok: false,
-              error: e instanceof Error ? e.message : String(e),
-            });
+          } catch {
+            json(res, 200, { ok: false, error: 'math computation failed' });
           }
           return;
         }
@@ -723,7 +729,11 @@ ${themeBootScript(unicornProjectId())}
             ...(devEchoEnabled() ? { devCode: code } : {}),
           });
         } catch (e) {
-          json(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) });
+          const error =
+            e instanceof Error && e.message === 'too many codes requested; try again later'
+              ? 'too many codes requested; try again later'
+              : 'could not send login code';
+          json(res, 400, { ok: false, error });
         }
         return;
       }
@@ -771,7 +781,8 @@ ${themeBootScript(unicornProjectId())}
       }
       json(res, 404, { ok: false, error: 'not found' });
     } catch (e) {
-      json(res, 500, { ok: false, error: redactSecrets(e instanceof Error ? e.message : String(e)) });
+      console.error('request failed:', redactSecrets(e instanceof Error ? e.message : String(e)));
+      json(res, 500, { ok: false, error: 'internal server error' });
     }
   });
 

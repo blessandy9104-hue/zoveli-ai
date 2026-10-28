@@ -55,7 +55,23 @@ function saveStore(store: AuthStore): void {
 
 export function normalizeEmail(email: string): string {
   const clean = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+  // Linear validation (no backtracking regex): exactly one @, no whitespace,
+  // a dotted domain with non-empty labels.
+  if (clean.length === 0 || clean.length > 254 || /\s/.test(clean)) {
+    throw new Error('invalid email address');
+  }
+  const at = clean.indexOf('@');
+  if (at <= 0 || at !== clean.lastIndexOf('@')) {
+    throw new Error('invalid email address');
+  }
+  const domain = clean.slice(at + 1);
+  if (
+    domain.length < 3 ||
+    domain.startsWith('.') ||
+    domain.endsWith('.') ||
+    domain.includes('..') ||
+    !domain.includes('.')
+  ) {
     throw new Error('invalid email address');
   }
   return clean;

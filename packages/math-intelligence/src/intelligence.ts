@@ -9,11 +9,13 @@ function memorizeEnabled(): boolean {
 }
 
 function slugOf(request: string): string {
+  // Bound before normalizing: the trim patterns run on at most 80 chars.
   const slug = request
+    .slice(0, 80)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
   return slug || 'untitled';
 }
 

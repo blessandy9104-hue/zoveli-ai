@@ -10,6 +10,33 @@ interface AnalyzeInput {
   includeIssues?: boolean;
 }
 
+/**
+ * Extract an import source without a backtracking-prone regex. Handles
+ * `import x from 'm'`, `import 'm'`, and Python's `from m import x`.
+ */
+function parseImportSource(line: string): string | null {
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('import ')) {
+    const rest = trimmed.slice('import '.length).trim();
+    const fromIdx = rest.lastIndexOf(' from ');
+    if (fromIdx !== -1) {
+      const spec = rest.slice(fromIdx + ' from '.length).trim();
+      if (spec.length >= 2 && (spec[0] === '"' || spec[0] === "'")) {
+        const end = spec.indexOf(spec[0], 1);
+        if (end > 0) return spec.slice(1, end);
+      }
+    }
+    const token = rest.split(/\s+/, 1)[0] ?? '';
+    const cleaned = token.replace(/^['"]|['"]$/g, '');
+    return cleaned || null;
+  }
+  if (trimmed.startsWith('from ')) {
+    const rest = trimmed.slice('from '.length).trim();
+    return rest.split(/\s+/, 1)[0] || null;
+  }
+  return null;
+}
+
 export class CodeAnalyzer {
   private ctx: any;
   private detector = new LanguageDetector();
@@ -146,10 +173,9 @@ export class CodeAnalyzer {
           });
         }
       }
-      const imp = line.match(/^\s*import\s+(.+?)\s+from\s+['"](.+?)['"]|^\s*from\s+(\S+)\s+import\s+(.+)|^\s*import\s+(.+)/);
-      if (imp) {
-        const source = imp[2] ?? imp[3] ?? imp[5] ?? 'unknown';
-        imports.push({ source, specifiers: [], line: lineNo });
+      const impSource = parseImportSource(line);
+      if (impSource) {
+        imports.push({ source: impSource, specifiers: [], line: lineNo });
       }
       const exp = line.match(/^\s*export\s+(default\s+)?(function|class|const|interface|type)\s+(\w+)/);
       if (exp) {

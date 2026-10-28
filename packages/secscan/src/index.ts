@@ -55,11 +55,40 @@ const REDACT_PATTERNS: RegExp[] = [
   /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/g,
   /\bAKIA[0-9A-Z]{16}\b/g,
   /\bBearer\s+[A-Za-z0-9\-._~+/=]{16,}/g,
-  // Private key blocks (multiline).
-  /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g,
   // Assigned secrets: api_key = "...", password: '...'.
   /\b(api[_-]?key|secret|passwd|password|client[_-]?secret)\s*[:=]\s*['"][^'"]+['"]/gi,
 ];
+
+/** Redact PEM private-key blocks with a linear scan (ReDoS-safe). */
+function redactPrivateKeyBlocks(text: string): string {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const begin = text.indexOf('-----BEGIN ', i);
+    if (begin === -1) {
+      out += text.slice(i);
+      break;
+    }
+    const headerEnd = text.indexOf('-----', begin + '-----BEGIN '.length);
+    if (headerEnd === -1) {
+      out += text.slice(i);
+      break;
+    }
+    const header = text.slice(begin, headerEnd + 5);
+    if (!header.includes('PRIVATE KEY')) {
+      out += text.slice(i, begin + '-----BEGIN '.length);
+      i = begin + '-----BEGIN '.length;
+      continue;
+    }
+    out += text.slice(i, begin);
+    const endMarker = header.replace('BEGIN ', 'END ');
+    const end = text.indexOf(endMarker, headerEnd + 5);
+    out += '[REDACTED]';
+    if (end === -1) break;
+    i = end + endMarker.length;
+  }
+  return out;
+}
 
 /**
  * Redact probable secrets from text destined for logs, errors, or telemetry.
@@ -72,7 +101,7 @@ export function redactSecrets(text: string): string {
     re.lastIndex = 0;
     out = out.replace(re, '[REDACTED]');
   }
-  return out;
+  return redactPrivateKeyBlocks(out);
 }
 
 export const zoveliSecscan = definePlugin({  name: 'zoveli-secscan',

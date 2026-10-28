@@ -184,12 +184,23 @@ function normalizeTags(tags: string[] = []): string[] {
 }
 
 function extractWikiLinks(body: string): string[] {
-  const re = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+  // Linear scan instead of a nested-quantifier regex (ReDoS-safe).
   const out = new Set<string>();
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(body)) !== null) {
-    const t = m[1].trim();
-    if (t) out.add(t);
+  let i = 0;
+  while (i < body.length) {
+    const start = body.indexOf('[[', i);
+    if (start === -1) break;
+    const end = body.indexOf(']]', start + 2);
+    if (end === -1) break;
+    const inner = body.slice(start + 2, end);
+    const pipe = inner.indexOf('|');
+    const target = (pipe === -1 ? inner : inner.slice(0, pipe)).trim();
+    if (target && !target.includes('[') && !target.includes(']')) {
+      out.add(target);
+      i = end + 2;
+    } else {
+      i = start + 2;
+    }
   }
   return [...out];
 }

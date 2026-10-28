@@ -17,6 +17,9 @@ env:
   # v9 lockfile (catalogs, allowBuilds) and fails with NO_LOCKFILE.
   PNPM_VERSION: '11.7.0'
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-typecheck:
     name: Lint & TypeCheck
@@ -95,11 +98,15 @@ jobs:
       - name: Build packages
         run: pnpm run build
 
+      # Enforce coverage on one leg only (cross-platform counters differ by a
+      # few tenths of a percent); both legs still run the full suite.
+      - name: Run unit tests (coverage gate)
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm test -- --coverage --reporter=json --outputFile=test-results.json
+
       - name: Run unit tests
+        if: matrix.os != 'ubuntu-latest'
         run: pnpm test -- --reporter=json --outputFile=test-results.json
-        # NOTE: no coverage upload — coverage thresholds (80%) are aspirational
-        # and `vitest run` here does not emit lcov. Turning coverage into a
-        # gate is tracked future work; see docs.
 
   integration-tests:
     name: Integration Tests

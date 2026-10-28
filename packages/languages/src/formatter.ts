@@ -79,10 +79,10 @@ export class CodeFormatter {
     const indent = opts.indentType === 'tabs' ? '\t' : ' '.repeat(opts.indentSize);
     return content
       .split('\n')
-      .map((l) => l.replace(/\s+$/u, '')) // trim trailing WS
+      .map((l) => l.trimEnd()) // trim trailing WS without backtracking regex
       .join('\n')
-      .replace(/\t/g, indent)
-      .replace(/[ \t]+$/gm, '')
+      .split('\t')
+      .join(indent)
       .replace(/\n{3,}/g, '\n\n')
       .trimEnd() + '\n';
   }
@@ -121,7 +121,7 @@ export class CodeFormatter {
     const issues: CodeIssue[] = [];
     const lines = content.split('\n');
     lines.forEach((line, i) => {
-      if (/\s+$/.test(line)) {
+      if (line.length !== line.trimEnd().length) {
         issues.push({
           type: 'warning', severity: 'low', rule: 'no-trailing-spaces',
           message: 'Trailing whitespace', filePath,

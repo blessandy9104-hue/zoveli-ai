@@ -88,16 +88,37 @@ function run(command, args, options = {}) {
 }
 
 function quoteArg(value) {
-  return /[ \t"]/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value;
+  const text = String(value);
+  if (text.includes('\0') || /[\r\n%]/.test(text)) {
+    throw new Error('unsafe control character in argument');
+  }
+  if (!/[ \t"]/.test(text)) return text;
+  // Windows command-line quoting: double backslashes that precede a quote
+  // (including a trailing backslash), then escape the quote itself.
+  const escaped = text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
+  return `"${escaped}"`;
+}
+
+function safeExecutablePath(value) {
+  if (
+    typeof value !== 'string' ||
+    !value ||
+    value.includes('\0') ||
+    /["\r\n%]/.test(value)
+  ) {
+    throw new Error('unsafe executable path');
+  }
+  return value;
 }
 
 function runLauncher(launcher, args, env, options = {}) {
   if (!IS_WIN) return run(launcher, args, { env, ...options });
+  const exe = safeExecutablePath(launcher);
   const command = args.length
-    ? `""${launcher}" ${args.map(quoteArg).join(' ')}"`
-    : `""${launcher}""`;
+    ? `""${exe}" ${args.map(quoteArg).join(' ')}"`
+    : `""${exe}""`;
   return run(
-    process.env.ComSpec || 'cmd.exe',
+    'cmd.exe',
     ['/d', '/s', '/c', command],
     { windowsVerbatimArguments: true, env, ...options }
   );
@@ -105,13 +126,15 @@ function runLauncher(launcher, args, env, options = {}) {
 
 function runLauncherAsync(launcher, args, env, options = {}) {
   const { input = '', timeout = 120000 } = options;
-  const command = IS_WIN ? process.env.ComSpec || 'cmd.exe' : launcher;
+  const command = IS_WIN ? 'cmd.exe' : launcher;
   const commandArgs = IS_WIN
     ? [
         '/d',
         '/s',
         '/c',
-        args.length ? `""${launcher}" ${args.map(quoteArg).join(' ')}"` : `""${launcher}""`,
+        args.length
+          ? `""${safeExecutablePath(launcher)}" ${args.map(quoteArg).join(' ')}"`
+          : `""${safeExecutablePath(launcher)}""`,
       ]
     : args;
   return new Promise((resolve, reject) => {
@@ -340,7 +363,9 @@ function assert(condition, message) {
 function pass(checks, id, detail, startedAt) {
   const check = { id, status: 'pass', ms: Date.now() - startedAt, detail };
   checks.push(check);
-  console.log(`[pass] ${id}${detail ? `: ${detail}` : ''}`);
+  // Keep details in the machine-readable report; logs must not contain
+  // environment-derived values.
+  console.log(`[pass] ${id}`);
   return check;
 }
 
@@ -741,7 +766,25 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('product acceptance: FAIL');
-  console.error(error instanceof Error ? error.message : String(error));
+  // Keep failure details out of console logs (they can include environment
+  // data); write them to the report file when one was requested.
+  const reportIdx = process.argv.indexOf('--report');
+  const reportPath = reportIdx !== -1 ? process.argv[reportIdx + 1] : '';
+  if (reportPath) {
+    try {
+      mkdirSync(dirname(reportPath), { recursive: true });
+      writeFileSync(
+        reportPath,
+        `${JSON.stringify(
+          { schema: 1, status: 'fail', finishedAt: new Date().toISOString(), error: String(error) },
+          null,
+          2
+        )}\n`
+      );
+    } catch {
+      // best effort
+    }
+  }
+  console.error('product acceptance: FAIL (details redacted from logs)');
   process.exit(1);
 });

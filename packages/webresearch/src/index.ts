@@ -124,14 +124,79 @@ export async function assertSafeUrl(url: string, lookupFn: DnsLookup = defaultLo
   return parsed;
 }
 
+/** Remove `<tag ...>...</tag ...>` blocks in linear time (case-insensitive). */
+function removeTagBlocks(html: string, tag: string): string {
+  const lower = html.toLowerCase();
+  const open = `<${tag}`;
+  const close = `</${tag}`;
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const start = lower.indexOf(open, i);
+    if (start === -1) {
+      out += html.slice(i);
+      break;
+    }
+    const next = lower.charAt(start + open.length);
+    if (next && !/[\s/>]/.test(next)) {
+      out += html.slice(i, start + open.length);
+      i = start + open.length;
+      continue;
+    }
+    out += html.slice(i, start);
+    let end = lower.indexOf(close, start + open.length);
+    if (end === -1) break; // unclosed block: drop the remainder
+    end = lower.indexOf('>', end + close.length);
+    if (end === -1) break;
+    i = end + 1;
+  }
+  return out;
+}
+
+/** Remove HTML comments in linear time. */
+function removeHtmlComments(html: string): string {
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const start = html.indexOf('<!--', i);
+    if (start === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, start);
+    const end = html.indexOf('-->', start + 4);
+    if (end === -1) break;
+    i = end + 3;
+  }
+  return out;
+}
+
+/** Replace `<...>` tags with a space in linear time. */
+function stripTags(html: string): string {
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, lt);
+    const gt = html.indexOf('>', lt + 1);
+    if (gt === -1) break;
+    i = gt + 1;
+  }
+  return out;
+}
+
 function stripToText(html: string): { title: string; text: string } {
   const title = (html.match(/<title[^>]*>([\s\S]{0,300})<\/title>/i)?.[1] || '').trim().replace(/\s+/g, ' ');
-  let body = html.replace(/<script[\s\S]*?<\/script>/gi, ' ');
-  body = body.replace(/<style[\s\S]*?<\/style>/gi, ' ');
-  body = body.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
-  body = body.replace(/<svg[\s\S]*?<\/svg>/gi, ' ');
-  body = body.replace(/<!--[\s\S]*?-->/g, ' ');
-  body = body.replace(/<[^>]+>/g, ' ');
+  let body = removeTagBlocks(html, 'script');
+  body = removeTagBlocks(body, 'style');
+  body = removeTagBlocks(body, 'noscript');
+  body = removeTagBlocks(body, 'svg');
+  body = removeHtmlComments(body);
+  body = stripTags(body);
   const text = body
     .replace(/&(nbsp|amp|lt|gt|quot|apos);/gi, ' ')
     .replace(/[ \t\u00a0]+/g, ' ')
@@ -202,7 +267,8 @@ export interface SearchHit {
 /** Decode the `udm=14`-free DuckDuckGo lite anchors into results. */
 export function parseDuckLite(html: string, limit: number): SearchHit[] {
   const hits: SearchHit[] = [];
-  const anchorRe = /<a[^>]+rel="nofollow"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  // Bounded quantifiers keep matching linear on hostile HTML.
+  const anchorRe = /<a\b[^>]{0,2000}?rel="nofollow"[^>]{0,2000}?href="([^"]{1,2000})"[^>]{0,2000}?>([\s\S]{0,5000}?)<\/a>/gi;
   let m: RegExpExecArray | null;
   while ((m = anchorRe.exec(html)) !== null && hits.length < limit) {
     let href = m[1].replace(/&amp;/g, '&');
@@ -215,7 +281,7 @@ export function parseDuckLite(html: string, limit: number): SearchHit[] {
       }
     }
     if (!/^https?:\/\//i.test(href)) continue;
-    const label = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const label = stripTags(m[2]).replace(/\s+/g, ' ').trim();
     hits.push({ title: label.slice(0, 200) || href, url: href, snippet: '', trusted: isTrustedUrl(href) });
   }
   return hits;
