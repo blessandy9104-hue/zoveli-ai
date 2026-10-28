@@ -410,7 +410,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify release metadata
-        run: pnpm run release:check -- --release --tag
+        run: node scripts/release-check.mjs --release --tag
 
       - name: Build packages
         run: pnpm run build
