@@ -13,7 +13,7 @@
   irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex
 
 .EXAMPLE
-  .\install-zoveli-runtime.ps1 -Yes -Archive .\zoveli-0.1.0-windows-x64.tar.gz -Dir "$env:LOCALAPPDATA\Zoveli"
+  .\install-zoveli-runtime.ps1 -Yes -Archive .\zoveli-0.1.1-windows-x64.tar.gz -Dir "$env:LOCALAPPDATA\Zoveli"
 
 .EXAMPLE
   .\install-zoveli-runtime.ps1 -Yes -AddToPath

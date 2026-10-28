@@ -1,7 +1,12 @@
 name: Runtime Artifacts
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to attach archives to (e.g. v0.1.1); leave empty to build only'
+        required: false
+        type: string
   release:
     types: [published]
   pull_request:
@@ -122,7 +127,7 @@ jobs:
 
   publish:
     name: Attach runtime artifacts
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -136,6 +141,9 @@ jobs:
 
       - uses: softprops/action-gh-release@v1
         with:
+          # download-artifact keeps the artifact's `release/` prefix, so the
+          # archives are one level below release-assets/.
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
           files: |
-            release-assets/*.tar.gz
-            release-assets/*.sha256
+            release-assets/**/*.tar.gz
+            release-assets/**/*.sha256
