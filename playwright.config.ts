@@ -50,9 +50,8 @@ export default defineConfig({
       ZOVELI_VAULT_PATH: './test-vault',
       ZOVELI_MEMORY_DB: join(tmpdir(), 'zoveli-e2e-web-memory.db'),
       ZOVELI_MEMORY_EXPORT: '0',
-      MATHCORE_MCP_COMMAND: process.platform === 'win32'
-        ? join(process.cwd(), '.venv', 'Scripts', 'mathcore-mcp.exe')
-        : join(process.cwd(), '.venv', 'bin', 'mathcore-mcp'),
+      // Leave MATHCORE_MCP_COMMAND unset: the resolver checks .venv first for
+      // local dev, then PATH, which is where CI installs mathcore-mcp.
       MATHCORE_AUDIT: './test-audit.jsonl',
       ZOVELI_AUTH_DEV_ECHO: '1',
       ZOVELI_AUTH_DIR: './test-auth-data'
