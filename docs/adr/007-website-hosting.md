@@ -29,6 +29,13 @@ static HTML/CSS and does not include third-party analytics or tracking scripts.
 Vercel may be used for preview deployments only; it is not a deploy target and
 its analytics snippet is not embedded.
 
+The connected Vercel project is configured by `vercel.json` to preview those
+same files: framework `Other` (`null`), empty install and build commands, and
+`outputDirectory: "website"`. Vercel therefore serves the static site as-is
+instead of trying to install and build the pnpm monorepo, so its deployment
+status no longer fails on every commit. GitHub Pages remains the only
+production host.
+
 Any future marketing-site analytics needs a separate proposal that names the
 host, the data collected, the retention period, and how the site discloses it.
 
@@ -40,6 +47,8 @@ host, the data collected, the retention period, and how the site discloses it.
 - The published site matches the no-telemetry posture documented for the
   product and cannot fail on a missing host-specific script.
 - Host-specific script PRs can be rejected without re-litigating the decision.
+- The Vercel preview status reflects the static site instead of a failed
+  monorepo build, so a red check means the site itself is broken.
 
 ### Negative
 - There is no visitor analytics on the public site; traffic questions rely on
@@ -54,6 +63,7 @@ host, the data collected, the retention period, and how the site discloses it.
 
 ## References
 - `.github/workflows/pages.yml`
+- `vercel.json` (static preview only)
 - `website/`
 - `SECURITY.md` (no telemetry)
 - PR #36 (closed; Vercel Web Analytics)
