@@ -34,6 +34,6 @@ minimumReleaseAgeExclude:
 # modern tsdown whose rolldown dependency is a stable range.
 overrides:
   tsdown: ^0.23.1
-  # Patched Vite (all GHSA advisories fixed in 6.4.4). Vitest 4 accepts Vite 6;
+  # Patched Vite (all GHSA advisories fixed in 6.4.5). Vitest 4 accepts Vite 6;
   # Vite 8 currently lacks the `vite/module-runner` export Vitest imports.
-  vite: 6.4.4
+  vite: 6.4.5

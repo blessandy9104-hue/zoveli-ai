@@ -9,6 +9,12 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Security
+
+- Bumped the pinned Vite override to 6.4.5 to clear a newly disclosed medium
+  advisory affecting 6.4.4. Vite is a development-only dependency and is not
+  included in the runtime archives.
+
 ## [0.1.2] - 2026-10-29
 
 ### Fixed
