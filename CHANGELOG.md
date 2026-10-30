@@ -9,6 +9,18 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Changed
+
+- Recorded GitHub Pages as the canonical website host and declined
+  host-specific analytics scripts in
+  [ADR 007](docs/adr/007-website-hosting.md).
+
+### Fixed
+
+- `.gitignore` and `pnpm clean` now cover the Vitest HTML reporter's
+  `favicon.ico`, so running the test UI no longer leaves an untracked file at
+  the repository root.
+
 ### Security
 
 - Bumped the pinned Vite override to 6.4.5 to clear a newly disclosed medium
