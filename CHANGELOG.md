@@ -14,6 +14,9 @@ the new section **before** running `pnpm release:check --release`.
 - Recorded GitHub Pages as the canonical website host and declined
   host-specific analytics scripts in
   [ADR 007](docs/adr/007-website-hosting.md).
+- Configured the connected Vercel project as a static preview of `website/`
+  with no install or build step, so its deployment status no longer fails on
+  every commit.
 
 ### Fixed
 
