@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/sysinfo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "System and hardware awareness: OS, CPU, memory, disk, GPU, battery, network, and process insight (local-only, no network calls)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

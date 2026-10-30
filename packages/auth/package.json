@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/auth",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Passwordless email-OTP auth for Zoveli. Works with any inbox including @proton.me (no OAuth partnership needed)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

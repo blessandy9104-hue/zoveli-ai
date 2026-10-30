@@ -9,6 +9,18 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-29
+
+### Fixed
+
+- `Runtime Artifacts` release uploads now locate the nested
+  `release-assets/**/*.tar.gz` archives and `**/*.sha256` checksums, and a
+  manual dispatch with `release_tag` can attach archives to an already
+  published release.
+- The release job calls `node scripts/release-check.mjs --release --tag ...`
+  directly instead of forwarding arguments through `pnpm run`, which failed on
+  Linux with `unknown option "--"`.
+
 ## [0.1.1] - 2026-10-28
 
 ### Security

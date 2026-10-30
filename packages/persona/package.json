@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/persona",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Switchable trusted personas that align with the user's goal",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

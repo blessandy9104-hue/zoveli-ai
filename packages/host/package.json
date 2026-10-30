@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/host",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Minimal local host for Zoveli plugins: loader, tool registry, REPL, and optional LLM chat",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

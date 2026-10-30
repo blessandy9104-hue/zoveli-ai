@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Zoveli desktop shell (Electron): spawns the local web server and opens it in a window",
   "main": "dist/main.js",

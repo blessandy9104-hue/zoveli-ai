@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/health",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Project health monitoring: dependencies, tech debt, coverage, and freshness",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

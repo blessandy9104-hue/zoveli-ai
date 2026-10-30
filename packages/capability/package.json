@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/capability",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Zoveli capability awareness: dynamic discovery, introspection, and adaptation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

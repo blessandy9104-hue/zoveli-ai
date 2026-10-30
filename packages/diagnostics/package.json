@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/diagnostics",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Runtime health rollup for Zoveli: config, vault, MCP pool and capabilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/languages",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Multi-language programming support: detection, analysis, formatting, testing, and tooling",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

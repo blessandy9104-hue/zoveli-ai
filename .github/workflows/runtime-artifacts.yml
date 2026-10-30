@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag to attach archives to (e.g. v0.1.1); leave empty to build only'
+        description: 'Release tag to attach archives to (e.g. 0.1.2); leave empty to build only'
         required: false
         type: string
   release:

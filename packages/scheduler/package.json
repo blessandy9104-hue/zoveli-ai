@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/scheduler",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Smart task scheduler: energy-aware prioritization and time-blocking",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
