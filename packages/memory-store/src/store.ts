@@ -343,7 +343,7 @@ export class MemoryStore {
     try {
       const current = this.schemaVersion();
       if (existed && current < SCHEMA_VERSION) this.snapshotBeforeMigration(current);
-      this.runMigrations();
+      this.runMigrations(current);
     } catch (e) {
       try {
         this.db.close();
@@ -389,9 +389,8 @@ export class MemoryStore {
     }
   }
 
-  private runMigrations(): void {
-    const row = this.db.prepare('PRAGMA user_version').get() as { user_version: number } | undefined;
-    let current = Number(row?.user_version ?? 0);
+  private runMigrations(fromVersion: number): void {
+    let current = fromVersion;
     if (current > SCHEMA_VERSION) {
       throw new Error(
         `memory database schema v${current} is newer than supported v${SCHEMA_VERSION}; upgrade Zoveli`
@@ -711,10 +710,13 @@ export class MemoryStore {
   deleteNote(title: string): { success: boolean; title: string } {
     const name = String(title || '').trim();
     const row = this.db.prepare('SELECT title FROM notes WHERE title = ?').get(name) as { title: string } | undefined;
+    // A `.md` filename is accepted when the note exists under its basename.
     const target = row ? row.title : name.endsWith('.md') ? path.basename(name, '.md') : null;
     if (!target) throw new Error(`note not found: ${title}`);
-    const exists = this.db.prepare('SELECT title FROM notes WHERE title = ?').get(target) as { title: string } | undefined;
-    if (!exists) throw new Error(`note not found: ${title}`);
+    if (!row) {
+      const exists = this.db.prepare('SELECT title FROM notes WHERE title = ?').get(target) as { title: string } | undefined;
+      if (!exists) throw new Error(`note not found: ${title}`);
+    }
     const rowid = this.getRowId(target);
     this.db.prepare('DELETE FROM notes WHERE title = ?').run(target);
     if (this.ftsAvailable && rowid !== null) {
@@ -730,6 +732,8 @@ export class MemoryStore {
 
   searchNotes(input: SearchInput): { results: SearchHit[] } {
     const query = String(input.query || '');
+    // Empty/whitespace queries return nothing; check before any table scan.
+    if (!query.trim()) return { results: [] };
     const tags = (input.tags || []).map(String).map((s) => s.trim()).filter(Boolean);
     const limit = Math.min(Math.max(input.limit ?? 10, 1), 100);
     const offset = Math.max(input.offset ?? 0, 0);
@@ -770,9 +774,6 @@ export class MemoryStore {
       } catch {
         rows = [];
       }
-      // Emulate old substring case-insensitivity already handled by LIKE (ASCII).
-      // Filter empty query to nothing (preserve old searchNotes contract of slice, not full dump).
-      if (!query.trim()) return { results: [] };
     }
 
     const results: SearchHit[] = rows.map((r) => {
