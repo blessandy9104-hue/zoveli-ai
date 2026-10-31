@@ -1,20 +1,15 @@
 import { describePlugins, type PluginInventory } from '@zoveli/host';
+import { parseFlags, type FlagDefinition } from './flags.js';
 
 interface ParsedFlags {
   json: boolean;
   help: boolean;
 }
 
-function parseFlags(argv: string[]): ParsedFlags {
-  const flags: ParsedFlags = { json: false, help: false };
-  for (const arg of argv) {
-    if (arg === '--json') flags.json = true;
-    else if (arg === '--help' || arg === '-h') flags.help = true;
-    else if (arg.startsWith('-')) throw new Error(`unknown option: ${arg}`);
-    else throw new Error(`unexpected argument: ${arg}`);
-  }
-  return flags;
-}
+const FLAGS = [
+  { key: 'json', tokens: ['--json'] },
+  { key: 'help', tokens: ['--help', '-h'] },
+] as const satisfies readonly FlagDefinition<keyof ParsedFlags>[];
 
 function usage(): string {
   return `zoveli plugin inventory
@@ -58,7 +53,7 @@ function printInventory(inventory: PluginInventory): void {
 
 export async function runPlugins(argv: string[]): Promise<number> {
   try {
-    const flags = parseFlags(argv);
+    const flags = parseFlags<ParsedFlags>(argv, { json: false, help: false }, FLAGS);
     if (flags.help) {
       console.log(usage());
       return 0;

@@ -12,6 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseArgs } from './lib/args.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -369,33 +370,33 @@ Next steps after scaffolding:
   (without --mount, wire optionalPlugins yourself; see docs/plugin-sdk/README.md)`;
 }
 
-export function parseArgs(argv) {
-  const parsed = { name: undefined, description: undefined, mount: false, force: false, help: false, rootDir: undefined };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--help' || arg === '-h') parsed.help = true;
-    else if (arg === '--mount') parsed.mount = true;
-    else if (arg === '--force') parsed.force = true;
-    else if (arg === '--description' || arg === '-d') {
-      const value = argv[i + 1];
-      if (!value) throw new Error(`${arg} requires a value`);
-      parsed.description = value;
-      i += 1;
-    } else if (arg.startsWith('--description=')) parsed.description = arg.slice('--description='.length);
-    else if (arg === '--root') {
-      const value = argv[i + 1];
-      if (!value) throw new Error('--root requires a path');
-      parsed.rootDir = value;
-      i += 1;
-    } else if (arg.startsWith('-')) throw new Error(`unknown option: ${arg}`);
-    else if (!parsed.name) parsed.name = arg;
-    else throw new Error(`unexpected argument: ${arg}`);
-  }
-  return parsed;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    positional: 'name',
+    defaults: {
+      name: undefined,
+      description: undefined,
+      mount: false,
+      force: false,
+      help: false,
+      rootDir: undefined,
+    },
+    values: {
+      '--description': 'description',
+      '-d': 'description',
+      '--root': 'rootDir',
+    },
+    booleans: {
+      '--mount': 'mount',
+      '--force': 'force',
+      '--help': 'help',
+      '-h': 'help',
+    },
+  });
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseOptions(process.argv.slice(2));
   if (args.help || !args.name) {
     console.log(usage());
     process.exit(args.help ? 0 : 1);

@@ -4,40 +4,16 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from './lib/args.mjs';
+import { launcherInvocation } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-function quoteArg(value) {
-  const text = String(value);
-  if (text.includes('\0') || /[\r\n%]/.test(text)) {
-    throw new Error('unsafe control character in argument');
-  }
-  if (!/[ \t"]/.test(text)) return text;
-  const escaped = text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
-  return `"${escaped}"`;
-}
-
-function safeExecutablePath(value) {
-  if (
-    typeof value !== 'string' ||
-    !value ||
-    value.includes('\0') ||
-    /["\r\n%]/.test(value)
-  ) {
-    throw new Error('unsafe executable path');
-  }
-  return value;
-}
-
-function parseArgs(argv) {
-  const options = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--dir') options.dir = resolve(argv[++i]);
-    else if (arg === '--help') options.help = true;
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return options;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    values: { '--dir': { key: 'dir', parse: resolve } },
+    booleans: { '--help': 'help' },
+  });
 }
 
 function run(command, args, options = {}) {
@@ -59,7 +35,7 @@ function check(condition, message) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseOptions(process.argv.slice(2));
   if (options.help) {
     console.log('usage: node scripts/smoke-runtime.mjs --dir <runtime directory>');
     return;
@@ -97,21 +73,13 @@ function main() {
   const help = run(node, [app, '--help']);
   check(help.includes('Usage:'), 'help output is missing usage');
 
-  const runLauncher = (args, options = {}) =>
-    process.platform === 'win32'
-      ? run(
-          'cmd.exe',
-          [
-            '/d',
-            '/s',
-            '/c',
-            args.length
-              ? `""${safeExecutablePath(launcher)}" ${args.map(quoteArg).join(' ')}"`
-              : `""${safeExecutablePath(launcher)}""`,
-          ],
-          { windowsVerbatimArguments: true, ...options }
-        )
-      : run(launcher, args, options);
+  const runLauncher = (args, options = {}) => {
+    const invocation = launcherInvocation(launcher, args);
+    return run(invocation.command, invocation.args, {
+      ...(invocation.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+      ...options,
+    });
+  };
 
   const launcherVersion = runLauncher(['--version']).trim();
   check(

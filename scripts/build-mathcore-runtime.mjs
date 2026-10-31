@@ -3,22 +3,22 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from './lib/args.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-function parseArgs(argv) {
-  const options = {
-    out: join(ROOT, 'release'),
-    python: process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'),
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--out') options.out = resolve(argv[++i]);
-    else if (arg === '--python') options.python = argv[++i];
-    else if (arg === '--help') options.help = true;
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return options;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    defaults: {
+      out: join(ROOT, 'release'),
+      python: process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'),
+    },
+    values: {
+      '--out': { key: 'out', parse: resolve },
+      '--python': 'python',
+    },
+    booleans: { '--help': 'help' },
+  });
 }
 
 function platformSlug(platform = process.platform) {
@@ -40,7 +40,7 @@ function run(command, args, env) {
 }
 
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseOptions(process.argv.slice(2));
   if (options.help) {
     console.log('usage: node scripts/build-mathcore-runtime.mjs [--out DIR] [--python PATH]');
     return;

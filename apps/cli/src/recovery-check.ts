@@ -8,6 +8,7 @@ import {
   verifyBackup,
   type DataPaths,
 } from '@zoveli/memory-store';
+import { parseFlags, type FlagDefinition } from './flags.js';
 
 export interface RecoveryStep {
   id: string;
@@ -178,17 +179,11 @@ interface ParsedFlags {
   help: boolean;
 }
 
-function parseFlags(argv: string[]): ParsedFlags {
-  const flags: ParsedFlags = { json: false, keep: false, help: false };
-  for (const arg of argv) {
-    if (arg === '--json') flags.json = true;
-    else if (arg === '--keep') flags.keep = true;
-    else if (arg === '--help' || arg === '-h') flags.help = true;
-    else if (arg.startsWith('-')) throw new Error(`unknown option: ${arg}`);
-    else throw new Error(`unexpected argument: ${arg}`);
-  }
-  return flags;
-}
+const FLAGS = [
+  { key: 'json', tokens: ['--json'] },
+  { key: 'keep', tokens: ['--keep'] },
+  { key: 'help', tokens: ['--help', '-h'] },
+] as const satisfies readonly FlagDefinition<keyof ParsedFlags>[];
 
 function usage(): string {
   return `zoveli recovery drill
@@ -206,7 +201,7 @@ Exit code 1 means the local backup/restore path is broken.
 export async function runRecoveryCheck(argv: string[]): Promise<number> {
   let flags: ParsedFlags;
   try {
-    flags = parseFlags(argv);
+    flags = parseFlags<ParsedFlags>(argv, { json: false, keep: false, help: false }, FLAGS);
   } catch (error) {
     console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
     return 1;

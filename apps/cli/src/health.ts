@@ -9,6 +9,7 @@ import {
   type HealthLevel,
 } from '@zoveli/diagnostics';
 import { resolveDbPath } from '@zoveli/memory-store';
+import { parseFlags, type FlagDefinition } from './flags.js';
 
 interface ParsedFlags {
   json: boolean;
@@ -17,27 +18,12 @@ interface ParsedFlags {
   db?: string;
 }
 
-function parseFlags(argv: string[]): ParsedFlags {
-  const flags: ParsedFlags = { json: false, help: false, offline: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--json') flags.json = true;
-    else if (arg === '--offline') flags.offline = true;
-    else if (arg === '--help' || arg === '-h') flags.help = true;
-    else if (arg.startsWith('--db=')) flags.db = arg.slice('--db='.length);
-    else if (arg === '--db') {
-      const value = argv[i + 1];
-      if (!value || value.startsWith('--')) throw new Error('--db requires a value');
-      flags.db = value;
-      i += 1;
-    } else if (arg.startsWith('-')) {
-      throw new Error(`unknown option: ${arg}`);
-    } else {
-      throw new Error(`unexpected argument: ${arg}`);
-    }
-  }
-  return flags;
-}
+const FLAGS = [
+  { key: 'json', tokens: ['--json'] },
+  { key: 'offline', tokens: ['--offline'] },
+  { key: 'help', tokens: ['--help', '-h'] },
+  { key: 'db', tokens: ['--db'], takesValue: true },
+] as const satisfies readonly FlagDefinition<keyof ParsedFlags>[];
 
 function usage(): string {
   return `zoveli runtime health
@@ -59,7 +45,7 @@ const LABELS: Record<HealthLevel, string> = {
 
 export async function runHealth(argv: string[]): Promise<number> {
   try {
-    const flags = parseFlags(argv);
+    const flags = parseFlags<ParsedFlags>(argv, { json: false, help: false, offline: false }, FLAGS);
     if (flags.help) {
       console.log(usage());
       return 0;

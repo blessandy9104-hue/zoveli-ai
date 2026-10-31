@@ -17,6 +17,9 @@ the new section **before** running `pnpm release:check --release`.
 - Configured the connected Vercel project as a static preview of `website/`
   with no install or build step, so its deployment status no longer fails on
   every commit.
+- CLI subcommands and the runtime/release scripts now share one argument
+  parser, and packaged-runtime checks share one Windows launcher helper, so
+  flag handling and quoting no longer drift between commands.
 
 ### Removed
 
