@@ -207,9 +207,6 @@ importers:
       '@zoveli/math-intelligence':
         specifier: workspace:*
         version: link:../math-intelligence
-      '@zoveli/memory-store':
-        specifier: workspace:*
-        version: link:../memory-store
     devDependencies:
       oxlint:
         specifier: 'catalog:'
@@ -513,28 +510,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@24.19.2)(tsx@4.23.15))
 
-  packages/memory:
-    dependencies:
-      '@deepseek-ai/dsh-core':
-        specifier: workspace:*
-        version: link:../shim-dsh-core
-      '@zoveli/memory-store':
-        specifier: workspace:*
-        version: link:../memory-store
-    devDependencies:
-      oxlint:
-        specifier: 'catalog:'
-        version: 0.18.1
-      tsdown:
-        specifier: ^0.23.1
-        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.12(@types/node@26.6.5)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@26.6.5)(tsx@4.23.15))
-
   packages/memory-store:
     dependencies:
       '@deepseek-ai/dsh-core':
@@ -604,31 +579,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@20.19.43)(tsx@4.23.15))
 
-  packages/search:
-    dependencies:
-      '@deepseek-ai/dsh-core':
-        specifier: workspace:*
-        version: link:../shim-dsh-core
-      '@zoveli/memory-store':
-        specifier: workspace:*
-        version: link:../memory-store
-    devDependencies:
-      '@types/node':
-        specifier: ^20.10.0
-        version: 20.19.43
-      oxlint:
-        specifier: 'catalog:'
-        version: 0.18.1
-      tsdown:
-        specifier: ^0.23.1
-        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@20.19.43)(tsx@4.23.15))
-
   packages/secscan:
     dependencies:
       '@deepseek-ai/dsh-core':
@@ -668,25 +618,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@20.19.43)(tsx@4.23.15))
-
-  packages/skills:
-    dependencies:
-      '@deepseek-ai/dsh-core':
-        specifier: workspace:*
-        version: link:../shim-dsh-core
-    devDependencies:
-      oxlint:
-        specifier: 'catalog:'
-        version: 0.18.1
-      tsdown:
-        specifier: ^0.23.1
-        version: 0.23.1(tsx@4.23.15)(typescript@5.9.3)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.12(@types/node@26.6.5)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@26.6.5)(tsx@4.23.15))
 
   packages/sysinfo:
     dependencies:

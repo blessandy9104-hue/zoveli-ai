@@ -16,8 +16,8 @@ Everything the default boot path needs: `apps/cli` → `@zoveli/host`
 `diagnostics`, `auth` (desktop only), `shim-dsh-core` (authoring shim),
 `apps/cli`. `guard` is optional and only useful with a custom `shell_exec`.
 
-The legacy `core`, `memory`, `search`, and `skills` packages remain in the
-workspace for compatibility but are not part of the default surface.
+The former `memory`, `search`, and `skills` wrappers were removed because
+`memory-store` owns those services and tools.
 
 Rules for core:
 
@@ -26,12 +26,11 @@ Rules for core:
   and maintainer sign-off.
 - The fast local loop builds core only: `pnpm run build:core`.
 
-## Legacy compatibility (unmounted)
+## Shared library package
 
-`core`, `memory`, `search`, and `skills` remain buildable packages for
-import compatibility. They are not in `defaultPlugins`; `core` contributes
-only its prompt, `memory`/`search` are service wrappers, and `skills` still
-contains placeholder implementations.
+`core` is a small prompt/version library, not a mounted plugin. The CLI
+imports `ZOVELI_VERSION` and the desktop server imports `promptSectionsText`.
+It contributes no tools and no services.
 
 ## Experimental (opt-in)
 
