@@ -6,7 +6,8 @@ export function quoteArg(value) {
   if (text.includes('\0') || /[\r\n%]/.test(text)) {
     throw new Error('unsafe control character in argument');
   }
-  if (!/[ \t"]/.test(text)) return text;
+  // Quote when cmd.exe would otherwise treat the value as an operator.
+  if (!/[ \t"&|<>^()]/.test(text)) return text;
   const escaped = text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
   return `"${escaped}"`;
 }
@@ -66,6 +67,8 @@ export function launcherInvocation(launcher, args, platform = process.platform) 
  */
 export function runSync(command, args, options = {}) {
   const { errorDetail = 'stderr', ...spawnOptions } = options;
+  // `command` is either a literal or a path checked by safeExecutablePath, and
+  // launcherInvocation quotes every argument cmd.exe could treat as an operator.
   const result = spawnSync(command, args, { encoding: 'utf8', ...spawnOptions });
   if (result.error) throw result.error;
   if (result.status !== 0) {

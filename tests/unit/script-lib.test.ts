@@ -43,6 +43,8 @@ describe('script process helpers', () => {
     expect(quoteArg('plain')).toBe('plain');
     expect(quoteArg('two words')).toBe('"two words"');
     expect(quoteArg('say "hi"')).toBe('"say \\"hi\\""');
+    expect(quoteArg('a&calc')).toBe('"a&calc"');
+    expect(quoteArg('a|b<c>d^e(f)')).toBe('"a|b<c>d^e(f)"');
     expect(() => quoteArg('line\nbreak')).toThrow('unsafe control character');
   });
 
@@ -58,6 +60,9 @@ describe('script process helpers', () => {
       args: ['/d', '/s', '/c', '""C:\\Program Files\\zoveli.cmd" --version"'],
       windowsVerbatimArguments: true,
     });
+    expect(launcherInvocation('C:\\zoveli.cmd', ['a&calc'], 'win32').args[3]).toBe(
+      '""C:\\zoveli.cmd" "a&calc""'
+    );
     expect(launcherInvocation('/usr/local/bin/zoveli', ['--help'], 'linux')).toEqual({
       command: '/usr/local/bin/zoveli',
       args: ['--help'],

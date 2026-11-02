@@ -57,6 +57,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Security
 
+- Windows launcher arguments containing `cmd.exe` metacharacters (`&`, `|`,
+  `<`, `>`, `^`, parentheses) are now quoted, so runtime and acceptance checks
+  cannot split or redirect a launcher command.
 - Bumped the pinned Vite override to 6.4.5 to clear a newly disclosed medium
   advisory affecting 6.4.4. Vite is a development-only dependency and is not
   included in the runtime archives.
