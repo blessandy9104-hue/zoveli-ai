@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from './lib/args.mjs';
-import { launcherInvocation } from './lib/process.mjs';
+import { launcherInvocation, runSync } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -17,17 +16,7 @@ function parseOptions(argv) {
 }
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    encoding: 'utf8',
-    ...options,
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${command} ${args.join(' ')} exited with code ${result.status}\n${result.stdout || ''}${result.stderr || ''}`
-    );
-  }
-  return result.stdout;
+  return runSync(command, args, { errorDetail: 'output', ...options });
 }
 
 function check(condition, message) {

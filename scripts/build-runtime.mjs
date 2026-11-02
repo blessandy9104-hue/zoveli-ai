@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   chmodSync,
@@ -16,6 +15,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { parseArgs } from './lib/args.mjs';
+import { runSync } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -38,21 +38,6 @@ function parseOptions(argv) {
       '--help': 'help',
     },
   });
-}
-
-function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    ...options,
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${command} ${args.join(' ')} exited with code ${result.status}: ${result.stderr || ''}`
-    );
-  }
-  return result.stdout;
 }
 
 function version() {
@@ -115,7 +100,7 @@ function sha256(file) {
 function archive(target, outRoot, baseName) {
   const file = join(outRoot, `${baseName}.tar.gz`);
   rmSync(file, { force: true });
-  run('tar', ['-czf', file, '-C', outRoot, baseName]);
+  runSync('tar', ['-czf', file, '-C', outRoot, baseName], { cwd: ROOT });
   const digest = sha256(file);
   writeFileSync(`${file}.sha256`, `${digest}  ${baseName}.tar.gz\n`);
   return { file, digest };
@@ -182,7 +167,7 @@ async function main() {
   copyFileSync(join(ROOT, 'LICENSE'), join(target, 'LICENSE'));
   writeLaunchers(target, true);
 
-  const nodeVersion = run(join(target, nodeName), ['--version']).trim();
+  const nodeVersion = runSync(join(target, nodeName), ['--version'], { cwd: ROOT }).trim();
   writeFileSync(
     join(target, 'runtime.json'),
     `${JSON.stringify(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from '../../scripts/lib/args.mjs';
-import { launcherInvocation, quoteArg, safeExecutablePath } from '../../scripts/lib/process.mjs';
+import { launcherInvocation, quoteArg, runSync, safeExecutablePath } from '../../scripts/lib/process.mjs';
 
 function parse(argv: string[]) {
   return parseArgs(argv, {
@@ -62,5 +62,37 @@ describe('script process helpers', () => {
       command: '/usr/local/bin/zoveli',
       args: ['--help'],
     });
+  });
+});
+
+describe('script process runner', () => {
+  const node = process.execPath;
+
+  it('returns stdout and forwards stdin', () => {
+    const out = runSync(node, ['-e', 'process.stdin.pipe(process.stdout)'], { input: 'hello' });
+    expect(out).toBe('hello');
+  });
+
+  it('throws with stderr detail by default', () => {
+    expect(() =>
+      runSync(node, ['-e', 'process.stderr.write("bad"); process.exit(3)'])
+    ).toThrow('exited with code 3: bad');
+  });
+
+  it('supports each failure detail mode', () => {
+    const script = 'process.stdout.write("out"); process.stderr.write("err"); process.exit(2)';
+    expect(() => runSync(node, ['-e', script], { errorDetail: 'none' })).toThrow(
+      /exited with code 2$/
+    );
+    expect(() => runSync(node, ['-e', script], { errorDetail: 'output' })).toThrow(
+      'exited with code 2\nouterr'
+    );
+    expect(() => runSync(node, ['-e', script], { errorDetail: 'sections' })).toThrow(
+      'exited with code 2\n--- stdout ---\nout\n--- stderr ---\nerr'
+    );
+  });
+
+  it('propagates spawn failures', () => {
+    expect(() => runSync('zoveli-command-that-does-not-exist', [])).toThrow();
   });
 });

@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 /** Quote one Windows command-line argument without changing its bytes. */
 export function quoteArg(value) {
   const text = String(value);
@@ -44,4 +46,40 @@ export function launcherInvocation(launcher, args, platform = process.platform) 
     ],
     windowsVerbatimArguments: true,
   };
+}
+
+/**
+ * Run a command synchronously and throw when it cannot start or exits non-zero.
+ * `errorDetail` keeps each caller's established failure diagnostics:
+ *
+ * - `stderr` (default): append `: <stderr>`
+ * - `output`: append stdout then stderr on a new line
+ * - `sections`: append labelled stdout and stderr sections
+ * - `none`: append nothing (for inherited stdio)
+ *
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {import('node:child_process').SpawnSyncOptionsWithStringEncoding & {
+ *   errorDetail?: 'stderr' | 'output' | 'sections' | 'none',
+ * }} [options]
+ * @returns {string}
+ */
+export function runSync(command, args, options = {}) {
+  const { errorDetail = 'stderr', ...spawnOptions } = options;
+  const result = spawnSync(command, args, { encoding: 'utf8', ...spawnOptions });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const stdout = result.stdout || '';
+    const stderr = result.stderr || '';
+    let detail = '';
+    if (errorDetail === 'stderr') {
+      detail = `: ${stderr}`;
+    } else if (errorDetail === 'output') {
+      detail = `\n${stdout}${stderr}`;
+    } else if (errorDetail === 'sections') {
+      detail = `\n--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}`;
+    }
+    throw new Error(`${command} ${args.join(' ')} exited with code ${result.status}${detail}`);
+  }
+  return result.stdout;
 }

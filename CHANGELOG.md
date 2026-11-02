@@ -20,6 +20,9 @@ the new section **before** running `pnpm release:check --release`.
 - CLI subcommands and the runtime/release scripts now share one argument
   parser, and packaged-runtime checks share one Windows launcher helper, so
   flag handling and quoting no longer drift between commands.
+- Runtime, smoke, and acceptance scripts now share one synchronous command
+  runner with explicit failure-detail modes, so exit-code handling and
+  diagnostics no longer drift between release steps.
 - Desktop HTML pages now live in `pages.ts` and the HTTP request pipeline in
   `routes.ts`, leaving `server.ts` responsible only for boot and shutdown.
 - The memory store's SQLite schema/loader and Markdown codec now live in
