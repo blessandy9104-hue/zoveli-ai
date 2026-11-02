@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import { sessionEmailFromCookie } from '@zoveli/auth';
+import { sessionTokenFromCookie, verifySession } from '@zoveli/auth';
 import type { ChatMessage } from '@zoveli/host';
 
 /** Keep the last 20 user turns while allowing up to 40 messages. */
@@ -30,15 +30,16 @@ export function trimHistory(
 /**
  * Stable, non-reversible identity for a caller's conversation.
  *
- * Sessions are keyed by the validated session cookie rather than the email so
+ * Sessions are keyed by the validated session token rather than the email so
  * two logins for the same account (or two browsers) do not share context.
+ * Only the token itself is hashed, so unrelated cookies cannot churn keys.
  * Bearer credentials are hashed for the same reason; anonymous local callers
  * fall back to their socket address.
  */
 export function conversationKey(req: IncomingMessage): string {
-  const cookie = req.headers.cookie || '';
-  if (sessionEmailFromCookie(cookie)) {
-    return `session:${digest(cookie)}`;
+  const token = sessionTokenFromCookie(req.headers.cookie);
+  if (token && verifySession(token)) {
+    return `session:${digest(token)}`;
   }
   const authorization = req.headers.authorization || '';
   if (authorization) {

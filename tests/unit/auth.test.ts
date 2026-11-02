@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { zoveliAuth } from '../../packages/auth/src/index';
 import { issueCode, verifyCode } from '../../packages/auth/src/otp';
 import {
-  mintSession, verifySession, sessionEmailFromCookie, sessionCookie, COOKIE_NAME,
+  mintSession, verifySession, sessionTokenFromCookie, sessionEmailFromCookie,
+  sessionCookie, COOKIE_NAME,
 } from '../../packages/auth/src/session';
 import { createMockContext } from '../setup';
 
@@ -97,6 +98,14 @@ describe('sessions', () => {
     expect(sessionEmailFromCookie(undefined)).toBeNull();
     expect(sessionEmailFromCookie('other=1')).toBeNull();
     expect(sessionEmailFromCookie(`${COOKIE_NAME}=%E0%A4%A`)).toBeNull();
+  });
+
+  it('extracts the raw session token from a cookie header', () => {
+    const token = mintSession('user@proton.me');
+    expect(sessionTokenFromCookie(`theme=dark; ${COOKIE_NAME}=${token}; other=1`)).toBe(token);
+    expect(sessionTokenFromCookie('other=1')).toBeNull();
+    expect(sessionTokenFromCookie(undefined)).toBeNull();
+    expect(sessionTokenFromCookie(`${COOKIE_NAME}=%E0%A4%A`)).toBeNull();
   });
 
   it('adds Secure only when the server serves TLS', () => {

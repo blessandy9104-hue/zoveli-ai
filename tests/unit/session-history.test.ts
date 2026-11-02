@@ -122,4 +122,17 @@ describe('conversation identity', () => {
       conversationKey(request('', '', '127.0.0.3'))
     );
   });
+
+  it('ignores unrelated cookies and cookie ordering', () => {
+    const token = mintSession('user@example.com');
+    const first = `theme=dark; zoveli_session=${token}; other=1`;
+    const reordered = `other=1; zoveli_session=${token}; theme=dark`;
+    expect(conversationKey(request(first))).toBe(conversationKey(request(reordered)));
+  });
+
+  it('uses the client address when the session cookie is invalid', () => {
+    expect(conversationKey(request('zoveli_session=garbage; theme=dark'))).toBe(
+      conversationKey(request('theme=light'))
+    );
+  });
 });

@@ -37,6 +37,11 @@ the new section **before** running `pnpm release:check --release`.
   credential instead of one process-wide array, so separate users cannot see
   each other's conversation context. Retained history is capped at 40 messages
   per conversation and 200 conversations per process.
+- Session history keys now hash only the validated session token, so unrelated
+  cookies or cookie reordering cannot reset or churn a conversation.
+- Desktop Host validation and origin construction now accept bracketed IPv6
+  loopback hosts such as `[::1]` instead of rejecting them or failing URL
+  parsing.
 - `.gitignore` and `pnpm clean` now cover the Vitest HTML reporter's
   `favicon.ico`, so running the test UI no longer leaves an untracked file at
   the repository root.

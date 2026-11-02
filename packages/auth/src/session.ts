@@ -80,21 +80,25 @@ export function verifySession(token: string): string | null {
   return payload.email;
 }
 
-/** Parse the session email out of a Cookie header. */
-export function sessionEmailFromCookie(cookieHeader: string | undefined): string | null {
+/** Extract the raw signed session token from a Cookie header. */
+export function sessionTokenFromCookie(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) return null;
   const match = cookieHeader
     .split(';')
     .map((p) => p.trim())
     .find((p) => p.startsWith(`${COOKIE_NAME}=`));
   if (!match) return null;
-  let token: string;
   try {
-    token = decodeURIComponent(match.slice(COOKIE_NAME.length + 1));
+    return decodeURIComponent(match.slice(COOKIE_NAME.length + 1));
   } catch {
     return null;
   }
-  return verifySession(token);
+}
+
+/** Parse the session email out of a Cookie header. */
+export function sessionEmailFromCookie(cookieHeader: string | undefined): string | null {
+  const token = sessionTokenFromCookie(cookieHeader);
+  return token ? verifySession(token) : null;
 }
 
 export function sessionCookie(token: string, secure = false): string {

@@ -13,6 +13,7 @@ import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
 import { onboardingMarkup } from './onboarding.js';
 import { renderHomePage } from './pages.js';
 import { createRequestHandler } from './routes.js';
+import { originForHost } from './security.js';
 
 const PORT = parseInt(process.env.PORT || '3080', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -77,7 +78,7 @@ async function main(): Promise<void> {
     homePage,
     baseSystem,
     lenisBundle: LENIS_BUNDLE,
-    origin: `http://${HOST}:${PORT}`,
+    origin: originForHost(HOST, PORT),
   });
   const server = http.createServer(handler);
 
