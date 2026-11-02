@@ -1,6 +1,6 @@
 import type { ZoveliHost } from './host.js';
 
-interface ChatMessage {
+export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | null;
   tool_calls?: {

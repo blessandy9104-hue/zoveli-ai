@@ -11,9 +11,14 @@ const MISSING_MODEL = 'missing:1b';
 const REPLY = 'Local mock reply: hello from the desktop.';
 const API_TOKEN = 'zoveli-e2e-api-token-0123456789';
 
+interface ChatRequest {
+  model?: string;
+  messages?: Array<{ role?: string; content?: string | null }>;
+}
+
 interface MockOllama {
   port: number;
-  chatRequests: Array<{ model?: string }>;
+  chatRequests: ChatRequest[];
   close: () => Promise<void>;
 }
 
@@ -37,7 +42,7 @@ async function freePort(): Promise<number> {
 }
 
 async function startMockOllama(models: string[]): Promise<MockOllama> {
-  const chatRequests: Array<{ model?: string }> = [];
+  const chatRequests: ChatRequest[] = [];
   const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/api/tags') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -218,6 +223,76 @@ test('names a pinned model that is missing and sends no chat request', async ({ 
     await pinnedMock.close();
     try {
       rmSync(pinnedWorkDir, { recursive: true, force: true });
+    } catch {
+      // Windows may still hold the SQLite file briefly
+    }
+  }
+});
+
+test('keeps chat history isolated between authenticated sessions', async ({ request }) => {
+  test.slow();
+  const isolatedMock = await startMockOllama([MODEL]);
+  const isolatedDir = mkdtempSync(join(tmpdir(), 'zoveli-e2e-sessions-'));
+  let isolatedApp: DesktopApp | undefined;
+  try {
+    isolatedApp = await startDesktop({
+      ...baseEnv(),
+      NODE_ENV: 'test',
+      ZOVELI_AUTH_REQUIRED: '1',
+      ZOVELI_AUTH_DEV_ECHO: '1',
+      ZOVELI_OLLAMA_URL: `http://127.0.0.1:${isolatedMock.port}`,
+      ZOVELI_VAULT_PATH: join(isolatedDir, 'vault'),
+      ZOVELI_MEMORY_DB: join(isolatedDir, 'memory.db'),
+      ZOVELI_MEMORY_EXPORT: '0',
+      ZOVELI_AUTH_DIR: join(isolatedDir, 'auth'),
+      MATHCORE_AUDIT: join(isolatedDir, 'audit.jsonl'),
+    });
+
+    const login = async (email: string): Promise<string> => {
+      const issued = await request.post(`${isolatedApp!.url}/api/auth/request`, {
+        data: { email },
+      });
+      expect(issued.ok()).toBeTruthy();
+      const { devCode } = await issued.json();
+      const verified = await request.post(`${isolatedApp!.url}/api/auth/verify`, {
+        data: { email, code: devCode },
+      });
+      expect(verified.ok()).toBeTruthy();
+      const cookie = (verified.headers()['set-cookie'] || '').split(';')[0];
+      expect(cookie).toContain('zoveli_session=');
+      return cookie;
+    };
+    const send = async (cookie: string, message: string): Promise<void> => {
+      const res = await request.post(`${isolatedApp!.url}/api/chat`, {
+        headers: { cookie },
+        data: { message },
+      });
+      expect(res.ok()).toBeTruthy();
+      expect(await res.json()).toMatchObject({ ok: true });
+    };
+    const promptText = (index: number): string =>
+      (isolatedMock.chatRequests[index]?.messages || [])
+        .map((entry) => entry.content || '')
+        .join('\n');
+
+    const alice = await login('alice@proton.me');
+    const bob = await login('bob@proton.me');
+    await send(alice, 'alice-first-question');
+    await send(bob, 'bob-question');
+    await send(alice, 'alice-second-question');
+
+    expect(isolatedMock.chatRequests).toHaveLength(3);
+    expect(promptText(0)).toContain('alice-first-question');
+    expect(promptText(1)).toContain('bob-question');
+    expect(promptText(1)).not.toContain('alice-first-question');
+    expect(promptText(2)).toContain('alice-first-question');
+    expect(promptText(2)).toContain('alice-second-question');
+    expect(promptText(2)).not.toContain('bob-question');
+  } finally {
+    isolatedApp?.close();
+    await isolatedMock.close();
+    try {
+      rmSync(isolatedDir, { recursive: true, force: true });
     } catch {
       // Windows may still hold the SQLite file briefly
     }

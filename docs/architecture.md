@@ -20,7 +20,7 @@ User (CLI / Desktop)
     → zoveli plugins (22 packages; 26 mounted by default)
       → capabilities (live tool inventory → registry → adaptation)
       → tools (58 live by default; desktop adds 2 auth tools)
-      → chat history (in-memory per session)
+      → chat history (in-memory, bounded per session)
       → local systems (mathcore binary, SQLite store, vault FS, optional LLM API)
 ```
 
@@ -46,7 +46,7 @@ diagnostics. `core` remains a prompt/version library and is not mounted;
 
 ## Data flows
 
-- **Chat turn (zoveli-host):** user text → optional math fast-path → OpenAI-compatible `chat/completions` with function tools → tool execution → follow-up turn, up to `maxSteps`. History is in-memory per session; durable session log is future work.
+- **Chat turn (zoveli-host):** user text → optional math fast-path → OpenAI-compatible `chat/completions` with function tools → tool execution → follow-up turn, up to `maxSteps`. History is in-memory per session (40-message cap, 200-session LRU); durable session log is future work.
 - **Verified math:** agent proposes → `math_route` (classify) → specialist solve (`math_algebra_solve`, …) or `mathcore_compute` → MCP stdio → sealed certificate → auto-memorized proof note → `OutputGuard` renders only releasable values → hash-chained audit log.
 - **Memory:** agent tools → SQLite store (`~/.zoveli/memory.db`, FTS5-ranked) → Markdown export mirror (`knowledge-vault/`) → wiki-link graph (`graph`). Legacy `.md` files import once on first boot.
 - **Languages:** `language_detect` → `language_analyze`/`lint` → `language_format` → `language_run_tests`; tooling guide via `language_get_tooling`.
