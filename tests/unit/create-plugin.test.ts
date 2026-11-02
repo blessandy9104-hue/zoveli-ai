@@ -9,6 +9,7 @@ import {
   mountTsReference,
   validatePluginName,
 } from '../../scripts/create-plugin.mjs';
+import { sourceTemplate, titleCase } from '../../scripts/lib/plugin-templates.mjs';
 
 const created: string[] = [];
 
@@ -180,5 +181,15 @@ describe('plugin scaffolder', () => {
       'export const optionalPlugins: ZoveliPlugin[] = [\n  zoveliX,\n];'
     );
     expect(host.text).toMatch(/export const defaultPlugins = \[\n  zoveliCore,\n\];/);
+  });
+});
+
+describe('plugin templates', () => {
+  it('derives PascalCase names and escapes generated string literals', () => {
+    expect(titleCase('daily-brief')).toBe('DailyBrief');
+    const source = sourceTemplate('demo', 'Demo', "It's a \\ test", 'demo_hello');
+    expect(source).toContain(String.raw`description: 'It\'s a \\ test'`);
+    expect(source).toContain('const DemoHello: Tool');
+    expect(source).toContain("ctx.register('zoveli-demo-tools', [DemoHello]);");
   });
 });

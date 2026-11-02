@@ -23,6 +23,9 @@ the new section **before** running `pnpm release:check --release`.
 - Runtime, smoke, and acceptance scripts now share one synchronous command
   runner with explicit failure-detail modes, so exit-code handling and
   diagnostics no longer drift between release steps.
+- The plugin scaffolder's generated package, source, README, and test content
+  now lives in `scripts/lib/plugin-templates.mjs`, leaving `create-plugin.mjs`
+  focused on validation, generation, and mounting.
 - Desktop HTML pages now live in `pages.ts` and the HTTP request pipeline in
   `routes.ts`, leaving `server.ts` responsible only for boot and shutdown.
 - The memory store's SQLite schema/loader and Markdown codec now live in
