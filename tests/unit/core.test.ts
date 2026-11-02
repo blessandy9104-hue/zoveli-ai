@@ -9,11 +9,10 @@ import {
   commandParts,
 } from '../../packages/math-intelligence/src/index';
 import { mathcore } from '../../packages/core/src/index';
-import { zoveliMemory } from '../../packages/memory/src/index';
 import { createMockContext } from '../setup';
 
 describe('zoveli core', () => {
-  it('registers only the legacy prompt', () => {
+  it('registers only the system prompt', () => {
     const ctx = createMockContext();
     zoveliCore.setup(ctx);
 
@@ -95,27 +94,5 @@ describe('one math subsystem (single source of truth)', () => {
     const mockAgent = { inject: vi.fn() };
     handler[1](mockAgent);
     expect(mockAgent.inject).toHaveBeenCalledWith({ type: 'system', content: MATH_RULES });
-  });
-});
-
-describe('zoveli memory', () => {
-  it('should provide memory service', () => {
-    const ctx = createMockContext();
-    zoveliMemory.setup(ctx);
-
-    expect(ctx.provide).toHaveBeenCalledWith('memory', expect.objectContaining({
-      createNote: expect.any(Function),
-      searchNotes: expect.any(Function),
-      readNote: expect.any(Function),
-      listTags: expect.any(Function)
-    }));
-  });
-
-  it('should register vault path', () => {
-    const ctx = createMockContext();
-    zoveliMemory.setup(ctx);
-    
-    const vaultCall = ctx.register.mock.calls.find(c => c[0] === 'memory-vault-path');
-    expect(vaultCall).toBeDefined();
   });
 });

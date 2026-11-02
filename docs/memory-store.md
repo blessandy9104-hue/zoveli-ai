@@ -14,14 +14,14 @@ TS store             @zoveli/memory-store     MemoryStore (sync) + getStore()
   single source: DB path, vault path,         no `node:sqlite` static import
   FTS query builder, markdown codec           (process.getBuiltinModule, vite-safe)
                              |
-TS tools             memory_create_note       memory_* registered by
-                     memory_search            @zoveli/memory-store;
-                     memory_read_note         @zoveli/core and
-                     memory_list_tags         @zoveli/memory delegate.
-                     memory_update_note       vault_search is owned by
-                     memory_delete_note       @zoveli/search and vault_graph
-                     vault_search             by @zoveli/graph (honors
-                     vault_graph              vaultPath).
+TS tools             memory_create_note       memory_* + vault_search
+                     memory_search            registered by
+                     memory_read_note         @zoveli/memory-store;
+                     memory_list_tags         vault_graph by @zoveli/graph
+                     memory_update_note       (honors vaultPath).
+                     memory_delete_note
+                     vault_search
+                     vault_graph
                              |
 Callers              CLI /tools, web /api/tools, agent loop, REPL
 ```
@@ -47,9 +47,8 @@ Engines: Node `>=22.16.0` (FTS5 guarantee; verified on 24.21 / SQLite 3.53.4).
 ## Tool ownership
 
 The host dedupes tools by name with first registration winning, so plugins
-must not register the same name with *different behavior*. `memory_*` tools
-are registered here (and mirrored by `@zoveli/core` as identical
-delegates), `vault_search` in `@zoveli/search`, and `vault_graph` in
+must not register the same name with *different behavior*. The `memory_*`
+tools and `vault_search` are registered here; `vault_graph` is registered by
 `@zoveli/graph`. This package deliberately does not register `vault_graph`:
 it would shadow the graph plugin's `vaultPath`-aware implementation.
 

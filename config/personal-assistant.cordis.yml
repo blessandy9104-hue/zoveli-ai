@@ -94,18 +94,12 @@
       name: '@zoveli/sdk'
     - id: zoveli-math
       name: '@zoveli/math'
-    - id: zoveli-memory
-      name: '@zoveli/memory'
-    - id: zoveli-skills
-      name: '@zoveli/skills'
     - id: zoveli-languages
       name: '@zoveli/languages'
     - id: zoveli-capability
       name: '@zoveli/capability'
     - id: zoveli-event-logger
       name: '@zoveli/event-logger'
-    - id: zoveli-search
-      name: '@zoveli/search'
     - id: zoveli-otel
       name: '@zoveli/otel'
     - id: zoveli-code-analysis

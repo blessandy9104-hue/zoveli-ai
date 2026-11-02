@@ -77,11 +77,6 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - Uses the system clock and `Intl` time-zone data; no network requests
 - Enable with `ZOVELI_PLUGINS=zoveli-daily-brief pnpm start`
 
-## Legacy skills (unmounted)
-- `@zoveli/skills` still exports `daily-briefing`, `research`, `task-planning`,
-  and `code-review` placeholders for compatibility, but it is not in the
-  default plugin set and does not contribute live tools.
-
 ## Plugins
 - Default tools come from the default plugins; optional plugins mount only when
   named in `ZOVELI_PLUGINS=<plugin-name,...>` (see

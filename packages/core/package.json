@@ -1,7 +1,7 @@
 {
   "name": "@zoveli/core",
   "version": "0.1.2",
-  "description": "Legacy prompt and shared version exports for Zoveli AI",
+  "description": "System prompt and shared version exports for Zoveli AI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -30,8 +30,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-core": "workspace:*",
-    "@zoveli/math-intelligence": "workspace:*",
-    "@zoveli/memory-store": "workspace:*"
+    "@zoveli/math-intelligence": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.3.0",

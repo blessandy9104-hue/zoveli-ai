@@ -88,7 +88,8 @@ Content in Markdown...
 
 ## Implementation
 - `packages/memory-store/`: SQLite source of truth (`MemoryStore`, FTS5)
-- `packages/memory/` + `packages/core/src/memory-tools.ts`: tool definitions (delegating to the store)
+- `packages/memory-store/src/index.ts`: `memory_*` tool definitions and the
+  `memory`/`search` compatibility services
 - `knowledge-vault/`: export mirror with examples (plus one-time legacy import)
 - `config/*.cordis.yml`: Filesystem provider config
 

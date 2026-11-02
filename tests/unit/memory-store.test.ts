@@ -4,8 +4,6 @@ import { join } from 'node:path';
 import { rmSync, mkdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { MemoryStore, resetStoreForTests } from '../../packages/memory-store/src/store';
 import { zoveliMemoryStore } from '../../packages/memory-store/src/index';
-import { zoveliMemory } from '../../packages/memory/src/index';
-import { zoveliSearch } from '../../packages/search/src/index';
 import { zoveliGraph } from '../../packages/graph/src/index';
 import { ZoveliHost } from '../../packages/host/src/host';
 import { createMockContext } from '../setup';
@@ -147,20 +145,4 @@ describe('memory-store plugin contract (tool names preserved)', () => {
     expect(tools.some((t) => t.name === 'vault_graph')).toBe(false);
   });
 
-  it('legacy memory/search services delegate without registering tools', async () => {
-    process.env.ZOVELI_MEMORY_DB = ':memory:';
-    process.env.ZOVELI_MEMORY_EXPORT = '0';
-    resetStoreForTests();
-    const ctx = createMockContext();
-    zoveliMemory.setup(ctx);
-    zoveliSearch.setup(ctx as any);
-    zoveliGraph.setup(ctx);
-    expect(ctx.provide).toHaveBeenCalledWith('memory', expect.any(Object));
-    expect(ctx.provide).toHaveBeenCalledWith('search', expect.any(Object));
-    expect(ctx.provide).toHaveBeenCalledWith('graph', expect.any(Object));
-    // Tool ownership stays with memory-store/graph; wrappers are service-only.
-    expect(ctx.register).not.toHaveBeenCalledWith('search-tools', expect.anything());
-    resetStoreForTests();
-    delete process.env.ZOVELI_MEMORY_DB;
-  });
 });

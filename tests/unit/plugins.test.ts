@@ -23,7 +23,7 @@ describe('plugin contract: every built package loads and sets up', () => {
 
   it('discovers a healthy package set', () => {
     // Guard against the test silently covering nothing.
-    // 24 workspace packages ship; legacy packages remain loadable but unmounted.
+    // 22 workspace packages ship; every one must build a loadable entry.
     expect(entries.length).toBeGreaterThanOrEqual(20);
   });
 

@@ -17,7 +17,7 @@ are core (stable, semver-minded) vs experimental (opt-in, may change).
 ```
 User (CLI / Desktop)
   → zoveli host (minimal plugin context)
-    → zoveli plugins (25 packages; 26 mounted by default)
+    → zoveli plugins (22 packages; 26 mounted by default)
       → capabilities (live tool inventory → registry → adaptation)
       → tools (58 live by default; desktop adds 2 auth tools)
       → chat history (in-memory per session)
@@ -28,10 +28,10 @@ User (CLI / Desktop)
 
 | Area | Plugins |
 |------|---------|
-| Core | `core` (legacy prompt-only package), `host`, `shim-dsh-core` (authoring shim, not a runtime) |
+| Core | `core` (system prompt + version library, not mounted), `host`, `shim-dsh-core` (authoring shim, not a runtime) |
 | Math | `math-intelligence` (governor: verified compute + proof memory + rules), `math-domains` (algebra/calculus/statistics/logic/units/discrete/arithmetic/geometry/trigonometry/probability/linear/number specialists) |
-| Memory | `memory-store` (SQLite FTS5 + vault export mirror); legacy `memory` and `search` wrappers are unmounted |
-| Capabilities | `capability`, `languages`, `docgen`, `code-analysis`, `health`, `graph`, `scheduler`, `sysinfo`; legacy `skills` is unmounted |
+| Memory | `memory-store` (SQLite FTS5 + vault export mirror; owns the `memory`/`search` services and tools) |
+| Capabilities | `capability`, `languages`, `docgen`, `code-analysis`, `health`, `graph`, `scheduler`, `sysinfo` |
 | Safety | `secscan` by default; `guard` is opt-in for custom shell tools; `auth` is desktop-only and optional |
 | Interaction | `persona` (switchable friend/tutor/engineer/coach), `webresearch` (guarded fetch + search), `diagnostics` |
 | Daily brief | `daily-brief` is opt-in (`ZOVELI_PLUGINS=zoveli-daily-brief`); local date/time/greeting tool, no network |
@@ -39,8 +39,8 @@ User (CLI / Desktop)
 The host's `defaultPlugins` (26) are: math-intelligence, the 12 math
 specialists, memory-store, languages, sysinfo, scheduler, secscan, health,
 graph, docgen, code-analysis, capability, persona, webresearch and
-diagnostics. Legacy `core`, `memory`, `search` and `skills` packages remain in
-the workspace but are not mounted by default; `guard` is available through
+diagnostics. `core` remains a prompt/version library and is not mounted;
+`guard` is available through
 `ZOVELI_PLUGINS=zoveli-guard` for custom shell tools, and `daily-brief` through
 `ZOVELI_PLUGINS=zoveli-daily-brief` for local briefings.
 
