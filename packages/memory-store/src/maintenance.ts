@@ -2,14 +2,8 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import {
-  MemoryStore,
-  openDatabaseSync,
-  resolveDbPath,
-  resolveVaultPath,
-  SCHEMA_VERSION,
-  type ImportReport,
-} from './store.js';
+import { MemoryStore, resolveDbPath, resolveVaultPath, type ImportReport } from './store.js';
+import { openDatabaseSync, SCHEMA_VERSION } from './database.js';
 
 export const BACKUP_FORMAT = 'zoveli-backup';
 export const BACKUP_VERSION = 1;
