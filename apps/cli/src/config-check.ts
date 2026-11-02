@@ -2,6 +2,7 @@ import { configAuditReport } from '@zoveli/config-audit';
 import { chatConfigFromEnv } from '@zoveli/host/chat';
 import { resolveMathcoreCommand } from '@zoveli/math-intelligence';
 import { exportEnabled, resolveDbPath, resolveVaultPath } from '@zoveli/memory-store';
+import { parseFlags, type FlagDefinition } from './flags.js';
 
 interface ParsedFlags {
   json: boolean;
@@ -9,26 +10,11 @@ interface ParsedFlags {
   db?: string;
 }
 
-function parseFlags(argv: string[]): ParsedFlags {
-  const flags: ParsedFlags = { json: false, help: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--json') flags.json = true;
-    else if (arg === '--help' || arg === '-h') flags.help = true;
-    else if (arg.startsWith('--db=')) flags.db = arg.slice('--db='.length);
-    else if (arg === '--db') {
-      const value = argv[i + 1];
-      if (!value || value.startsWith('--')) throw new Error('--db requires a value');
-      flags.db = value;
-      i += 1;
-    } else if (arg.startsWith('-')) {
-      throw new Error(`unknown option: ${arg}`);
-    } else {
-      throw new Error(`unexpected argument: ${arg}`);
-    }
-  }
-  return flags;
-}
+const FLAGS = [
+  { key: 'json', tokens: ['--json'] },
+  { key: 'help', tokens: ['--help', '-h'] },
+  { key: 'db', tokens: ['--db'], takesValue: true },
+] as const satisfies readonly FlagDefinition<keyof ParsedFlags>[];
 
 function usage(): string {
   return `zoveli config drift check
@@ -56,7 +42,7 @@ function redactUrl(url: string): string {
 
 export async function runConfigCheck(argv: string[]): Promise<number> {
   try {
-    const flags = parseFlags(argv);
+    const flags = parseFlags<ParsedFlags>(argv, { json: false, help: false }, FLAGS);
     if (flags.help) {
       console.log(usage());
       return 0;

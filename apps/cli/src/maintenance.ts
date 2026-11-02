@@ -5,6 +5,7 @@ import {
   verifyBackup,
   type DataPaths,
 } from '@zoveli/memory-store';
+import { parseFlags, type FlagDefinition } from './flags.js';
 
 export const MAINTENANCE_COMMANDS = ['backup', 'verify', 'restore', 'migrate'] as const;
 export type MaintenanceCommand = (typeof MAINTENANCE_COMMANDS)[number];
@@ -14,7 +15,6 @@ export function isMaintenanceCommand(value: string | undefined): value is Mainte
 }
 
 interface ParsedFlags {
-  positional: string[];
   out?: string;
   db?: string;
   vault?: string;
@@ -25,35 +25,16 @@ interface ParsedFlags {
   help: boolean;
 }
 
-function parseFlags(argv: string[]): ParsedFlags {
-  const flags: ParsedFlags = { positional: [], force: false, json: false, help: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--force') flags.force = true;
-    else if (arg === '--json') flags.json = true;
-    else if (arg === '--help' || arg === '-h') flags.help = true;
-    else if (arg.startsWith('--out=')) flags.out = arg.slice('--out='.length);
-    else if (arg.startsWith('--db=')) flags.db = arg.slice('--db='.length);
-    else if (arg.startsWith('--vault=')) flags.vault = arg.slice('--vault='.length);
-    else if (arg.startsWith('--auth-dir=')) flags.authDir = arg.slice('--auth-dir='.length);
-    else if (arg.startsWith('--audit=')) flags.audit = arg.slice('--audit='.length);
-    else if (arg === '--out' || arg === '--db' || arg === '--vault' || arg === '--auth-dir' || arg === '--audit') {
-      const value = argv[i + 1];
-      if (!value || value.startsWith('--')) throw new Error(`${arg} requires a value`);
-      if (arg === '--out') flags.out = value;
-      else if (arg === '--db') flags.db = value;
-      else if (arg === '--vault') flags.vault = value;
-      else if (arg === '--auth-dir') flags.authDir = value;
-      else flags.audit = value;
-      i += 1;
-    } else if (arg.startsWith('-')) {
-      throw new Error(`unknown option: ${arg}`);
-    } else {
-      flags.positional.push(arg);
-    }
-  }
-  return flags;
-}
+const FLAGS = [
+  { key: 'force', tokens: ['--force'] },
+  { key: 'json', tokens: ['--json'] },
+  { key: 'help', tokens: ['--help', '-h'] },
+  { key: 'out', tokens: ['--out'], takesValue: true },
+  { key: 'db', tokens: ['--db'], takesValue: true },
+  { key: 'vault', tokens: ['--vault'], takesValue: true },
+  { key: 'authDir', tokens: ['--auth-dir'], takesValue: true },
+  { key: 'audit', tokens: ['--audit'], takesValue: true },
+] as const satisfies readonly FlagDefinition<keyof ParsedFlags>[];
 
 function pathOverrides(flags: ParsedFlags): Partial<DataPaths> {
   return {
@@ -79,7 +60,12 @@ export async function runMaintenanceCommand(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   try {
     if (!isMaintenanceCommand(command)) throw new Error(`unknown maintenance command: ${String(command)}`);
-    const flags = parseFlags(rest);
+    const flags = parseFlags<ParsedFlags>(
+      rest,
+      { force: false, json: false, help: false },
+      FLAGS,
+      { positional: true }
+    );
     if (flags.help) {
       console.log(usage());
       return 0;

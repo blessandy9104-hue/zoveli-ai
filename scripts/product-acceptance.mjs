@@ -16,6 +16,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from './lib/args.mjs';
+import { launcherInvocation } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const IS_WIN = process.platform === 'win32';
@@ -44,19 +46,20 @@ const CLEARED_ENV = [
   'MATHCORE_AUDIT',
 ];
 
-function parseArgs(argv) {
-  const options = { maxSeconds: 600, keep: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--archive') options.archive = resolve(argv[++i]);
-    else if (arg === '--dir') options.dir = resolve(argv[++i]);
-    else if (arg === '--report') options.report = resolve(argv[++i]);
-    else if (arg === '--max-seconds') options.maxSeconds = Number(argv[++i]);
-    else if (arg === '--keep') options.keep = true;
-    else if (arg === '--help') options.help = true;
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return options;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    defaults: { maxSeconds: 600, keep: false },
+    values: {
+      '--archive': { key: 'archive', parse: resolve },
+      '--dir': { key: 'dir', parse: resolve },
+      '--report': { key: 'report', parse: resolve },
+      '--max-seconds': { key: 'maxSeconds', parse: Number },
+    },
+    booleans: {
+      '--keep': 'keep',
+      '--help': 'help',
+    },
+  });
 }
 
 function findArchive() {
@@ -87,63 +90,27 @@ function run(command, args, options = {}) {
   return result.stdout;
 }
 
-function quoteArg(value) {
-  const text = String(value);
-  if (text.includes('\0') || /[\r\n%]/.test(text)) {
-    throw new Error('unsafe control character in argument');
-  }
-  if (!/[ \t"]/.test(text)) return text;
-  // Windows command-line quoting: double backslashes that precede a quote
-  // (including a trailing backslash), then escape the quote itself.
-  const escaped = text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
-  return `"${escaped}"`;
-}
-
-function safeExecutablePath(value) {
-  if (
-    typeof value !== 'string' ||
-    !value ||
-    value.includes('\0') ||
-    /["\r\n%]/.test(value)
-  ) {
-    throw new Error('unsafe executable path');
-  }
-  return value;
-}
-
 function runLauncher(launcher, args, env, options = {}) {
-  if (!IS_WIN) return run(launcher, args, { env, ...options });
-  const exe = safeExecutablePath(launcher);
-  const command = args.length
-    ? `""${exe}" ${args.map(quoteArg).join(' ')}"`
-    : `""${exe}""`;
-  return run(
-    'cmd.exe',
-    ['/d', '/s', '/c', command],
-    { windowsVerbatimArguments: true, env, ...options }
-  );
+  const invocation = launcherInvocation(launcher, args);
+  return run(invocation.command, invocation.args, {
+    ...(invocation.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+    env,
+    ...options,
+  });
 }
 
 function runLauncherAsync(launcher, args, env, options = {}) {
   const { input = '', timeout = 120000 } = options;
-  const command = IS_WIN ? 'cmd.exe' : launcher;
-  const commandArgs = IS_WIN
-    ? [
-        '/d',
-        '/s',
-        '/c',
-        args.length
-          ? `""${safeExecutablePath(launcher)}" ${args.map(quoteArg).join(' ')}"`
-          : `""${safeExecutablePath(launcher)}""`,
-      ]
-    : args;
+  const invocation = launcherInvocation(launcher, args);
+  const command = invocation.command;
+  const commandArgs = invocation.args;
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
     const child = spawn(command, commandArgs, {
       cwd: ROOT,
       env,
-      windowsVerbatimArguments: IS_WIN,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const timer = setTimeout(() => {
@@ -374,7 +341,7 @@ function tail(text, lines = 20) {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseOptions(process.argv.slice(2));
   if (options.help) {
     console.log(
       'usage: node scripts/product-acceptance.mjs [--archive FILE] [--dir INSTALL] [--report FILE] [--max-seconds N] [--keep]'

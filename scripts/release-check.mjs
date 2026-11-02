@@ -12,6 +12,7 @@
  * Node >= 22, zero dependencies.
  */
 import { execFileSync } from 'node:child_process';
+import { parseArgs } from './lib/args.mjs';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -178,21 +179,22 @@ export function releaseCheck(root = DEFAULT_ROOT, options = {}) {
   };
 }
 
-function parseArgs(argv) {
-  const options = { release: false, tag: false, json: false, allowDirty: false };
-  for (const arg of argv) {
-    if (arg === '--release') options.release = true;
-    else if (arg === '--tag') options.tag = true;
-    else if (arg === '--json') options.json = true;
-    else if (arg === '--allow-dirty') options.allowDirty = true;
-    else if (arg === '--help' || arg === '-h') options.help = true;
-    else throw new Error(`unknown option "${arg}" (try --release, --tag, --json, --allow-dirty)`);
-  }
-  return options;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    defaults: { release: false, tag: false, json: false, allowDirty: false },
+    booleans: {
+      '--release': 'release',
+      '--tag': 'tag',
+      '--json': 'json',
+      '--allow-dirty': 'allowDirty',
+      '--help': 'help',
+      '-h': 'help',
+    },
+  });
 }
 
 export function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
-  const options = parseArgs(argv);
+  const options = parseOptions(argv);
   if (options.help) {
     console.log(`Usage: pnpm release:check [--release] [--tag] [--json] [--allow-dirty]
 

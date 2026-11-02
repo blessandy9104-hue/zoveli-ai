@@ -15,6 +15,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { parseArgs } from './lib/args.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -24,22 +25,19 @@ function platformSlug(platform = process.platform) {
   return 'linux';
 }
 
-function parseArgs(argv) {
-  const options = {
-    out: join(ROOT, 'release'),
-    node: process.execPath,
-    archive: true,
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === '--out') options.out = resolve(argv[++i]);
-    else if (arg === '--node') options.node = resolve(argv[++i]);
-    else if (arg === '--mathcore') options.mathcore = resolve(argv[++i]);
-    else if (arg === '--no-archive') options.archive = false;
-    else if (arg === '--help') options.help = true;
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return options;
+function parseOptions(argv) {
+  return parseArgs(argv, {
+    defaults: { out: join(ROOT, 'release'), node: process.execPath, archive: true },
+    values: {
+      '--out': { key: 'out', parse: resolve },
+      '--node': { key: 'node', parse: resolve },
+      '--mathcore': { key: 'mathcore', parse: resolve },
+    },
+    booleans: {
+      '--no-archive': ['archive', false],
+      '--help': 'help',
+    },
+  });
 }
 
 function run(command, args, options = {}) {
@@ -124,7 +122,7 @@ function archive(target, outRoot, baseName) {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseOptions(process.argv.slice(2));
   if (options.help) {
     console.log(
       'usage: node scripts/build-runtime.mjs [--out DIR] [--node PATH] [--mathcore DIR] [--no-archive]'
