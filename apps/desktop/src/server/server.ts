@@ -69,6 +69,9 @@ const LENIS_BUNDLE = loadVendorLenis();
 const authLimiter = new RateLimiter(30, 60_000);
 const apiLimiter = new RateLimiter(120, 60_000);
 
+// The login page is deterministic for the process lifetime; build it once.
+let loginPageCache: string | null = null;
+
 // Test-mode escape hatch: the e2e suite runs 5 browser projects against
 // one server, which would legitimately trip per-IP budgets (auth PROVEN to
 // 429 the last project on CI). DEV_ECHO already marks test mode — it echoes
@@ -92,6 +95,15 @@ function json(res: http.ServerResponse, status: number, body: unknown): void {
     'Content-Length': String(Buffer.byteLength(text)),
   }));
   res.end(text);
+}
+
+/** Shared 429 response so every rate-limited route stays identical. */
+function rateLimited(res: http.ServerResponse): void {
+  res.writeHead(429, withSecurityHeaders({
+    'Content-Type': 'application/json; charset=utf-8',
+    'Retry-After': '60',
+  }));
+  res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
 }
 
 /** Map request-parse failures to fixed, client-safe text (no exception text). */
@@ -379,6 +391,8 @@ async function main(): Promise<void> {
     },
     math: { ready: mathReady },
   });
+  // Onboarding is fixed at startup, so the whole home page is static too.
+  const homePage = pageHTML(onboarding);
   const baseSystem = [
     'You are Zoveli, a personal helper that shows its work in math and remembers what matters to you.',
     'For any arithmetic, algebra, calculus, linear algebra, number theory, logic, statistics or unit conversion: do not compute in your head. Call the mathcore tools and state only verified values. If a result is WITHHELD, say so; never guess.',
@@ -423,15 +437,14 @@ async function main(): Promise<void> {
         }
       }
       if (req.method === 'GET' && url.pathname === '/') {
-        const text = pageHTML(onboarding);
         res.writeHead(200, withSecurityHeaders({
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': String(Buffer.byteLength(text)),
+          'Content-Length': String(Buffer.byteLength(homePage)),
         }));
-        res.end(text);
+        res.end(homePage);
         return;
       }
-const LOGIN_PAGE = `<!doctype html>
+const LOGIN_PAGE = (loginPageCache ??= `<!doctype html>
 <html lang="en" data-theme="daylight" data-testid="app-root">
 <head>
 <meta charset="utf-8" />
@@ -549,7 +562,7 @@ ${themeSwitcherHTML()}
 <script src="/vendor/lenis.min.js" defer></script>
 ${themeBootScript(unicornProjectId())}
 </body>
-</html>`;
+</html>`);
 
       if (req.method === 'GET' && url.pathname === '/health') {
         json(res, 200, { ok: true, tools: host.tools().length });
@@ -611,11 +624,7 @@ ${themeBootScript(unicornProjectId())}
           return;
         }
         if (rateLimitsEnabled() && !apiLimiter.allow(`run:${clientIp(req)}`)) {
-          res.writeHead(429, withSecurityHeaders({
-            'Content-Type': 'application/json; charset=utf-8',
-            'Retry-After': '60',
-          }));
-          res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
+          rateLimited(res);
           return;
         }
         if (!host.tools().some((t) => t.name === tool)) {
@@ -644,11 +653,7 @@ ${themeBootScript(unicornProjectId())}
           return;
         }
         if (rateLimitsEnabled() && !apiLimiter.allow(`chat:${clientIp(req)}`)) {
-          res.writeHead(429, withSecurityHeaders({
-            'Content-Type': 'application/json; charset=utf-8',
-            'Retry-After': '60',
-          }));
-          res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
+          rateLimited(res);
           return;
         }
         // Offline fast path: verified math without any model.
@@ -711,11 +716,7 @@ ${themeBootScript(unicornProjectId())}
           return;
         }
         if (rateLimitsEnabled() && !authLimiter.allow(`auth:${clientIp(req)}`)) {
-          res.writeHead(429, withSecurityHeaders({
-            'Content-Type': 'application/json; charset=utf-8',
-            'Retry-After': '60',
-          }));
-          res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
+          rateLimited(res);
           return;
         }
         try {
@@ -747,11 +748,7 @@ ${themeBootScript(unicornProjectId())}
           return;
         }
         if (rateLimitsEnabled() && !authLimiter.allow(`auth:${clientIp(req)}`)) {
-          res.writeHead(429, withSecurityHeaders({
-            'Content-Type': 'application/json; charset=utf-8',
-            'Retry-After': '60',
-          }));
-          res.end(JSON.stringify({ ok: false, error: 'rate limited' }));
+          rateLimited(res);
           return;
         }
         const verdict = verifyCode(email, String(body?.code ?? ''));

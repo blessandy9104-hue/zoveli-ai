@@ -22,8 +22,6 @@
   },
   "devDependencies": {
     "tsdown": "^0.3.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
-    "oxlint": "catalog:"
+    "typescript": "catalog:"
   }
 }
