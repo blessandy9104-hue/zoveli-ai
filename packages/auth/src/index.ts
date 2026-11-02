@@ -64,5 +64,5 @@ export const zoveliAuth = definePlugin({
 
 export default zoveliAuth;
 export { issueCode, verifyCode, normalizeEmail } from './otp.js';
-export { mintSession, verifySession, sessionEmailFromCookie, sessionCookie, clearSessionCookie, COOKIE_NAME } from './session.js';
+export { mintSession, verifySession, sessionTokenFromCookie, sessionEmailFromCookie, sessionCookie, clearSessionCookie, COOKIE_NAME } from './session.js';
 export { deliverCode } from './deliver.js';

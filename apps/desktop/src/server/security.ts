@@ -24,20 +24,37 @@ export function withSecurityHeaders(extra: Record<string, string> = {}): Record<
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '::ffff:127.0.0.1']);
 
+/** Extract a hostname from a Host header, tolerating IPv6 brackets and ports. */
+function hostnameFromHostHeader(hostHeader: string): string {
+  const value = hostHeader.trim().toLowerCase();
+  if (value.startsWith('[')) {
+    const end = value.indexOf(']');
+    return end > 0 ? value.slice(1, end) : value;
+  }
+  return value.split(':')[0];
+}
+
 /** Extra allowed Hosts from `ZOVELI_ALLOWED_HOSTS` (comma-separated, no port). */
 export function extraAllowedHosts(): string[] {
   return (process.env.ZOVELI_ALLOWED_HOSTS || '')
     .split(',')
-    .map((h) => h.trim().toLowerCase())
+    .map((h) => hostnameFromHostHeader(h))
     .filter(Boolean);
 }
 
 /** Reject DNS-rebinding and LAN Host headers; allow loopback + configured. */
 export function isHostAllowed(hostHeader: string | undefined): boolean {
   if (!hostHeader) return false;
-  const host = hostHeader.split(':')[0].trim().toLowerCase().replace(/^\[(.*)\]$/, '$1');
+  const host = hostnameFromHostHeader(hostHeader);
   if (LOOPBACK_HOSTS.has(host)) return true;
   return extraAllowedHosts().includes(host);
+}
+
+/** Build an HTTP origin, bracketing IPv6 literals so `new URL` accepts it. */
+export function originForHost(host: string, port: number): string {
+  const value = host.trim();
+  const hostname = value.includes(':') && !value.startsWith('[') ? `[${value}]` : value;
+  return `http://${hostname}:${port}`;
 }
 
 /** Sliding-window per-key rate limiter (in-memory, single process). */

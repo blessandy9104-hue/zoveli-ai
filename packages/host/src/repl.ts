@@ -1,6 +1,6 @@
 import * as readline from 'node:readline';
 import type { ZoveliHost } from './host.js';
-import { configuredOllamaModel, resolveChatConfig, chat } from './chat.js';
+import { configuredOllamaModel, resolveChatConfig, chat, type ChatMessage } from './chat.js';
 import { mathcore } from '@zoveli/core/mathcore-mcp';
 import { mathcoreCommandAvailable } from '@zoveli/math-intelligence';
 import { promptSectionsText } from '@zoveli/core';
@@ -166,7 +166,7 @@ export async function runRepl(host: ZoveliHost, agent: { systemSections: string[
   process.once('SIGINT', exitOnSignal);
   process.once('SIGTERM', exitOnSignal);
 
-  let history: any[] = [];
+  let history: ChatMessage[] = [];
 
   const handleLine = async (raw: string): Promise<boolean> => {
     const text = raw.trim();

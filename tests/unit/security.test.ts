@@ -14,6 +14,7 @@ import { join } from 'path';
 import { zoveliPrompt, promptSectionsText } from '../../packages/core/src/system-prompt';
 import {
   isHostAllowed,
+  originForHost,
   RateLimiter,
   bearerAuthorized,
   apiRequestAuthorized,
@@ -155,8 +156,18 @@ describe('web hardening helpers', () => {
   it('allows loopback hosts, rejects the rest', () => {
     expect(isHostAllowed('localhost:3080')).toBe(true);
     expect(isHostAllowed('127.0.0.1:3080')).toBe(true);
+    expect(isHostAllowed('[::1]:3080')).toBe(true);
+    expect(isHostAllowed('[::1]')).toBe(true);
+    expect(isHostAllowed('[::ffff:127.0.0.1]:3080')).toBe(true);
     expect(isHostAllowed('evil.example.com')).toBe(false);
     expect(isHostAllowed(undefined)).toBe(false);
+  });
+
+  it('builds a parseable origin for IPv4 and IPv6 hosts', () => {
+    expect(originForHost('127.0.0.1', 3080)).toBe('http://127.0.0.1:3080');
+    expect(originForHost('::1', 3080)).toBe('http://[::1]:3080');
+    expect(originForHost('[::1]', 3080)).toBe('http://[::1]:3080');
+    expect(new URL(originForHost('::1', 3080)).hostname).toBe('[::1]');
   });
 
   it('rate limiter allows bursts then blocks, recovers after window', () => {

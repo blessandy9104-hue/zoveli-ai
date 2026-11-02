@@ -20,6 +20,8 @@ the new section **before** running `pnpm release:check --release`.
 - CLI subcommands and the runtime/release scripts now share one argument
   parser, and packaged-runtime checks share one Windows launcher helper, so
   flag handling and quoting no longer drift between commands.
+- Desktop HTML pages now live in `pages.ts` and the HTTP request pipeline in
+  `routes.ts`, leaving `server.ts` responsible only for boot and shutdown.
 
 ### Removed
 
@@ -31,6 +33,15 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- Desktop chat history is now keyed by the validated session or bearer
+  credential instead of one process-wide array, so separate users cannot see
+  each other's conversation context. Retained history is capped at 40 messages
+  per conversation and 200 conversations per process.
+- Session history keys now hash only the validated session token, so unrelated
+  cookies or cookie reordering cannot reset or churn a conversation.
+- Desktop Host validation and origin construction now accept bracketed IPv6
+  loopback hosts such as `[::1]` instead of rejecting them or failing URL
+  parsing.
 - `.gitignore` and `pnpm clean` now cover the Vitest HTML reporter's
   `favicon.ico`, so running the test UI no longer leaves an untracked file at
   the repository root.
