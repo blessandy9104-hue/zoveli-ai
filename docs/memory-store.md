@@ -26,7 +26,7 @@ TS tools             memory_create_note       memory_* + vault_search
 Callers              CLI /tools, web /api/tools, agent loop, REPL
 ```
 
-## Schema (do not duplicate — lives in `packages/memory-store/src/store.ts`)
+## Schema (do not duplicate — lives in `packages/memory-store/src/database.ts`)
 
 - `notes(title TEXT PK, body TEXT, created TEXT, updated TEXT)` + implicit `rowid`
 - `notes_fts(title, body)` with `tokenize='porter'`; `rowid` mapped manually
@@ -34,8 +34,11 @@ Callers              CLI /tools, web /api/tools, agent loop, REPL
 - `tags(note_title, tag)` + `idx_tags_tag`; `links(from_title, to_title)` +
   `idx_links_to` (`to_title` dangling by design, like `[[missing]]`)
 - `PRAGMA user_version = 1` (schema version). Migrations live in `MIGRATIONS`
-  and run inside one transaction on open; a database from a newer schema is
-  refused instead of being silently downgraded.
+  in `database.ts` and run inside one transaction on open; a database from a
+  newer schema is refused instead of being silently downgraded.
+
+`store.ts` owns the `MemoryStore` class and search helpers; the Markdown
+frontmatter codec lives in `markdown.ts`.
 
 ## Environment
 

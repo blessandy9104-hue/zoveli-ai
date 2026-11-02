@@ -22,6 +22,9 @@ the new section **before** running `pnpm release:check --release`.
   flag handling and quoting no longer drift between commands.
 - Desktop HTML pages now live in `pages.ts` and the HTTP request pipeline in
   `routes.ts`, leaving `server.ts` responsible only for boot and shutdown.
+- The memory store's SQLite schema/loader and Markdown codec now live in
+  `database.ts` and `markdown.ts`, leaving `store.ts` focused on the
+  `MemoryStore` class and search helpers.
 
 ### Removed
 
