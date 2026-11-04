@@ -20,9 +20,9 @@ Zoveli is already differentiated by a stronger trust model: verified math, expli
 
 ### Multi-surface product architecture
 
-- Keep the CLI as the primary experience, but allow TUI, desktop, and web/dashboard surfaces to sit on top of the same local runtime.
-- Use a clear gateway/control-plane or runtime orchestration model for sessions, tools, and device-aware capabilities.
-- Keep each user-facing surface as a portal to the same verified core instead of a separate product identity.
+- Focus on the Desktop app as the primary interface; keep the CLI as a supported automation/headless surface.
+- Treat the browser/web UI as experimental and other clients as community-supported, with the support tiers documented in [interfaces.md](interfaces.md).
+- Use one local runtime for sessions, tools, and device-aware capabilities so every surface shares the same verified core instead of becoming a separate product identity.
 
 ### Device-aware assistant capabilities
 

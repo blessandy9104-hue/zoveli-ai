@@ -9,8 +9,41 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Added
+
+- **Model portability:** `ZOVELI_OLLAMA_MODEL` selects any local Ollama model
+  (0.8B through 70B), and `ZOVELI_MODEL` remains the global override. The
+  installer accepts `--model` / `-Model`, and
+  [docs/guides/models.md](docs/guides/models.md) documents presets and hardware
+  guidance.
+- **Optional Cloud Brain:** native Anthropic Messages API support alongside the
+  existing OpenAI-compatible providers. `ZOVELI_PROVIDER` pins one provider
+  explicitly; unknown values fail at startup, and `ZOVELI_PROVIDER=ollama`
+  forces the local server. `ZOVELI_MAX_TOKENS` sets the Anthropic budget.
+- **Pluggable claim verifiers:** `mathcore.audit_claim()` now runs registered
+  non-math verifiers before verified math. Built-ins parse fenced Python with
+  `ast.parse` (never executing it) and look up exact questions in a local
+  trusted-knowledge JSONL file. `MATHCORE_VERIFIERS` selects the chain,
+  `MATHCORE_TRUSTED_KB` sets the knowledge file, and `list_verifiers` exposes
+  the surface over MCP.
+- **Public Trust & Transparency page:** [docs/TRUST.md](docs/TRUST.md) and
+  `website/trust.html` document what stays local, what a cloud provider sees,
+  the hash-chained audit log, vault handling, and honest limits.
+- **Interface tiers:** [docs/interfaces.md](docs/interfaces.md) names Desktop as
+  the primary interface, CLI as the supported automation surface, the browser UI
+  as experimental, and other clients as community-supported.
+
 ### Changed
 
+- Python math specialists now load lazily through `ops_catalog.py`; importing
+  `mathcore` no longer imports every `ops_*` module, and the first operation
+  loads only its own domain.
+- The README and installers lead with one-command installation, model selection,
+  and Desktop-first run instructions. Docker Compose passes through
+  `ZOVELI_PROVIDER`, `ZOVELI_OLLAMA_MODEL`, Anthropic/OpenAI/Groq keys, and
+  verifier settings.
+- The website navigation now links Trust & Transparency from every page, and the
+  install/features pages describe the same support tiers.
 - Recorded GitHub Pages as the canonical website host and declined
   host-specific analytics scripts in
   [ADR 007](docs/adr/007-website-hosting.md).

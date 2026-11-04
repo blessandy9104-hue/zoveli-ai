@@ -10,20 +10,29 @@
 </head>
 <body>
 <header>
-  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
   <h1>Download &amp; launch Zoveli AI</h1>
   <p class="tagline">Own hardware. Ten minutes. No account needed to start.</p>
 </header>
 
 <section>
-  <h2>0. Portable install (recommended)</h2>
-  <p>No Git, Node, Python, pnpm, or compiler is required. The archive bundles its own runtime and verified-math backend; the installer verifies SHA-256 before extracting.</p>
-  <pre><code># macOS / Linux
+  <h2>0. One command (recommended)</h2>
+  <p><strong>No toolchain?</strong> Use the portable runtime: no Git, Node, Python, pnpm, or compiler is required. The archive bundles its own runtime and verified-math backend; the installer verifies SHA-256 before extracting.</p>
+  <pre><code># macOS / Linux — portable runtime
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.sh | bash
 
-# Windows PowerShell
+# Windows PowerShell — portable runtime
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli-runtime.ps1 | iex</code></pre>
+  <p><strong>Have a toolchain?</strong> The source installer clones, builds, and configures everything in one step. Pick a local model with <code>--model</code> (default <code>qwen3:4b</code>):</p>
+  <pre><code># macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.sh \
+  | bash -s -- --model qwen3:8b
+
+# Windows PowerShell
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.ps1 | iex
+# from a checkout: .\install\install-zoveli.ps1 -Model qwen3:8b</code></pre>
   <p>Then run the printed <code>zoveli</code> (or <code>zoveli.cmd</code>) path. Re-running the installer stages and preflights the new runtime, creates a verified backup, and rolls back automatically if the upgrade fails. After install, <code>zoveli health</code> reports readiness and <code>zoveli recovery-check</code> proves backup/restore in an isolated temporary vault without touching your real data. CI builds Linux, Windows, and macOS archives and runs a clean-install acceptance test on each; see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/runbooks/product-acceptance.md">acceptance runbook</a>.</p>
+  <p>Optional Cloud Brain: set <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GROQ_API_KEY</code>, or any OpenAI-compatible key. Pin one with <code>ZOVELI_PROVIDER</code>. Verified math and the audit log always stay local — see <a href="trust.html">Trust &amp; Transparency</a>.</p>
 </section>
 
 <section>
@@ -75,8 +84,8 @@ pnpm start</code></pre>
 
 <section>
   <h2>4. Launch it</h2>
-  <pre><code>pnpm start            # CLI — local tools work offline
-pnpm run desktop      # Electron shell (dev mode)</code></pre>
+  <pre><code>pnpm run desktop      # Desktop app — primary interface
+pnpm start            # CLI — supported automation surface</code></pre>
   <p>In the CLI, try: <code>/math solve x^2 - 5x + 6 = 0</code> · <code>/remember My spare key is in the blue drawer</code> · <code>/recall blue drawer</code> · <code>/sys</code> · <code>/tools</code> · <code>/help</code></p>
   <p>For free offline chat with no keys, install <a href="https://ollama.com">Ollama</a> and run <code>ollama pull qwen3:4b</code> — Zoveli detects it automatically. Or set any API key (<code>OPENAI_API_KEY</code>, <code>DEEPSEEK_API_KEY</code>, …) for cloud models. No key needed for any local tool.</p>
 </section>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zoveli AI trust &amp; transparency</title>
+<meta name="description" content="Zoveli AI trust and transparency: what stays local, what a cloud model sees, how the math audit chain works, and how your vault is stored." />
+<link rel="stylesheet" href="style.css" />
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+</head>
+<body>
+<header>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <h1>Trust &amp; Transparency</h1>
+  <p class="tagline">Check the machine's work instead of trusting a summary.</p>
+</header>
+
+<section>
+  <h2>The short version</h2>
+  <table>
+    <tr><th>Verified math</th><td><strong>Local always.</strong> Independent methods must agree, or the answer is withheld.</td></tr>
+    <tr><th>Audit records</th><td><strong>Local always.</strong> Hash-chained JSONL on your disk; edits are detectable.</td></tr>
+    <tr><th>Memory and notes</th><td><strong>Local always.</strong> SQLite database plus a Markdown mirror you can read anywhere.</td></tr>
+    <tr><th>Telemetry</th><td><strong>None.</strong> Zoveli does not send usage analytics.</td></tr>
+    <tr><th>Cloud chat</th><td><strong>Opt-in.</strong> If you set a provider key, the chat text you send goes to that provider.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>What can leave your machine</h2>
+  <table>
+    <tr><th>Action</th><th>Data</th><th>Destination</th></tr>
+    <tr><td>Chat with a cloud provider</td><td>Prompt, history, and tool results for the turn</td><td>The provider you configured</td></tr>
+    <tr><td>Web research tool</td><td>The URL or query you request</td><td>The target site (SSRF-guarded)</td></tr>
+    <tr><td>Local Ollama chat</td><td>Nothing</td><td>Stays on your machine</td></tr>
+    <tr><td>Verified math</td><td>Nothing</td><td>Local <code>mathcore</code> process</td></tr>
+  </table>
+  <p>Zoveli never sends the math audit log, the SQLite memory database, or the Markdown vault to a model provider. The memory brief is added to chat only for a local model by default; a cloud provider gets it only when you set <code>ZOVELI_MEMORY_TO_CLOUD=1</code>.</p>
+  <p>Provider keys are read from the environment and are not written into the vault. Your provider's retention and training policies still apply to the chat text you send it.</p>
+</section>
+
+<section>
+  <h2>Audit logs you can inspect</h2>
+  <p>Every verified, withheld, or mismatched computation can append to <code>MATHCORE_AUDIT</code> (default <code>~/.mathcore/audit.jsonl</code>). Each record links to the previous one with a hash.</p>
+  <pre><code># Show recent certificate entries
+mathcore verify-log --audit ~/.mathcore/audit.jsonl
+
+# Check a claim; the verdict is appended to the same log
+mathcore check "evaluate 6*7" "41"
+
+# JSON for scripts and dashboards
+mathcore --json "evaluate 6*7"</code></pre>
+  <p><code>pnpm health:check</code> summarizes config, vault, and MCP state. <code>/trace</code> in the CLI and the desktop status panel show recent tool calls.</p>
+</section>
+
+<section>
+  <h2>Claim verification is pluggable</h2>
+  <p><code>audit_claim()</code> checks a proposed answer before Zoveli repeats it. Built-in verifiers run in order, then verified math is the fallback:</p>
+  <ul>
+    <li><strong>code</strong> — parses fenced Python with <code>ast.parse</code>; it never executes the code.</li>
+    <li><strong>knowledge</strong> — exact-question lookup in a local JSONL file with <code>question</code>, <code>answer</code>, and optional <code>source</code> fields.</li>
+    <li><strong>math</strong> — independent recomputation with a sealed certificate.</li>
+  </ul>
+  <p>Third parties can register a verifier with <code>mathcore.register_verifier()</code>. Verifier failures are reported as <code>UNVERIFIABLE</code>, never silently skipped, and every verdict records which verifier decided it.</p>
+</section>
+
+<section>
+  <h2>Your vault, your files</h2>
+  <ul>
+    <li><strong>Memory database:</strong> <code>~/.zoveli/memory.db</code> (override with <code>ZOVELI_MEMORY_DB</code>).</li>
+    <li><strong>Markdown vault:</strong> <code>./knowledge-vault</code> (override with <code>ZOVELI_VAULT_PATH</code>).</li>
+    <li><strong>Audit log:</strong> <code>~/.mathcore/audit.jsonl</code> (override with <code>MATHCORE_AUDIT</code>).</li>
+  </ul>
+  <p>Backups include a SHA-256 manifest and can be verified offline:</p>
+  <pre><code>pnpm vault:backup -- --out ./backups/2026-11-03
+pnpm vault:verify -- ./backups/2026-11-03
+pnpm vault:restore -- ./backups/2026-11-03 --force</code></pre>
+  <p>Deleting your data is local and immediate: stop Zoveli, then remove the paths above. Backups you created elsewhere are not touched.</p>
+</section>
+
+<section>
+  <h2>Honest limits</h2>
+  <ul>
+    <li>A cloud provider sees the chat content you send. Use local Ollama if that is not acceptable.</li>
+    <li>Web research makes network requests to the sites you name.</li>
+    <li>The audit chain detects edits; it is not a remote notarization service.</li>
+    <li>The <code>code</code> verifier checks syntax only — not behavior or security.</li>
+    <li>The <code>knowledge</code> verifier trusts the JSONL file you give it. Curate it.</li>
+  </ul>
+  <p>Read the full data-handling and recovery details in <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/TRUST.md">docs/TRUST.md</a>. For vulnerability reports, see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/SECURITY.md">security policy</a>.</p>
+</section>
+
+<footer>
+  <p><a href="index.html">← Back to Zoveli AI home</a></p>
+</footer>
+<script src="https://unpkg.com/lenis@1.3.26/dist/lenis.min.js" defer></script>
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  if (window.Lenis) { try { new window.Lenis({ autoRaf: true }); } catch (e) {} }
+});
+</script>
+</body>
+</html>

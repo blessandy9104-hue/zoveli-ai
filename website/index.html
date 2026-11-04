@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
   <h1>Zoveli AI</h1>
   <p class="tagline">The assistant that proves its math, runs on your hardware, and never trains on your data.</p>
   <p>
@@ -72,11 +72,17 @@ VERIFIED  solve x^2 - 5x + 6 = 0 for x
 
 <section>
   <h2>Run it on your hardware in minutes</h2>
-  <pre><code>git clone https://github.com/blessandy9104-hue/zoveli-ai.git
+  <pre><code># macOS / Linux — one command, pick any local model
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.sh \
+  | bash -s -- --model qwen3:8b
+
+# Or from a source checkout
+git clone https://github.com/blessandy9104-hue/zoveli-ai.git
 cd zoveli-ai
 pnpm install &amp;&amp; pnpm run build
-pnpm start   # CLI — local tools work offline
-pnpm run desktop # Desktop shell (Electron, dev mode)</code></pre>
+pnpm run desktop   # primary app
+pnpm start         # CLI automation surface</code></pre>
+  <p>Free local chat needs no key: <code>ollama pull qwen3:4b</code>. Prefer a cloud model? Set any provider key — verified math and the audit log stay local. <a href="trust.html">See what leaves your machine →</a></p>
   <p><a href="install.html">Full installation guides for Windows, macOS, and Linux →</a></p>
 </section>
 

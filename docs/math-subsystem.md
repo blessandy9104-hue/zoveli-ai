@@ -8,7 +8,12 @@ chat model — ever.
 Python engine        mathcore/                  sympy/mpmath/numpy/scipy/
                      (pip install -e ./mathcore) networkx/z3/pint + quorum
                             |
-stdio JSON-RPC       `mathcore-mcp` binary      tools/call compute|check_answer
+                     ops_catalog.py            declares 34 operations;
+                                                specialist ops_* modules load
+                                                on first use, not at startup
+                            |
+stdio JSON-RPC       `mathcore-mcp` binary      tools/call compute|check_answer|
+                                                list_operations|list_verifiers
                             |
 TS transport         @zoveli/math-intelligence  MathcoreClient (persistent
                      src/transport.ts           child; transports, never computes)
@@ -91,6 +96,26 @@ All in `packages/math-intelligence/src/`:
   unrecognized input. To add a future op: extend `DOMAIN_OPERATIONS` plus a
   plugin entry, nothing else changes.
 
+## Claim verifiers (`verifiers.py`)
+
+`OutputGuard.audit_claim` runs pluggable verifiers before falling back to
+verified math. A verifier returns `None` when it does not apply, or a
+`ClaimVerdict` with a `verifier` field naming the deciding component:
+
+- **`code`** — extracts fenced Python blocks and calls `ast.parse`; it never
+  executes the code. The claim must say the code is valid or invalid.
+- **`knowledge`** — exact-question lookup in a local JSONL file
+  (`MATHCORE_TRUSTED_KB`, default `~/.mathcore/trusted-knowledge.jsonl`) with
+  `question`, `answer`, and optional `source` fields.
+
+`MATHCORE_VERIFIERS=code,knowledge` restricts the chain and `off` disables
+plugins. Third parties register with `register_verifier(ClaimVerifier(...))`;
+duplicate names raise unless `replace=True`. A verifier that raises, or an
+unknown configured name, produces `UNVERIFIABLE` instead of being skipped, so a
+broken plugin cannot silently change the trust decision. `Orchestrator.check`
+records the deciding verifier in the audit log, and the MCP server exposes
+`list_verifiers`.
+
 ## Semantic recall (`semantic.ts`)
 
 `math_recall_semantic`: keyword prefilter over the domain namespace, then
@@ -103,6 +128,8 @@ deterministic keyword overlap (`mode: 'keyword'`). Never throws, never hangs
 
 `MATHCORE_MCP_COMMAND` (full path, or a command line with args; checked
 before `.venv`/PATH), `MATHCORE_AUDIT` (audit path),
+`MATHCORE_TRUSTED_KB` (trusted-knowledge JSONL for the `knowledge` verifier),
+`MATHCORE_VERIFIERS` (comma-separated verifier chain; `off` disables plugins),
 `MATHCORE_TIMEOUT_MS` (per-request timeout, default 120000),
 `ZOVELI_MATH_MEMORIZE=0` disables proof auto-memorize,
 `ZOVELI_OLLAMA_URL` is unrelated (chat models, see `docs/guides/cli.md`).
@@ -126,7 +153,12 @@ before `.venv`/PATH), `MATHCORE_AUDIT` (audit path),
 
 ## Tests
 
-- Python: `python -m pytest mathcore/tests/test_known_answers.py mathcore/tests/test_cli.py -q`
+- Python: `python -m pytest mathcore/tests/test_known_answers.py mathcore/tests/test_cli.py mathcore/tests/test_lazy_ops.py mathcore/tests/test_claim_verifiers.py -q`
+- Lazy loading: `test_lazy_ops.py` proves importing `mathcore` loads no
+  specialist module, the first operation loads only its own module, and the
+  catalog still lists every operation without importing heavy dependencies.
+- Verifiers: `test_claim_verifiers.py` covers code/trusted-knowledge verdicts,
+  custom registration, configuration errors, and verifier logging.
 - Resolver: `tests/unit/mathcore-resolve.test.ts` (override > venv > PATH >
   fallback; existing paths with spaces vs command lines with args)
 - TS unity: `tests/unit/math-intelligence.test.ts` → "one AI math intelligence

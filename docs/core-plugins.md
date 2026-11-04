@@ -1,20 +1,24 @@
 # Core vs experimental packages
 
-The core product is the **offline CLI assistant** — verified math, local
-memory, and local tools (see the product scope in the
-[README](../README.md) and [architecture](architecture.md)). This file
-declares which packages carry that promise and which are free to evolve.
+The **core runtime** is verified math, local memory, and local tools. The
+**Desktop app** is the primary interface over that runtime; the CLI remains
+supported for automation and headless use. The browser/web UI is experimental
+and other surfaces are community-supported. See the product scope in the
+[README](../README.md), [interface tiers](interfaces.md), and
+[architecture](architecture.md). This file declares which packages carry the
+core promise and which are free to evolve.
 
 ## Core (stable)
 
-Everything the default boot path needs: `apps/cli` → `@zoveli/host`
-(`defaultPlugins`, REPL, chat) and its direct providers:
+Everything the default boot path needs: `apps/desktop` and `apps/cli` →
+`@zoveli/host` (`defaultPlugins`, REPL, chat) and its direct providers:
 
 `host`, `math-intelligence`, `math-domains`, `memory-store`, `languages`,
 `sysinfo`, `scheduler`, `secscan`, `health`, `graph`, `docgen`,
 `code-analysis`, `capability`, `persona`, `webresearch`,
 `diagnostics`, `auth` (desktop only), `shim-dsh-core` (authoring shim),
-`apps/cli`. `guard` is optional and only useful with a custom `shell_exec`.
+`apps/cli`, `apps/desktop`. `guard` is optional and only useful with a custom
+`shell_exec`.
 
 The former `memory`, `search`, and `skills` wrappers were removed because
 `memory-store` owns those services and tools.
