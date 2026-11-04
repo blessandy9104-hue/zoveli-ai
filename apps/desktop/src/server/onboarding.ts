@@ -1,3 +1,5 @@
+import { DEFAULT_OLLAMA_MODEL } from '@zoveli/host';
+
 export interface OnboardingState {
   chat: {
     ready: boolean;
@@ -15,7 +17,7 @@ export interface OnboardingMarkup {
   panel: string;
 }
 
-const DEFAULT_CHAT_MODEL = 'qwen3:4b';
+const DEFAULT_CHAT_MODEL = DEFAULT_OLLAMA_MODEL;
 
 /** Plain-text setup reply for a chat attempt before a model is configured. */
 export function chatSetupReply(requestedModel?: string | null): string {

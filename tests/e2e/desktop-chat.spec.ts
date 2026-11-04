@@ -106,13 +106,16 @@ function baseEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const key of [
     'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
     'DEEPSEEK_API_KEY',
     'OPENROUTER_API_KEY',
     'GROQ_API_KEY',
     'TOGETHER_API_KEY',
     'ZOVELI_API_KEY',
     'ZOVELI_API_BASE',
+    'ZOVELI_PROVIDER',
     'ZOVELI_MODEL',
+    'ZOVELI_MAX_TOKENS',
     'ZOVELI_OLLAMA_MODEL',
     'ZOVELI_OLLAMA_URL',
     'ZOVELI_AUTH_REQUIRED',

@@ -127,15 +127,17 @@ describe('ZoveliHost tool trace', () => {
 
 describe('chatConfigFromEnv', () => {
   it('returns null without a key and config with one', () => {
-    const prev = process.env.DEEPSEEK_API_KEY;
-    delete process.env.DEEPSEEK_API_KEY;
-    expect(chatConfigFromEnv()).toBeNull();
-    process.env.DEEPSEEK_API_KEY = 'test-key';
-    const cfg = chatConfigFromEnv();
-    expect(cfg?.model).toBe('deepseek-chat');
-    expect(cfg?.baseUrl).toBe('https://api.deepseek.com');
-    if (prev === undefined) delete process.env.DEEPSEEK_API_KEY;
-    else process.env.DEEPSEEK_API_KEY = prev;
+    const snap = snapshotChatEnv();
+    try {
+      clearChatEnv();
+      expect(chatConfigFromEnv()).toBeNull();
+      process.env.DEEPSEEK_API_KEY = 'test-key';
+      const cfg = chatConfigFromEnv();
+      expect(cfg?.model).toBe('deepseek-chat');
+      expect(cfg?.baseUrl).toBe('https://api.deepseek.com');
+    } finally {
+      restoreChatEnv(snap);
+    }
   });
 });
 
@@ -143,9 +145,12 @@ const CHAT_KEYS = [
   'ZOVELI_API_KEY',
   'ZOVELI_API_BASE',
   'ZOVELI_MODEL',
+  'ZOVELI_PROVIDER',
+  'ZOVELI_MAX_TOKENS',
   'ZOVELI_OLLAMA_URL',
   'ZOVELI_OLLAMA_MODEL',
   'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
   'DEEPSEEK_API_KEY',
   'OPENROUTER_API_KEY',
   'GROQ_API_KEY',
