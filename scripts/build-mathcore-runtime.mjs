@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from './lib/args.mjs';
+import { runSync } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -25,18 +26,6 @@ function platformSlug(platform = process.platform) {
   if (platform === 'win32') return 'windows';
   if (platform === 'darwin') return 'macos';
   return 'linux';
-}
-
-function run(command, args, env) {
-  const result = spawnSync(command, args, {
-    cwd: ROOT,
-    env,
-    stdio: 'inherit',
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} exited with code ${result.status}`);
-  }
 }
 
 function main() {
@@ -80,7 +69,7 @@ function main() {
   );
 
   try {
-    run(
+    runSync(
       options.python,
       [
         '-m',
@@ -102,7 +91,7 @@ function main() {
         workDir,
         entry,
       ],
-      env
+      { cwd: ROOT, env, stdio: 'inherit', errorDetail: 'none' }
     );
 
     const binary = join(

@@ -20,6 +20,12 @@ the new section **before** running `pnpm release:check --release`.
 - CLI subcommands and the runtime/release scripts now share one argument
   parser, and packaged-runtime checks share one Windows launcher helper, so
   flag handling and quoting no longer drift between commands.
+- Runtime, smoke, and acceptance scripts now share one synchronous command
+  runner with explicit failure-detail modes, so exit-code handling and
+  diagnostics no longer drift between release steps.
+- The plugin scaffolder's generated package, source, README, and test content
+  now lives in `scripts/lib/plugin-templates.mjs`, leaving `create-plugin.mjs`
+  focused on validation, generation, and mounting.
 - Desktop HTML pages now live in `pages.ts` and the HTTP request pipeline in
   `routes.ts`, leaving `server.ts` responsible only for boot and shutdown.
 - The memory store's SQLite schema/loader and Markdown codec now live in
@@ -51,6 +57,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Security
 
+- Windows launcher arguments containing `cmd.exe` metacharacters (`&`, `|`,
+  `<`, `>`, `^`, parentheses) are now quoted, so runtime and acceptance checks
+  cannot split or redirect a launcher command.
 - Bumped the pinned Vite override to 6.4.5 to clear a newly disclosed medium
   advisory affecting 6.4.4. Vite is a development-only dependency and is not
   included in the runtime archives.

@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from './lib/args.mjs';
-import { launcherInvocation } from './lib/process.mjs';
+import { launcherInvocation, runSync } from './lib/process.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const IS_WIN = process.platform === 'win32';
@@ -74,20 +74,12 @@ function findArchive() {
 }
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  return runSync(command, args, {
     cwd: ROOT,
-    encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
+    errorDetail: 'sections',
     ...options,
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${command} ${args.join(' ')} exited with code ${result.status}\n` +
-        `--- stdout ---\n${result.stdout || ''}\n--- stderr ---\n${result.stderr || ''}`
-    );
-  }
-  return result.stdout;
 }
 
 function runLauncher(launcher, args, env, options = {}) {
