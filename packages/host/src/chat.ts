@@ -1,4 +1,6 @@
 import type { ZoveliHost } from './host.js';
+import { postAnthropicTurn, type ChatTurn } from './anthropic.js';
+import { trimTrailingSlashes } from './url.js';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -32,6 +34,7 @@ interface ProviderDef {
 
 const PROVIDERS: ProviderDef[] = [
   { id: 'openai', envKey: 'OPENAI_API_KEY', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { id: 'anthropic', envKey: 'ANTHROPIC_API_KEY', baseUrl: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-5' },
   { id: 'deepseek', envKey: 'DEEPSEEK_API_KEY', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
   { id: 'openrouter', envKey: 'OPENROUTER_API_KEY', baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini' },
   { id: 'groq', envKey: 'GROQ_API_KEY', baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
@@ -40,39 +43,102 @@ const PROVIDERS: ProviderDef[] = [
 
 export const CHAT_PROVIDER_ENV_KEYS: readonly string[] = PROVIDERS.map((p) => p.envKey);
 
+/** Provider ids accepted by `ZOVELI_PROVIDER` (plus Ollama, which is probed). */
+export const CHAT_PROVIDER_IDS: readonly string[] = [
+  'custom',
+  'ollama',
+  ...PROVIDERS.map((p) => p.id),
+];
+
 function stripCompletionsSuffix(url: string): string {
   return url.replace(/\/chat\/completions\/?$/, '');
 }
 
+function configFor(
+  provider: string,
+  apiKey: string,
+  baseUrl: string,
+  model: string
+): ChatConfig {
+  return {
+    apiKey,
+    baseUrl: stripCompletionsSuffix(baseUrl),
+    model,
+    provider,
+    maxSteps: 10,
+  };
+}
+
+/**
+ * Resolve an API-backed chat configuration. Precedence:
+ *
+ * 1. `ZOVELI_PROVIDER` picks one provider explicitly (only its key is used).
+ * 2. `ZOVELI_API_KEY` is the generic OpenAI-compatible key.
+ * 3. The first provider key present wins.
+ *
+ * `ZOVELI_PROVIDER=ollama` returns null so `resolveChatConfig()` probes the
+ * local server. `ZOVELI_MODEL` overrides the model for every provider;
+ * `ZOVELI_OLLAMA_MODEL` is the Ollama-only fallback.
+ */
 export function chatConfigFromEnv(): ChatConfig | null {
   const overrideBase = process.env.ZOVELI_API_BASE || '';
   const overrideModel = process.env.ZOVELI_MODEL || '';
+  const requested = (process.env.ZOVELI_PROVIDER || '').trim().toLowerCase();
+
+  if (requested === 'ollama') return null;
+
+  if (requested === 'custom') {
+    const genericKey = process.env.ZOVELI_API_KEY || '';
+    if (!genericKey) return null;
+    return configFor(
+      'custom',
+      genericKey,
+      overrideBase || 'https://api.openai.com/v1',
+      overrideModel || 'gpt-4o-mini'
+    );
+  }
+
+  if (requested) {
+    const provider = PROVIDERS.find((p) => p.id === requested);
+    if (!provider) {
+      throw new Error(
+        `unknown ZOVELI_PROVIDER "${requested}" (expected one of: ${CHAT_PROVIDER_IDS.join(', ')})`
+      );
+    }
+    const key = process.env[provider.envKey] || '';
+    if (!key) return null;
+    return configFor(
+      provider.id,
+      key,
+      overrideBase || provider.baseUrl,
+      overrideModel || provider.model
+    );
+  }
+
   const genericKey = process.env.ZOVELI_API_KEY || '';
   if (genericKey) {
-    return {
-      apiKey: genericKey,
-      baseUrl: stripCompletionsSuffix(overrideBase) || 'https://api.openai.com/v1',
-      model: overrideModel || 'gpt-4o-mini',
-      provider: 'custom',
-      maxSteps: 10,
-    };
+    return configFor(
+      'custom',
+      genericKey,
+      overrideBase || 'https://api.openai.com/v1',
+      overrideModel || 'gpt-4o-mini'
+    );
   }
-  for (const p of PROVIDERS) {
-    const key = process.env[p.envKey] || '';
+  for (const provider of PROVIDERS) {
+    const key = process.env[provider.envKey] || '';
     if (!key) continue;
-    return {
-      apiKey: key,
-      baseUrl: stripCompletionsSuffix(overrideBase) || p.baseUrl,
-      model: overrideModel || p.model,
-      provider: p.id,
-      maxSteps: 10,
-    };
+    return configFor(
+      provider.id,
+      key,
+      overrideBase || provider.baseUrl,
+      overrideModel || provider.model
+    );
   }
   return null;
 }
 
 export function ollamaBaseUrl(): string {
-  return (process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
+  return trimTrailingSlashes(process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434');
 }
 
 export function configuredOllamaModel(): string {
@@ -117,7 +183,13 @@ export async function probeOllama(timeoutMs = 2000, retries = 1): Promise<ChatCo
 }
 
 export async function resolveChatConfig(): Promise<ChatConfig | null> {
-  return chatConfigFromEnv() ?? (await probeOllama());
+  const cfg = chatConfigFromEnv();
+  if (cfg) return cfg;
+  // An explicit provider pin is a promise to the user: do not silently probe
+  // Ollama when the pinned provider has no key (only `ollama` should probe).
+  const requested = (process.env.ZOVELI_PROVIDER || '').trim().toLowerCase();
+  if (requested && requested !== 'ollama') return null;
+  return probeOllama();
 }
 
 function toFunctionTool(t: { name: string; description?: string; parameters?: unknown }) {
@@ -210,6 +282,43 @@ export async function buildMemoryBrief(store?: BriefStore): Promise<string> {
   }
 }
 
+async function postOpenAiTurn(
+  cfg: ChatConfig,
+  messages: ChatMessage[],
+  tools: ReturnType<typeof toFunctionTool>[],
+  temperature: number,
+  timeoutMs: number,
+  smallLocalModel: boolean
+): Promise<ChatTurn> {
+  const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
+    signal: AbortSignal.timeout(timeoutMs),
+    body: JSON.stringify({
+      model: cfg.model,
+      messages,
+      tools: tools.length > 0 ? tools : undefined,
+      temperature,
+      ...(smallLocalModel ? { max_tokens: 128, think: false } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    if (res.status === 404 && /localhost:11434|127\.0\.0\.1:11434|ollama/i.test(cfg.baseUrl)) {
+      throw new Error(
+        `chat API error 404: model '${cfg.model}' is not pulled into your local Ollama. ` +
+          `Run: ollama pull ${cfg.model} (start the server first with: ollama serve). ` +
+          `Server said: ${body.slice(0, 200)}`
+      );
+    }
+    throw new Error(`chat API error ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data: any = await res.json();
+  const choice = data.choices?.[0]?.message;
+  if (!choice) throw new Error('chat API returned no choices');
+  return { content: choice.content ?? null, tool_calls: choice.tool_calls };
+}
+
 export async function chat(
   host: ZoveliHost,
   cfg: ChatConfig,
@@ -251,44 +360,21 @@ export async function chat(
 
   for (let step = 0; step < steps; step++) {
     const postChat = () =>
-      fetch(`${cfg.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
-        signal: AbortSignal.timeout(timeoutMs),
-        body: JSON.stringify({
-          model: cfg.model,
-          messages,
-          tools: tools.length > 0 ? tools : undefined,
-          temperature,
-          ...(smallLocalModel ? { max_tokens: 128, think: false } : {}),
-        }),
-      });
-    let res: Response;
+      cfg.provider === 'anthropic'
+        ? postAnthropicTurn(cfg, messages, tools, temperature, timeoutMs)
+        : postOpenAiTurn(cfg, messages, tools, temperature, timeoutMs, smallLocalModel);
+    let choice: ChatTurn;
     try {
-      res = await postChat();
+      choice = await postChat();
     } catch (e) {
       if (isTimeoutError(e)) throw timeoutError(cfg.baseUrl, timeoutMs);
       try {
-        res = await postChat();
+        choice = await postChat();
       } catch (retryError) {
         if (isTimeoutError(retryError)) throw timeoutError(cfg.baseUrl, timeoutMs);
         throw retryError;
       }
     }
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      if (res.status === 404 && /localhost:11434|127\.0\.0\.1:11434|ollama/i.test(cfg.baseUrl)) {
-        throw new Error(
-          `chat API error 404: model '${cfg.model}' is not pulled into your local Ollama. ` +
-            `Run: ollama pull ${cfg.model} (start the server first with: ollama serve). ` +
-            `Server said: ${body.slice(0, 200)}`
-        );
-      }
-      throw new Error(`chat API error ${res.status}: ${body.slice(0, 300)}`);
-    }
-    const data: any = await res.json();
-    const choice = data.choices?.[0]?.message;
-    if (!choice) throw new Error('chat API returned no choices');
     messages.push({ role: 'assistant', content: choice.content ?? null, tool_calls: choice.tool_calls });
     const calls = choice.tool_calls ?? [];
     if (calls.length === 0) {

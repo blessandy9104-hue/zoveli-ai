@@ -18,16 +18,18 @@ import time
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import mpmath as mp
 import sympy as sp
 
-from . import ops_algebra, ops_arithmetic, ops_calculus, ops_data, ops_geometry, ops_integer, ops_linear, ops_logic, ops_probability, ops_trig  # noqa: F401  (register ops)
+from . import ops_catalog  # noqa: F401  (declares lazy specialist modules)
+from .claims import ClaimVerdict
 from .command import Authorization, Command, authorize, parse
 from .framework import ERROR, PARTIAL, REGISTRY, REJECTED, VERIFIED, Certificate, compute
 from .numeric import close, to_mp
 from .safe_expr import ParseError, to_sympy
+from .verifiers import enabled_verifiers, get_verifier
 
 
 # --------------------------------------------------------------------------- audit log
@@ -156,14 +158,6 @@ class Blocked(Exception):
     """Raised when something unverified would reach a consumer."""
 
 
-@dataclass
-class ClaimVerdict:
-    verdict: str  # MATCH | MISMATCH | UNVERIFIABLE | UNCOMPARABLE
-    verified_answer: Optional[str]
-    detail: str
-    certificate_digest: str = ""
-
-
 class OutputGuard:
     """The only component allowed to produce text for a person or an AI."""
 
@@ -222,7 +216,42 @@ class OutputGuard:
         return re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", "", s)[:2000]
 
     # ---- auditing an answer that someone else (for example an AI) proposed
-    def audit_claim(self, coordinator: Coordinator, question: str, claimed: str) -> ClaimVerdict:
+    def audit_claim(
+        self,
+        coordinator: Coordinator,
+        question: str,
+        claimed: str,
+        verifiers: Optional[Sequence[Any]] = None,
+    ) -> ClaimVerdict:
+        """Run configured non-math verifiers, then fall back to verified math.
+
+        A verifier returns ``None`` when it does not apply. A verifier that
+        raises fails the audit as ``UNVERIFIABLE`` instead of being skipped,
+        so a broken plugin cannot silently change the trust decision.
+        """
+        try:
+            selected = (
+                enabled_verifiers()
+                if verifiers is None
+                else [get_verifier(v) if isinstance(v, str) else v for v in verifiers]
+            )
+        except ValueError as exc:
+            return ClaimVerdict("UNVERIFIABLE", None, str(exc), verifier="config")
+        for verifier in selected:
+            try:
+                result = verifier.verify(question, claimed, coordinator=coordinator)
+            except Exception as exc:  # a plugin must never take the audit down
+                return ClaimVerdict(
+                    "UNVERIFIABLE",
+                    None,
+                    f"verifier {verifier.name} failed: {type(exc).__name__}: {exc}",
+                    verifier=verifier.name,
+                )
+            if result is not None:
+                return result
+        return self._audit_math(coordinator, question, claimed)
+
+    def _audit_math(self, coordinator: Coordinator, question: str, claimed: str) -> ClaimVerdict:
         try:
             report = coordinator.run(question)
         except ParseError as exc:
@@ -372,10 +401,13 @@ class Orchestrator:
         except ParseError as exc:
             return f"WITHHELD  {text.strip()[:200]}\n    I could not understand this as a mathematical request: {exc}"
 
-    def check(self, question: str, claimed: str) -> ClaimVerdict:
-        verdict = self.guard.audit_claim(self.coordinator, question, claimed)
+    def check(
+        self, question: str, claimed: str, verifiers: Optional[Sequence[Any]] = None
+    ) -> ClaimVerdict:
+        verdict = self.guard.audit_claim(self.coordinator, question, claimed, verifiers)
         self.audit.append({"kind": "claim", "question": question[:500], "claimed": claimed[:500],
-                           "verdict": verdict.verdict, "certificate": verdict.certificate_digest})
+                           "verdict": verdict.verdict, "verifier": verdict.verifier,
+                           "certificate": verdict.certificate_digest})
         return verdict
 
     def for_ai(self, text: str) -> Dict[str, Any]:

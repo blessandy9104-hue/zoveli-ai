@@ -146,27 +146,31 @@ None of these need an account, API key, or network connection.
 
 ## 5. Enable chat (optional)
 
-Resolution order is: any API key, then a free local Ollama server, then
-tools-only offline mode. Zoveli prefers `qwen3:4b` when it is installed and
-otherwise uses another installed chat model; set `ZOVELI_MODEL` to pin one.
-If the pinned model is not installed, or Ollama has no chat models, the banner
-and desktop setup panel keep chat off and print the exact pull command instead
-of failing on the first message.
+Resolution order is: `ZOVELI_PROVIDER` if pinned, then `ZOVELI_API_KEY`
+(custom OpenAI-compatible endpoint), then the first provider key present, then
+a free local Ollama server, then tools-only offline mode. Zoveli prefers
+`qwen3:4b` when it is installed and otherwise uses another installed chat
+model; set `ZOVELI_OLLAMA_MODEL` to pin a local model (or `ZOVELI_MODEL` to
+override any provider). If the pinned model is not installed, or Ollama has no
+chat models, the banner and desktop setup panel keep chat off and print the
+exact pull command instead of failing on the first message.
 
 **Free and local (recommended):**
 
 1. Install Ollama from <https://ollama.com>.
-2. Run `ollama pull qwen3:4b`.
+2. Run `ollama pull qwen3:4b` (or any preset from
+   [models.md](models.md), such as `qwen3:8b`).
 3. Restart Zoveli (`pnpm start`). The banner should say
    `Local Ollama detected`.
 
-**Any OpenAI-compatible key:**
+**Any OpenAI-compatible key, or native Anthropic:**
 
 ```bash
 OPENAI_API_KEY=sk-... pnpm start
+ANTHROPIC_API_KEY=sk-ant-... pnpm start
 # also: DEEPSEEK_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY,
 #       TOGETHER_API_KEY, or ZOVELI_API_KEY for a custom endpoint
-ZOVELI_MODEL=gpt-4o-mini pnpm start
+ZOVELI_PROVIDER=groq ZOVELI_MODEL=llama-3.3-70b-versatile pnpm start
 ZOVELI_API_BASE=https://my-proxy/v1 ZOVELI_API_KEY=... pnpm start
 ```
 

@@ -21,10 +21,20 @@ services:
     environment:
       # The Ollama container is attached to the same Compose network.
       - ZOVELI_OLLAMA_URL=http://ollama:11434
-      - ZOVELI_OLLAMA_MODEL=qwen3.5:0.8b
+      - ZOVELI_OLLAMA_MODEL=${ZOVELI_OLLAMA_MODEL:-qwen3:4b}
       - ZOVELI_CHAT_TIMEOUT_MS=600000
       - ZOVELI_VAULT_PATH=/app/data/vault
       - MATHCORE_AUDIT=/app/data/audit/audit.jsonl
+      - MATHCORE_VERIFIERS=${MATHCORE_VERIFIERS:-}
+      - MATHCORE_TRUSTED_KB=${MATHCORE_TRUSTED_KB:-}
+      - ZOVELI_PROVIDER=${ZOVELI_PROVIDER:-}
+      - ZOVELI_MODEL=${ZOVELI_MODEL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY:-}
       # Clear the obsolete variable present in the published runtime image.
       - ZOVELI_SESSION_PATH=
     profiles:

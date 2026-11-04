@@ -51,6 +51,12 @@ export const ENV_REGISTRY: EnvSpec[] = [
     description: 'OpenAI provider key',
   },
   {
+    name: 'ANTHROPIC_API_KEY',
+    group: 'Chat',
+    kind: 'secret',
+    description: 'Anthropic provider key (native Messages API)',
+  },
+  {
     name: 'DEEPSEEK_API_KEY',
     group: 'Chat',
     kind: 'secret',
@@ -82,11 +88,29 @@ export const ENV_REGISTRY: EnvSpec[] = [
     default: 'provider default (https://api.openai.com/v1 for custom keys)',
   },
   {
+    name: 'ZOVELI_PROVIDER',
+    group: 'Chat',
+    kind: 'enum',
+    values: ['custom', 'ollama', 'openai', 'anthropic', 'deepseek', 'openrouter', 'groq', 'together'],
+    description: 'pin one chat provider instead of using the first key present',
+    default: 'first configured key, else local Ollama',
+  },
+  {
     name: 'ZOVELI_MODEL',
     group: 'Chat',
     kind: 'string',
-    description: 'model name override',
+    description: 'model name override for cloud or Ollama',
     default: 'provider default (qwen3:4b for Ollama)',
+  },
+  {
+    name: 'ZOVELI_MAX_TOKENS',
+    group: 'Chat',
+    kind: 'number',
+    parse: 'int',
+    min: 256,
+    max: 8192,
+    description: 'Anthropic response token budget (clamped)',
+    default: '4096',
   },
   {
     name: 'ZOVELI_OLLAMA_URL',
@@ -99,7 +123,7 @@ export const ENV_REGISTRY: EnvSpec[] = [
     name: 'ZOVELI_OLLAMA_MODEL',
     group: 'Chat',
     kind: 'string',
-    description: 'Ollama model to chat with',
+    description: 'Ollama-only model; ZOVELI_MODEL wins when both are set',
     default: 'qwen3:4b',
   },
   {
@@ -185,6 +209,20 @@ export const ENV_REGISTRY: EnvSpec[] = [
     kind: 'path-file',
     description: 'hash-chained math audit certificate log',
     default: '~/.mathcore/audit.jsonl',
+  },
+  {
+    name: 'MATHCORE_TRUSTED_KB',
+    group: 'Math',
+    kind: 'path-file',
+    description: 'JSONL trusted-knowledge file used by the claim auditor (question, answer, source)',
+    default: '~/.mathcore/trusted-knowledge.jsonl',
+  },
+  {
+    name: 'MATHCORE_VERIFIERS',
+    group: 'Math',
+    kind: 'string',
+    description: 'comma-separated claim verifiers to run before verified math (code, knowledge; off disables)',
+    default: 'all built-in verifiers',
   },
   {
     name: 'ZOVELI_MATH_MEMORIZE',

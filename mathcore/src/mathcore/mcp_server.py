@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 from .framework import REGISTRY
 from .orchestrator import Orchestrator
+from .verifiers import list_verifiers
 
 PROTOCOL = "2024-11-05"
 TOOLS = [
@@ -21,9 +22,12 @@ TOOLS = [
      "'derivative of x^3*sin(x)', 'integrate x^2 from 0 to 3', 'determinant of [[1,2],[3,4]]', 'is 1000003 prime', 'prove x^2 >= 0'.",
      "inputSchema": {"type": "object", "properties": {"request": {"type": "string"}}, "required": ["request"]}},
     {"name": "check_answer", "description": "Recompute a question independently and say whether a proposed answer is correct. "
+     "Math uses verified computation; code and trusted-knowledge verifiers can also be configured. "
      "Use this before stating any numeric or symbolic result.",
      "inputSchema": {"type": "object", "properties": {"question": {"type": "string"}, "claimed_answer": {"type": "string"}},
                      "required": ["question", "claimed_answer"]}},
+    {"name": "list_verifiers", "description": "List the claim verifiers available to check_answer (math is always the fallback).",
+     "inputSchema": {"type": "object", "properties": {}}},
     {"name": "list_operations", "description": "List supported operations.", "inputSchema": {"type": "object", "properties": {}}},
 ]
 
@@ -56,6 +60,8 @@ def handle(orch: Orchestrator, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             if name == "check_answer":
                 v = orch.check(str(a["question"]), str(a["claimed_answer"]))
                 return text(json.dumps(vars(v), indent=2), error=v.verdict == "MISMATCH")
+            if name == "list_verifiers":
+                return text(json.dumps(list_verifiers(), indent=2))
             if name == "list_operations":
                 return text(json.dumps(REGISTRY.describe(), indent=2))
         except KeyError as exc:

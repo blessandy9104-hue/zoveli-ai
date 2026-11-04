@@ -49,7 +49,9 @@ and `pnpm release:check` (maintainers).
   or type a bare expression like `2+2`. Solved proofs are memorized; the governor routes
 to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Audit an answer:** `/check integrate x^2 from 0 to 3 ;; the answer is 9`
-  → `MATCH` (wrong answers get `MISMATCH`, never a silent guess)
+  → `MATCH` (wrong answers get `MISMATCH`, never a silent guess). The auditor
+  runs configured non-math verifiers first (`code` syntax, trusted `knowledge`
+  lookup), then verified math. See [math-subsystem](../math-subsystem.md#claim-verifiers-verifierspy).
 - **Remember and recall:** `/remember <fact>` saves a local note; `/recall <query>` searches it back. Both work offline with no model configured.
 - **Host facts:** `/sys` → OS/CPU/RAM/disk/GPU snapshot
 - **MCP pool:** `/mcp` → mathcore pid, spawns, restarts, pending calls, last error (`mathcore_status` does the same from chat)
@@ -62,7 +64,9 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
 
 ## Chat models (your preference, zero cost possible)
 
-Resolution order: any API key → free local Ollama → tools-only offline.
+Resolution order: `ZOVELI_PROVIDER` if pinned → `ZOVELI_API_KEY` (custom
+OpenAI-compatible endpoint) → the first provider key present → free local
+Ollama → tools-only offline.
 
 ```bash
 # Option A — free and local, no keys, no cost:
@@ -70,12 +74,33 @@ Resolution order: any API key → free local Ollama → tools-only offline.
 ollama pull qwen3:4b
 pnpm start   # auto-detects Ollama, chat just works
 
-# Option B — any API key (OpenAI-compatible providers):
+# Pick a larger local model:
+ZOVELI_OLLAMA_MODEL=qwen3:8b pnpm start
+
+# Option B — a provider key (OpenAI-compatible, plus native Anthropic):
 OPENAI_API_KEY=sk-... pnpm start        # or DEEPSEEK_API_KEY,
 # OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, ZOVELI_API_KEY
+ANTHROPIC_API_KEY=sk-ant-... pnpm start # native Messages API
 ZOVELI_MODEL=gpt-4o-mini pnpm start     # pick any model name
 ZOVELI_API_BASE=https://my-proxy/v1 ZOVELI_API_KEY=... pnpm start  # custom endpoint
 
+# Several keys installed? Pin one explicitly:
+ZOVELI_PROVIDER=anthropic ANTHROPIC_API_KEY=sk-ant-... pnpm start
+ZOVELI_PROVIDER=groq ZOVELI_MODEL=llama-3.3-70b-versatile pnpm start
+```
+
+Accepted `ZOVELI_PROVIDER` values are `custom`, `ollama`, `openai`,
+`anthropic`, `deepseek`, `openrouter`, `groq`, and `together`. Unknown values
+fail at startup instead of silently choosing another key;
+`ZOVELI_PROVIDER=ollama` forces the local server. `ZOVELI_MODEL` overrides the
+model for any provider and wins over `ZOVELI_OLLAMA_MODEL`.
+`ZOVELI_MAX_TOKENS` sets the Anthropic reply budget (256–8192, default 4096).
+
+Local presets from 0.8B to 70B, Cloud Brain details, and what still stays local:
+[models.md](models.md). Trust boundary and audit records:
+[../TRUST.md](../TRUST.md).
+
+```bash
 # Docker: ollama runs as a sibling service, already wired:
 docker compose -f docker/docker-compose.yml --profile local-llm up -d ollama
 docker exec zoveli-ollama ollama pull qwen3:4b

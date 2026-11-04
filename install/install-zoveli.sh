@@ -42,6 +42,7 @@ ASSUME_YES=false
 SKIP_UPDATE=false
 TARGET_DIR="$DEFAULT_DIR"
 BRANCH="${ZOVELI_BRANCH:-$DEFAULT_BRANCH}"
+MODEL="${ZOVELI_OLLAMA_MODEL:-}"
 
 print_message() {
   local level=$1
@@ -63,6 +64,7 @@ Options:
   -y, --yes            Non-interactive: assume yes for prompts (incl. sudo prereq installs)
       --dir <path>     Install directory (default: $DEFAULT_DIR)
       --branch <name>  Git branch to clone (default: $DEFAULT_BRANCH, or \$ZOVELI_BRANCH)
+      --model <tag>    Ollama model to recommend after install (default: qwen3:4b)
       --skip-update    Reuse an existing checkout without fetching or switching branches
   -h, --help           Display this help message
 Examples:
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
     -y|--yes) ASSUME_YES=true; shift ;;
     --dir) TARGET_DIR="${2:?--dir requires a path}"; shift 2 ;;
     --branch) BRANCH="${2:?--branch requires a name}"; shift 2 ;;
+    --model) MODEL="${2:?--model requires an Ollama tag}"; shift 2 ;;
     --skip-update) SKIP_UPDATE=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) print_message error "Unknown option: $1 (see --help)"; exit 1 ;;
@@ -244,15 +247,30 @@ cat <<EOF
 Run it:
   cd $TARGET_DIR && source .venv/bin/activate
   pnpm run doctor       # confirm Node/pnpm/python/mathcore/Ollama
-  pnpm start            # CLI assistant (works fully offline, Windows/macOS/Linux)
-  pnpm run desktop      # Electron desktop shell (dev mode)
+  pnpm run desktop      # Electron desktop app (primary interface)
+  pnpm start            # CLI assistant (offline automation and scripting)
 
 Docker:
   docker compose -f docker/docker-compose.yml --profile cli up --build
 
 Try in the CLI: /math solve x^2 - 5x + 6 = 0  ·  /sys  ·  /tools  ·  /help
-Free offline chat (no keys): install Ollama (https://ollama.com), run 'ollama pull qwen3:4b'.
-Or set any API key: OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY.
+Free offline chat (no keys): install Ollama (https://ollama.com), then pull a model.
+EOF
+if [ -n "$MODEL" ]; then
+  cat <<EOF
+Selected local model: $MODEL
+  export ZOVELI_OLLAMA_MODEL="$MODEL"
+  ollama pull "$MODEL"
+EOF
+else
+  cat <<EOF
+Default local model: qwen3:4b (swap with --model qwen3:8b or ZOVELI_OLLAMA_MODEL=...)
+EOF
+fi
+cat <<EOF
+Cloud Brain (optional): set ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, or any
+OpenAI-compatible key. Pin one with ZOVELI_PROVIDER=anthropic|openai|groq|...
+Verified math and the audit log always stay local.
 EOF
 
 if [ -n "${GITHUB_ACTIONS:-}" ] && [ "${GITHUB_ACTIONS}" = "true" ] && [ -n "${GITHUB_PATH:-}" ]; then

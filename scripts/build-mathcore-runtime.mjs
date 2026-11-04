@@ -54,6 +54,27 @@ function main() {
     );
   }
 
+  // Specialist modules are imported dynamically from the catalog, so PyInstaller
+  // cannot discover them by scanning imports. Bundle every declared module or
+  // the frozen binary fails with ModuleNotFoundError on the first operation.
+  const catalog = spawnSync(
+    options.python,
+    [
+      '-c',
+      'from mathcore.ops_catalog import OPS_MODULES; print("\\n".join(sorted(OPS_MODULES)))',
+    ],
+    { cwd: ROOT, encoding: 'utf8', env }
+  );
+  if (catalog.status !== 0) {
+    throw new Error(
+      `could not read the mathcore operation catalog with ${options.python}: ${catalog.stderr || catalog.stdout}`
+    );
+  }
+  const opsModules = catalog.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   const slug = platformSlug();
   const outDir = join(options.out, `mathcore-${slug}-${process.arch}`);
   const workDir = join(ROOT, '.tmp', `mathcore-build-${process.pid}`);
@@ -81,6 +102,7 @@ function main() {
         'mathcore-mcp',
         '--collect-all',
         'z3',
+        ...opsModules.flatMap((module) => ['--hidden-import', `mathcore.${module}`]),
         '--paths',
         join(ROOT, 'mathcore', 'src'),
         '--distpath',
