@@ -1,4 +1,5 @@
 import type { ChatConfig, ChatMessage } from './chat.js';
+import { trimTrailingSlashes } from './url.js';
 
 /**
  * Native Anthropic Messages API adapter.
@@ -163,7 +164,7 @@ export async function postAnthropicTurn(
   if (system) body.system = system;
   if (tools.length > 0) body.tools = anthropicTools(tools);
 
-  const res = await fetch(`${cfg.baseUrl.replace(/\/+$/, '')}/messages`, {
+  const res = await fetch(`${trimTrailingSlashes(cfg.baseUrl)}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

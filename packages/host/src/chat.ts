@@ -1,5 +1,6 @@
 import type { ZoveliHost } from './host.js';
 import { postAnthropicTurn, type ChatTurn } from './anthropic.js';
+import { trimTrailingSlashes } from './url.js';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -137,7 +138,7 @@ export function chatConfigFromEnv(): ChatConfig | null {
 }
 
 export function ollamaBaseUrl(): string {
-  return (process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
+  return trimTrailingSlashes(process.env.ZOVELI_OLLAMA_URL || 'http://localhost:11434');
 }
 
 export function configuredOllamaModel(): string {
