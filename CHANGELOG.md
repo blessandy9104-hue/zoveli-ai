@@ -34,11 +34,13 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Removed
 
-- Removed the unused `@zoveli/memory`, `@zoveli/search`, and `@zoveli/skills`
-  compatibility packages. `@zoveli/memory-store` already provides the
-  `memory`/`search` services and the `memory_*`/`vault_search` tools.
-- Removed the never-registered `memoryTools` export from `@zoveli/core` and
-  updated the package descriptions, docs, and profile examples to match.
+- **Breaking:** Removed the unused `@zoveli/memory`, `@zoveli/search`, and
+  `@zoveli/skills` compatibility packages. `@zoveli/memory-store` already
+  provides the `memory`/`search` services and the `memory_*`/`vault_search`
+  tools.
+- **Breaking:** Removed the never-registered `memoryTools` export from
+  `@zoveli/core` and updated the package descriptions, docs, and profile
+  examples to match.
 
 ### Fixed
 
