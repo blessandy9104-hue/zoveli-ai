@@ -15,12 +15,15 @@
   irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.ps1 | iex
 .EXAMPLE
   .\install-zoveli.ps1 -Yes -Dir "$env:USERPROFILE\zoveli-ai" -Branch main
+.EXAMPLE
+  .\install-zoveli.ps1 -Yes -Model qwen3:8b
 #>
 [CmdletBinding()]
 param(
   [Alias('y')][switch]$Yes,
   [string]$Dir = (Join-Path $env:USERPROFILE 'zoveli-ai'),
   [string]$Branch = $(if ($env:ZOVELI_BRANCH) { $env:ZOVELI_BRANCH } else { 'main' }),
+  [string]$Model = $env:ZOVELI_OLLAMA_MODEL,
   [switch]$SkipUpdate
 )
 
@@ -120,7 +123,19 @@ Write-Host ""
 Write-Host "Run it:"
 Write-Host "  cd $Dir; .\.venv\Scripts\Activate.ps1"
 Write-Host "  pnpm run doctor       # confirm Node/pnpm/python/mathcore/Ollama"
-Write-Host "  pnpm start            # CLI assistant (works fully offline)"
-Write-Host "  pnpm run desktop      # Electron desktop shell (dev mode)"
+Write-Host "  pnpm run desktop      # Electron desktop app (primary interface)"
+Write-Host "  pnpm start            # CLI assistant (offline automation and scripting)"
+Write-Host ""
+if ($Model) {
+  Write-Host "Selected local model: $Model"
+  Write-Host "  `$env:ZOVELI_OLLAMA_MODEL='$Model'"
+  Write-Host "  ollama pull $Model"
+} else {
+  Write-Host "Default local model: qwen3:4b (swap with -Model qwen3:8b or ZOVELI_OLLAMA_MODEL)"
+}
+Write-Host ""
+Write-Host "Cloud Brain (optional): set ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, or any"
+Write-Host "OpenAI-compatible key. Pin one with ZOVELI_PROVIDER=anthropic|openai|groq|..."
+Write-Host "Verified math and the audit log always stay local."
 Write-Host ""
 Write-Host "Try in the CLI: /math solve x^2 - 5x + 6 = 0 | /sys | /tools | /help"
