@@ -13,6 +13,7 @@ Anything else is rejected rather than guessed. Fail closed.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import signal
 import threading
@@ -120,25 +121,53 @@ class Certificate:
 
 
 class Registry:
+    """Operation registry with lazy module loading.
+
+    Specialist modules pull in sympy/scipy/pint/z3, so importing all of them at
+    startup made every CLI/MCP launch pay for the whole math surface. Modules
+    are now *declared* by name and imported only when one of their operations
+    is first requested. ``names()`` and ``describe()`` still expose the full
+    catalog for discovery without touching a heavy module until needed.
+    """
+
     def __init__(self) -> None:
         self._ops: Dict[str, Operation] = {}
+        self._lazy: Dict[str, str] = {}
+        self._loaded: set[str] = set()
 
     def add(self, op: Operation) -> Operation:
         if op.name in self._ops:
             raise ValueError(f"duplicate operation {op.name}")
         self._ops[op.name] = op
+        self._lazy.pop(op.name, None)
         return op
 
+    def declare(self, module: str, names: Tuple[str, ...]) -> None:
+        """Publish operation names now; import ``module`` on first use."""
+        for name in names:
+            if name not in self._ops:
+                self._lazy[name] = module
+
+    def _load(self, module: str) -> None:
+        if module in self._loaded:
+            return
+        importlib.import_module(f".{module}", package=__package__)
+        self._loaded.add(module)
+
     def get(self, name: str) -> Operation:
+        if name not in self._ops and name in self._lazy:
+            self._load(self._lazy[name])
         if name not in self._ops:
             raise KeyError(name)
         return self._ops[name]
 
     def names(self) -> List[str]:
-        return sorted(self._ops)
+        return sorted(set(self._ops) | set(self._lazy))
 
     def describe(self) -> Dict[str, str]:
-        return {n: self._ops[n].summary for n in self.names()}
+        for module in set(self._lazy.values()):
+            self._load(module)
+        return {n: self._ops[n].summary for n in sorted(self._ops)}
 
 
 REGISTRY = Registry()
