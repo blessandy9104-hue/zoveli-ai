@@ -1,0 +1,6 @@
+{
+  "format": "zoveli-trusted-kb-v1",
+  "domain": "urn:zoveli:kb:general",
+  "content": "general.jsonl",
+  "sha256": "3936cf79632a06ff3311211f1b54f9414ffa9b2012c60d6084c1d74f8eacbd6f"
+}

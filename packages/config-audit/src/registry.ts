@@ -12,6 +12,7 @@ export type EnvKind =
   | 'url'
   | 'path-file'
   | 'path-dir'
+  | 'path-any'
   | 'command'
   | 'enum';
 
@@ -213,8 +214,9 @@ export const ENV_REGISTRY: EnvSpec[] = [
   {
     name: 'MATHCORE_TRUSTED_KB',
     group: 'Math',
-    kind: 'path-file',
-    description: 'JSONL trusted-knowledge file used by the claim auditor (question, answer, source)',
+    kind: 'path-any',
+    description:
+      'trusted-knowledge JSONL file, or a directory of manifest-authenticated KB domains',
     default: '~/.mathcore/trusted-knowledge.jsonl',
   },
   {

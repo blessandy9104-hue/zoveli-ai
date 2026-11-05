@@ -94,5 +94,8 @@ export { StructuredLogSink, resolveStructuredLog } from './structured-log.js';
 export type { StructuredLogOptions, StructuredLogStats } from './structured-log.js';
 export { DEFAULT_OLLAMA_MODEL, CHAT_PROVIDER_IDS, CHAT_PROVIDER_ENV_KEYS, chatConfigFromEnv, configuredOllamaModel, resolveChatConfig, probeOllama, chat, chatTemperature, buildMemoryBrief, isLocalProvider, memoryBriefAllowed } from './chat.js';
 export type { ChatConfig, ChatMessage } from './chat.js';
+export { CircuitBreaker, fromOpenAIResponse, openaiHealthPing, openaiTools, postOpenAITurn, resetOpenAIStateForTests } from './openai.js';
+export { ProviderError, isRetryableProviderError, mapOpenAIError, parseRetryAfter, transportError } from './provider-errors.js';
+export type { ProviderErrorCode } from './provider-errors.js';
 
 

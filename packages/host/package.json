@@ -14,6 +14,16 @@
       "types": "./dist/chat.d.ts",
       "import": "./dist/chat.js",
       "require": "./dist/chat.js"
+    },
+    "./openai": {
+      "types": "./dist/openai.d.ts",
+      "import": "./dist/openai.js",
+      "require": "./dist/openai.js"
+    },
+    "./provider-errors": {
+      "types": "./dist/provider-errors.d.ts",
+      "import": "./dist/provider-errors.js",
+      "require": "./dist/provider-errors.js"
     }
   },
   "scripts": {

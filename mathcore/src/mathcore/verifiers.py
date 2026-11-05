@@ -11,8 +11,9 @@ guard:
 Built-ins:
 
 * ``code`` - parses fenced Python blocks (``ast.parse``; never executes them).
-* ``knowledge`` - exact-question lookup in ``MATHCORE_TRUSTED_KB`` (JSONL with
-  ``question``, ``answer``, and optional ``source``).
+* ``knowledge`` - exact-question lookup in ``MATHCORE_TRUSTED_KB``. Content is
+  only trusted when every manifest authenticates it (see
+  :mod:`mathcore.trusted_kb`).
 
 Order is alphabetical by name; math is the final fallback. Set
 ``MATHCORE_VERIFIERS=code,knowledge`` to restrict the chain, or ``off`` to
@@ -21,7 +22,6 @@ disable plugins entirely.
 from __future__ import annotations
 
 import ast
-import json
 import os
 import re
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from .claims import ClaimVerdict
+from .trusted_kb import TrustedKbError, load_trusted_kb
 
 
 @dataclass(frozen=True)
@@ -121,51 +122,33 @@ def _knowledge_verify(
 ) -> Optional[ClaimVerdict]:
     del coordinator
     path = trusted_kb_path()
-    if not path.is_file():
+    if not path.exists():
+        # No KB configured: this verifier does not apply. An existing but
+        # unauthenticated KB is different; that fails closed below.
         return None
-    wanted = _normalize(question)
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
+        kb = load_trusted_kb(path)
+    except TrustedKbError as exc:
         return ClaimVerdict(
             "UNVERIFIABLE",
             None,
-            f"could not read trusted knowledge base {path}: {exc}",
+            f"trusted knowledge base failed authentication: {exc}",
             verifier="knowledge",
         )
-    for line_no, line in enumerate(lines, 1):
-        if not line.strip():
-            continue
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError as exc:
-            return ClaimVerdict(
-                "UNVERIFIABLE",
-                None,
-                f"trusted knowledge base line {line_no} is not valid JSON: {exc}",
-                verifier="knowledge",
-            )
-        entry_question = entry.get("question") if isinstance(entry, dict) else None
-        if not isinstance(entry_question, str) or _normalize(entry_question) != wanted:
-            continue
-        answer = entry.get("answer")
-        if not isinstance(answer, str) or not answer.strip():
-            return ClaimVerdict(
-                "UNVERIFIABLE",
-                None,
-                f"trusted knowledge base line {line_no} has no answer",
-                verifier="knowledge",
-            )
-        source = entry.get("source")
-        where = f" (source: {source})" if isinstance(source, str) and source else ""
-        matched = _claim_value(claimed) == _normalize(answer)
-        return ClaimVerdict(
-            "MATCH" if matched else "MISMATCH",
-            answer,
-            f"{'agrees with' if matched else 'differs from'} the trusted knowledge base{where}",
-            verifier="knowledge",
-        )
-    return None
+    entry, ambiguity = kb.find(_normalize(question), _normalize)
+    if ambiguity:
+        return ClaimVerdict("UNVERIFIABLE", None, ambiguity, verifier="knowledge")
+    if entry is None:
+        return None
+    where = f" (source: {entry.source})" if entry.source else ""
+    matched = _claim_value(claimed) == _normalize(entry.answer)
+    return ClaimVerdict(
+        "MATCH" if matched else "MISMATCH",
+        entry.answer,
+        f"{'agrees with' if matched else 'differs from'} the trusted knowledge base "
+        f"[{entry.domain}]{where}",
+        verifier="knowledge",
+    )
 
 
 def _code_verify(

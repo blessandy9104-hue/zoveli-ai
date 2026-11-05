@@ -79,6 +79,9 @@ class Operation:
     show: Callable[[Any], str] = str
     caveats: Optional[Callable[[Dict[str, Any], Any], List[str]]] = None
     min_confirmations: int = 2
+    # Model capability tier in billions of parameters (0 = any model).
+    # Populated from the lazy catalog when the operation module is loaded.
+    min_params: int = 0
 
 
 @dataclass
@@ -134,6 +137,7 @@ class Registry:
         self._ops: Dict[str, Operation] = {}
         self._lazy: Dict[str, str] = {}
         self._loaded: set[str] = set()
+        self._min_params: Dict[str, int] = {}
 
     def add(self, op: Operation) -> Operation:
         if op.name in self._ops:
@@ -142,11 +146,23 @@ class Registry:
         self._lazy.pop(op.name, None)
         return op
 
-    def declare(self, module: str, names: Tuple[str, ...]) -> None:
-        """Publish operation names now; import ``module`` on first use."""
+    def declare(
+        self,
+        module: str,
+        names: Tuple[str, ...],
+        min_params: Optional[Dict[str, int]] = None,
+    ) -> None:
+        """Publish operation names now; import ``module`` on first use.
+
+        ``min_params`` carries the model capability tier for each declared
+        operation. It is applied when the lazy module registers the real
+        operation, so callers can inspect ``operation.min_params``.
+        """
         for name in names:
             if name not in self._ops:
                 self._lazy[name] = module
+            if min_params and name in min_params:
+                self._min_params[name] = int(min_params[name])
 
     def _load(self, module: str) -> None:
         if module in self._loaded:
@@ -159,7 +175,10 @@ class Registry:
             self._load(self._lazy[name])
         if name not in self._ops:
             raise KeyError(name)
-        return self._ops[name]
+        operation = self._ops[name]
+        if name in self._min_params:
+            operation.min_params = self._min_params[name]
+        return operation
 
     def names(self) -> List[str]:
         return sorted(set(self._ops) | set(self._lazy))

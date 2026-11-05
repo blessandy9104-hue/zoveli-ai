@@ -81,6 +81,26 @@ describe('fetchReadable', () => {
     expect(r.trusted).toBe(true);
   });
 
+  it('validates each redirect destination before requesting it', async () => {
+    const requested: string[] = [];
+    const redirectFetch = (async (input: string | URL | Request) => {
+      const target = String(input);
+      requested.push(target);
+      return {
+        ok: false,
+        status: 302,
+        url: target,
+        headers: { get: (name: string) => name.toLowerCase() === 'location' ? 'http://127.0.0.1/admin' : null },
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    await expect(fetchReadable('https://example.com/start', {
+      fetchImpl: redirectFetch,
+      resolveHost: PUBLIC_DNS,
+    })).rejects.toThrow('blocked host');
+    expect(requested).toEqual(['https://example.com/start']);
+  });
+
   it('rejects non-text content and HTTP errors', async () => {
     await expect(
       fetchReadable('https://example.com/f.png', { fetchImpl: stubFetch('x', 'image/png'), resolveHost: PUBLIC_DNS })
@@ -103,6 +123,25 @@ describe('searchTrusted', () => {
     expect(hits[0].url).toBe('https://en.wikipedia.org/wiki/Tea');
     expect(hits[0].trusted).toBe(true);
     expect(hits[1].trusted).toBe(false);
+  });
+
+  it('manually follows safe redirects and rejects unsafe destinations', async () => {
+    const requested: string[] = [];
+    const redirectFetch = (async (input: string | URL | Request) => {
+      const target = String(input);
+      requested.push(target);
+      return {
+        ok: false,
+        status: 302,
+        url: target,
+        headers: { get: (name: string) => name.toLowerCase() === 'location' ? 'http://127.0.0.1/admin' : null },
+        text: async () => '',
+      };
+    }) as unknown as typeof fetch;
+    const out = await searchTrusted('tea', { fetchImpl: redirectFetch, resolveHost: PUBLIC_DNS });
+    expect(out.results).toEqual([]);
+    expect(out.note).toContain('blocked host');
+    expect(requested).toEqual(['https://lite.duckduckgo.com/lite/?q=tea']);
   });
 
   it('returns empty with a note when search is down (offline stays offline)', async () => {

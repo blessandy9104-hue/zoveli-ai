@@ -59,6 +59,7 @@ function writeLaunchers(target, hasMathcore) {
       ? 'set "MATHCORE_MCP_COMMAND=%~dp0mathcore\\mathcore-mcp.exe"'
       : 'rem mathcore runtime not bundled',
     'if not defined ZOVELI_VAULT_PATH set "ZOVELI_VAULT_PATH=%USERPROFILE%\\.zoveli\\knowledge-vault"',
+    'if not defined MATHCORE_TRUSTED_KB set "MATHCORE_TRUSTED_KB=%~dp0trusted_kb"',
     '"%~dp0node.exe" "%~dp0app.cjs" %*',
     'exit /b %ERRORLEVEL%',
     '',
@@ -84,6 +85,10 @@ function writeLaunchers(target, hasMathcore) {
     'if [ -z "${ZOVELI_VAULT_PATH:-}" ]; then',
     '  ZOVELI_VAULT_PATH="$HOME/.zoveli/knowledge-vault"',
     '  export ZOVELI_VAULT_PATH',
+    'fi',
+    'if [ -z "${MATHCORE_TRUSTED_KB:-}" ]; then',
+    '  MATHCORE_TRUSTED_KB="$DIR/trusted_kb"',
+    '  export MATHCORE_TRUSTED_KB',
     'fi',
     'exec "$DIR/node" "$DIR/app.cjs" "$@"',
     '',
@@ -164,6 +169,9 @@ async function main() {
   if (process.platform !== 'win32') {
     chmodSync(join(target, 'mathcore', 'mathcore-mcp'), 0o755);
   }
+  // Curated KB ships with the runtime so `knowledge` verification works
+  // offline; the launchers point MATHCORE_TRUSTED_KB at it.
+  cpSync(join(ROOT, 'trusted_kb'), join(target, 'trusted_kb'), { recursive: true });
   copyFileSync(join(ROOT, 'LICENSE'), join(target, 'LICENSE'));
   writeLaunchers(target, true);
 

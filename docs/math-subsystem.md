@@ -104,9 +104,11 @@ verified math. A verifier returns `None` when it does not apply, or a
 
 - **`code`** — extracts fenced Python blocks and calls `ast.parse`; it never
   executes the code. The claim must say the code is valid or invalid.
-- **`knowledge`** — exact-question lookup in a local JSONL file
-  (`MATHCORE_TRUSTED_KB`, default `~/.mathcore/trusted-knowledge.jsonl`) with
-  `question`, `answer`, and optional `source` fields.
+- **`knowledge`** — exact-question lookup in `MATHCORE_TRUSTED_KB`, either a
+  manifest-authenticated directory of curated domains or a legacy JSONL file
+  with `question`, `answer`, and optional `source` fields. A directory domain
+  is released only when its `.manifest` names the content file and its SHA-256
+  matches; a missing, malformed, or mismatched manifest fails closed.
 
 `MATHCORE_VERIFIERS=code,knowledge` restricts the chain and `off` disables
 plugins. Third parties register with `register_verifier(ClaimVerifier(...))`;
@@ -115,6 +117,29 @@ unknown configured name, produces `UNVERIFIABLE` instead of being skipped, so a
 broken plugin cannot silently change the trust decision. `Orchestrator.check`
 records the deciding verifier in the audit log, and the MCP server exposes
 `list_verifiers`.
+
+The checked-in `trusted_kb/` tree is verified with
+`python -m mathcore.trusted_kb verify trusted_kb`; regenerate manifests after
+editing content with `update trusted_kb`. See
+[Trusted knowledge manifests](TRUST.md#trusted-knowledge-manifests).
+
+## Capability tiers (`capability.py`)
+
+Every math operation declares a minimum model size in billions of parameters
+(`OPS_MIN_PARAMS` in `ops_catalog.py`): arithmetic and evaluation need no model,
+algebra/statistics start at 1B, solving/calculus/linear algebra at 2–3B, and
+`dsolve`, `sat`, and `prove` at 7B. The size of the active model comes from
+`ZOVELI_MODEL_PARAMS` (an explicit number, in billions) or the model tag
+(`qwen3:70b`, `llama3.2:0.8b`). An unknown size is allowed and left visible in
+diagnostics rather than guessed.
+
+A local model below the tier fails fast with `CapabilityError` before loading a
+specialist or running the operation; the coordinator emits a `RuntimeWarning`
+and seals an `ERROR` certificate. Mathematically, `0.8B` cannot proceed with a
+high-tier operation while `70B` can. If `ZOVELI_PROVIDER` is pinned to a known
+cloud provider (`openai`, `anthropic`, `deepseek`, `openrouter`, `groq`,
+`together`), the request is allowed to fall back to that provider instead of
+failing.
 
 ## Semantic recall (`semantic.ts`)
 
@@ -128,9 +153,11 @@ deterministic keyword overlap (`mode: 'keyword'`). Never throws, never hangs
 
 `MATHCORE_MCP_COMMAND` (full path, or a command line with args; checked
 before `.venv`/PATH), `MATHCORE_AUDIT` (audit path),
-`MATHCORE_TRUSTED_KB` (trusted-knowledge JSONL for the `knowledge` verifier),
-`MATHCORE_VERIFIERS` (comma-separated verifier chain; `off` disables plugins),
-`MATHCORE_TIMEOUT_MS` (per-request timeout, default 120000),
+`MATHCORE_TRUSTED_KB` (manifest-authenticated KB directory or legacy JSONL for
+the `knowledge` verifier), `MATHCORE_VERIFIERS` (comma-separated verifier chain;
+`off` disables plugins), `ZOVELI_MODEL_PARAMS` (explicit active model size in
+billions for capability tiers), `MATHCORE_TIMEOUT_MS` (per-request timeout,
+default 120000),
 `ZOVELI_MATH_MEMORIZE=0` disables proof auto-memorize,
 `ZOVELI_OLLAMA_URL` is unrelated (chat models, see `docs/guides/cli.md`).
 

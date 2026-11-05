@@ -1,2 +1,5 @@
 # Keep shell installers runnable on every OS checkout.
 install/*.sh text eol=lf
+# Manifest hashes are canonicalised to LF, and fixtures must be byte-stable.
+trusted_kb/** text eol=lf
+eval/** text eol=lf

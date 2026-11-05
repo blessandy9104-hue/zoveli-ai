@@ -97,4 +97,6 @@ with the runtime artifacts. A release is not publishable when this job fails.
 
 This is a clean-home proof on hosted runners, not physical hardware. It covers
 the CLI product path. Desktop UI and browser flows are covered by the
-Playwright e2e job, and signed installers remain separate release work.
+Playwright e2e job. Signed `.dmg`/`.exe` installers are built and verified in
+the release run; the acceptance gate exercises the portable archives and
+installer scripts, not Gatekeeper or Authenticode on a physical machine.

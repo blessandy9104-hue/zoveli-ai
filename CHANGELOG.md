@@ -11,6 +11,25 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- **Trusted KB manifests:** `trusted_kb/` now authenticates curated domains with
+  SHA-256 manifests. A missing, malformed, or mismatched manifest fails closed,
+  and knowledge verdicts record `verifier=knowledge`. `MATHCORE_TRUSTED_KB`
+  accepts a manifest-authenticated directory or a legacy JSONL file.
+- **Public evaluation harness:** `zoveli eval` runs GSM8K-mini,
+  HumanEval-mini, and trusted-claim fixtures through the real verifier, writes
+  `eval/report.json`, updates `website/trust.html`, and blocks a relative
+  trust-score drop of 5% or more in CI.
+- **Model capability tiers:** every math operation declares a minimum model
+  size. Small local models fail high-tier work fast with `CapabilityError`,
+  while a pinned cloud provider or a large enough model proceeds.
+- **Resilient OpenAI transport:** native OpenAI-compatible transport with
+  retries, a circuit breaker, a pre-routing health ping, and unified error
+  mapping alongside Anthropic.
+- **Signed updates and installers:** `zoveli update` checks the latest GitHub
+  release, verifies SHA-256, and invokes the unified installer using manual
+  redirects restricted to GitHub HTTPS hosts. Installers gained read-only
+  version checks and upgrade/downgrade prompts; release CI builds a signed,
+  notarized macOS `.dmg` and a signed Windows `.exe`.
 - **Model portability:** `ZOVELI_OLLAMA_MODEL` selects any local Ollama model
   (0.8B through 70B), and `ZOVELI_MODEL` remains the global override. The
   installer accepts `--model` / `-Model`, and

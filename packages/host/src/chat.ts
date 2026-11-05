@@ -1,5 +1,7 @@
 import type { ZoveliHost } from './host.js';
 import { postAnthropicTurn, type ChatTurn } from './anthropic.js';
+import { postOpenAITurn } from './openai.js';
+import { ProviderError, mapOpenAIError } from './provider-errors.js';
 import { trimTrailingSlashes } from './url.js';
 
 export interface ChatMessage {
@@ -311,7 +313,7 @@ async function postOpenAiTurn(
           `Server said: ${body.slice(0, 200)}`
       );
     }
-    throw new Error(`chat API error ${res.status}: ${body.slice(0, 300)}`);
+    throw mapOpenAIError(res.status, body, res.headers, cfg.provider || 'openai');
   }
   const data: any = await res.json();
   const choice = data.choices?.[0]?.message;
@@ -362,12 +364,17 @@ export async function chat(
     const postChat = () =>
       cfg.provider === 'anthropic'
         ? postAnthropicTurn(cfg, messages, tools, temperature, timeoutMs)
-        : postOpenAiTurn(cfg, messages, tools, temperature, timeoutMs, smallLocalModel);
+        : cfg.provider === 'openai'
+          ? postOpenAITurn(cfg, messages, tools, temperature, timeoutMs)
+          : postOpenAiTurn(cfg, messages, tools, temperature, timeoutMs, smallLocalModel);
     let choice: ChatTurn;
     try {
       choice = await postChat();
     } catch (e) {
       if (isTimeoutError(e)) throw timeoutError(cfg.baseUrl, timeoutMs);
+      // Non-retryable provider errors (bad key, model missing, context window)
+      // will never succeed on a second identical request.
+      if (e instanceof ProviderError && !e.retryable) throw e;
       try {
         choice = await postChat();
       } catch (retryError) {

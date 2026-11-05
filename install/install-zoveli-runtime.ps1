@@ -28,7 +28,8 @@ param(
   [switch]$NoVerify,
   [switch]$Force,
   [switch]$SkipBackup,
-  [switch]$AddToPath
+  [switch]$AddToPath,
+  [switch]$Check
 )
 
 if ($PSVersionTable.PSEdition -eq 'Desktop') {
@@ -61,6 +62,80 @@ function Get-Sha256Hex($path) {
   }
 }
 
+function Assert-SafeDownloadUrl([string]$Url) {
+  $uri = $null
+  try { $uri = [System.Uri]$Url } catch { throw "Invalid download URL: $Url" }
+  if ($uri.Scheme -ne 'https') { throw "Refusing non-HTTPS download URL: $Url" }
+  if ($uri.UserInfo) { throw "Refusing download URL with embedded credentials." }
+  if ($uri.Port -ne 443) { throw "Refusing download URL on a non-HTTPS port: $Url" }
+  $allowed = @(
+    'github.com',
+    'objects.githubusercontent.com',
+    'raw.githubusercontent.com',
+    'release-assets.githubusercontent.com',
+    'github-releases.githubusercontent.com'
+  )
+  $hostName = $uri.Host.ToLowerInvariant()
+  if ($allowed -notcontains $hostName) {
+    throw "Refusing download from unauthorized host: $hostName"
+  }
+}
+
+# Follow redirects by hand so a redirect cannot point at localhost, a
+# link-local metadata service, or another machine on the user's network.
+function Invoke-SafeDownload([string]$Url, [string]$OutFile) {
+  Add-Type -AssemblyName System.Net.Http
+  $handler = [System.Net.Http.HttpClientHandler]::new()
+  $handler.AllowAutoRedirect = $false
+  $client = [System.Net.Http.HttpClient]::new($handler)
+  $client.Timeout = [TimeSpan]::FromMinutes(10)
+  try {
+    $current = $Url
+    for ($hop = 0; $hop -le 5; $hop++) {
+      Assert-SafeDownloadUrl $current
+      $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $current)
+      $response = $client.SendAsync($request).GetAwaiter().GetResult()
+      try {
+        $code = [int]$response.StatusCode
+        if ($code -in 301, 302, 303, 307, 308) {
+          $location = $response.Headers.Location
+          if ($null -eq $location) { throw "Redirect from $current had no Location header." }
+          if (-not $location.IsAbsoluteUri) {
+            $location = [System.Uri]::new([System.Uri]$current, $location)
+          }
+          $current = $location.AbsoluteUri
+          continue
+        }
+        if ($code -ne 200) { throw "Download failed with HTTP ${code}: $current" }
+        $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $file = [System.IO.File]::Create($OutFile)
+        try { $stream.CopyTo($file) } finally { $file.Dispose(); $stream.Dispose() }
+        return
+      } finally {
+        $response.Dispose()
+        $request.Dispose()
+      }
+    }
+    throw "Too many redirects while downloading $Url"
+  } catch {
+    Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+    throw
+  } finally {
+    $client.Dispose()
+    $handler.Dispose()
+  }
+}
+
+function Get-SafeJson([string]$Url) {
+  $tempFile = [System.IO.Path]::GetTempFileName()
+  try {
+    Invoke-SafeDownload $Url $tempFile
+    return (Get-Content -LiteralPath $tempFile -Raw | ConvertFrom-Json)
+  } finally {
+    Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+  }
+}
+
 function Get-RuntimeVersion($launcher) {
   $previousPreference = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
@@ -74,6 +149,48 @@ function Get-RuntimeVersion($launcher) {
     Code = $code
     Text = "$($output | Select-Object -Last 1)".Trim()
   }
+}
+
+function ConvertTo-VersionParts([string]$value) {
+  $clean = ($value.Trim() -replace '^v', '').Split('-')[0]
+  $parts = $clean.Split('.')
+  if ($parts.Count -lt 3) { return $null }
+  $numbers = @()
+  foreach ($part in $parts[0..2]) {
+    $number = 0
+    if (-not [int]::TryParse($part, [ref]$number)) { return $null }
+    $numbers += $number
+  }
+  return $numbers
+}
+
+function Compare-Version([string]$left, [string]$right) {
+  $a = ConvertTo-VersionParts $left
+  $b = ConvertTo-VersionParts $right
+  if ($null -eq $a -or $null -eq $b) { return 0 }
+  for ($i = 0; $i -lt 3; $i++) {
+    if ($a[$i] -lt $b[$i]) { return -1 }
+    if ($a[$i] -gt $b[$i]) { return 1 }
+  }
+  return 0
+}
+
+function Get-InstalledVersion([string]$dir) {
+  $launcher = Join-Path $dir 'zoveli.cmd'
+  if (Test-Path -LiteralPath $launcher) {
+    $result = Get-RuntimeVersion $launcher
+    if ($result.Code -eq 0 -and $result.Text -match '^zoveli\s+(\S+)') {
+      return $Matches[1]
+    }
+  }
+  $manifest = Join-Path $dir 'runtime.json'
+  if (Test-Path -LiteralPath $manifest) {
+    try {
+      $runtime = Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
+      if ($runtime.version) { return [string]$runtime.version }
+    } catch { }
+  }
+  return $null
 }
 
 function Test-SafeTarget($path) {
@@ -194,25 +311,62 @@ function Backup-ExistingRuntime($dir) {
   Info "Backup verified: $backupDir"
 }
 
-if (-not $Yes) {
-  $answer = Read-Host "Install Zoveli into $Dir? [y/N]"
-  if ($answer -notmatch '^(y|yes)$') { Fail 'Aborted.' }
-}
-
 if (-not (Test-SafeTarget $Dir)) { Fail "Refusing to install into protected directory: $Dir" }
 $Dir = [System.IO.Path]::GetFullPath($Dir).TrimEnd('\')
+if ($Version) { $Version = $Version.Trim().TrimStart('v') }
+if (-not $Version -and $Archive -match 'zoveli-([0-9]+\.[0-9]+\.[0-9]+)-') {
+  $Version = $Matches[1]
+}
 
-if (-not $Archive) {
-  if (-not $Version) {
-    Info 'Resolving the current Zoveli version...'
-    $manifest = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/$Repo/$Branch/package.json"
-    $Version = $manifest.version
+if (-not $Archive -and -not $Version) {
+  Info 'Resolving the current Zoveli version...'
+  $manifest = Get-SafeJson "https://raw.githubusercontent.com/$Repo/$Branch/package.json"
+  $Version = [string]$manifest.version
+  if ($Version) { $Version = $Version.TrimStart('v') }
+}
+if (-not $Archive -and -not $Version) { Fail 'Could not resolve Zoveli version.' }
+if (-not $Archive -and -not $Url) {
+  $arch = $(if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' })
+  $Url = "https://github.com/$Repo/releases/download/v$Version/zoveli-$Version-windows-$arch.tar.gz"
+}
+
+$installVerb = 'Install'
+$installedVersion = Get-InstalledVersion $Dir
+if ($installedVersion) {
+  $comparison = 0
+  if ($Version) { $comparison = Compare-Version $installedVersion $Version }
+  if ($Check) {
+    if ($Version -and $comparison -lt 0) {
+      Info "Update available: Zoveli $installedVersion -> $Version"
+    } elseif ($Version -and $comparison -gt 0) {
+      Info "Installed Zoveli $installedVersion is newer than requested $Version"
+    } else {
+      Info "Zoveli $installedVersion is already installed in $Dir"
+    }
+    exit 0
   }
-  if (-not $Version) { Fail 'Could not resolve Zoveli version.' }
-  if (-not $Url) {
-    $arch = $(if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' })
-    $Url = "https://github.com/$Repo/releases/download/v$Version/zoveli-$Version-windows-$arch.tar.gz"
+  if ($Version -and $comparison -lt 0) {
+    Info "Upgrading Zoveli $installedVersion -> $Version"
+    $installVerb = 'Upgrade'
+  } elseif ($Version -and $comparison -gt 0) {
+    Warn "Downgrading Zoveli $installedVersion -> $Version"
+    $installVerb = 'Downgrade'
+  } else {
+    Warn "Zoveli $installedVersion is already installed in $Dir."
   }
+} elseif ($Check) {
+  if ($Version) {
+    Info "No Zoveli runtime in $Dir; target $Version is available"
+  } else {
+    Info "No Zoveli runtime in $Dir and no version was selected"
+  }
+  exit 0
+}
+
+if (-not $Yes) {
+  $prompt = $(if ($installVerb -eq 'Install') { "Install Zoveli into $Dir? [y/N]" } else { "$installVerb Zoveli in $Dir? [y/N]" })
+  $answer = Read-Host $prompt
+  if ($answer -notmatch '^(y|yes)$') { Fail 'Aborted.' }
 }
 
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("zoveli-install-" + [guid]::NewGuid().ToString('N'))
@@ -225,8 +379,8 @@ try {
   } else {
     $archivePath = Join-Path $temp 'zoveli.tar.gz'
     Info "Downloading $Url"
-    Invoke-WebRequest -Uri $Url -OutFile $archivePath
-    Invoke-WebRequest -Uri "$Url.sha256" -OutFile "$archivePath.sha256"
+    Invoke-SafeDownload $Url $archivePath
+    Invoke-SafeDownload "$Url.sha256" "$archivePath.sha256"
   }
 
   if (-not $NoVerify) {

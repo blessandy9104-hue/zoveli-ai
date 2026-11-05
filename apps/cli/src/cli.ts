@@ -10,6 +10,8 @@ Usage:
   zoveli config-check [--json]    validate environment configuration
   zoveli health [--offline]       runtime/config/vault/MCP health rollup
   zoveli plugins [--json]         list plugin inventory and mount status
+  zoveli eval [--json]            run trust benchmarks and publish the score
+  zoveli update [--check]         check for and install the latest release
   zoveli recovery-check           prove backup/restore works in isolation
   zoveli backup|verify|restore|migrate   vault maintenance
   zoveli --version                print the version
@@ -43,6 +45,16 @@ async function main() {
   if (argv[0] === 'plugins') {
     const { runPlugins } = await import('./plugins.js');
     process.exitCode = await runPlugins(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'eval') {
+    const { runEval } = await import('./eval.js');
+    process.exitCode = await runEval(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'update') {
+    const { runUpdate } = await import('./update.js');
+    process.exitCode = await runUpdate(argv.slice(1));
     return;
   }
   if (argv[0] === 'recovery-check') {

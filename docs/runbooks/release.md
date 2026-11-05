@@ -58,8 +58,32 @@ pnpm run acceptance:runtime -- --archive release/zoveli-X.Y.Z-<platform>-<arch>.
 Do not publish unless the archive smoke and clean-install acceptance checks are
 green. The acceptance report records install time, first-task time and the
 core workflow results; the first task must stay under ten minutes. Archives are
-checksummed and receive a GitHub build-provenance attestation, but are not yet
-code-signed or notarized.
+checksummed and receive a GitHub build-provenance attestation.
+
+`Runtime Artifacts` also builds a macOS `.dmg` and a Windows Inno Setup `.exe`
+for every run. Pull-request and manual non-release runs publish unsigned
+installers. Publishing a GitHub release signs every Mach-O binary, signs and
+notarizes the `.dmg`, and Authenticode-signs the `.exe`; the job fails if the
+required secrets are missing. Release signing secrets:
+
+| Secret | Purpose |
+|---|---|
+| `APPLE_SIGNING_IDENTITY` | Developer ID Application identity |
+| `APPLE_CERTIFICATE_P12_BASE64` | Base64 `.p12` containing the signing certificate |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for the `.p12` |
+| `APPLE_ID` | Apple account for notarization |
+| `APPLE_TEAM_ID` | Apple developer team ID |
+| `APPLE_APP_PASSWORD` | App-specific password for notarization |
+| `WINDOWS_CERTIFICATE_BASE64` | Base64 `.pfx` with the Authenticode certificate |
+| `WINDOWS_CERTIFICATE_PASSWORD` | Password for the `.pfx` |
+
+The scripts are `scripts/sign-macos.sh` and `scripts/sign-windows.ps1`;
+`scripts/package-installers.mjs` builds the installers. The macOS script signs
+Mach-O files and verifies them, then submits the disk image with
+`xcrun notarytool`, staples the ticket, and validates it. The Windows script
+signs with SHA-256 and an RFC 3161 timestamp, then runs `signtool verify /pa`.
+Both are release-only, so PR builds can exercise the build without
+certificates.
 
 ## 3. Tag and publish
 
@@ -75,7 +99,8 @@ gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes
 `--release` requires the changelog entry and a clean tree; `--tag` requires
 `vX.Y.Z` to point at HEAD. Publishing the GitHub release triggers the release
 job (image push to GHCR, SBOM attachment, release notes) and the runtime
-artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
+artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, a signed
+`.dmg`, and a signed `.exe`).
 
 ## 4. Confirm
 
@@ -85,10 +110,18 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars).
 - `Runtime Artifacts` passes on Linux, macOS, and Windows, including
   clean-install acceptance.
 - The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
-  matching `.sha256` files where the runner supports that architecture.
+  matching `.sha256` files where the runner supports that architecture, plus
+  `zoveli-X.Y.Z-macos-<arch>-setup.dmg` and
+  `zoveli-X.Y.Z-windows-<arch>-setup.exe`.
 - `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai
   --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`
-  finds a build-provenance attestation for each published archive.
+  finds a build-provenance attestation for each published archive and
+  installer.
+- The macOS disk image passes `codesign --verify --strict`, `stapler validate`,
+  and Gatekeeper (`spctl -a -t open`). The Windows installer passes
+  `signtool verify /pa`.
+- `zoveli update --check` on the previous release reports the new version, and
+  `zoveli update --yes` upgrades it while preserving the vault.
 - The acceptance reports show every core workflow green and a first-task time
   under ten minutes.
 - Download one archive on a clean machine (or clean container), run the

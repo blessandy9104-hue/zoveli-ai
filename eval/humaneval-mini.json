@@ -1,0 +1,37 @@
+{
+  "format": "zoveli-eval-suite-v1",
+  "name": "humaneval-mini",
+  "description": "HumanEval-style Python snippets checked by the syntax-only code verifier.",
+  "cases": [
+    {
+      "id": "humaneval-001",
+      "question": "Does this Python parse?\n```python\ndef add(a, b):\n    return a + b\n```",
+      "answer": "valid"
+    },
+    {
+      "id": "humaneval-002",
+      "question": "Does this Python parse?\n```python\ndef add(a, b:\n    return a + b\n```",
+      "answer": "invalid"
+    },
+    {
+      "id": "humaneval-003",
+      "question": "Is this Python valid?\n```python\nclass Counter:\n    def __init__(self):\n        self.value = 0\n\n    def bump(self):\n        self.value += 1\n        return self.value\n```",
+      "answer": "valid"
+    },
+    {
+      "id": "humaneval-004",
+      "question": "Is this Python valid?\n```python\nvalues = [x * 2 for x in range(5)]\nprint(values)\n```",
+      "answer": "valid"
+    },
+    {
+      "id": "humaneval-005",
+      "question": "Does this Python parse?\n```python\nif True\n    pass\n```",
+      "answer": "invalid"
+    },
+    {
+      "id": "humaneval-006",
+      "question": "Does this Python parse?\n```python\ndef broken():\nreturn 1\n```",
+      "answer": "invalid"
+    }
+  ]
+}

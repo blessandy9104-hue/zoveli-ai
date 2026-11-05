@@ -1,0 +1,52 @@
+{
+  "format": "zoveli-eval-suite-v1",
+  "name": "simple_claims",
+  "description": "Curated claims answered by the authenticated trusted_kb/ manifests.",
+  "cases": [
+    {
+      "id": "claim-001",
+      "question": "What is the capital of France?",
+      "answer": "Paris"
+    },
+    {
+      "id": "claim-002",
+      "question": "What is the capital of Japan?",
+      "answer": "Tokyo"
+    },
+    {
+      "id": "claim-003",
+      "question": "What is the chemical formula for water?",
+      "answer": "H2O"
+    },
+    {
+      "id": "claim-004",
+      "question": "How many continents are there on Earth?",
+      "answer": "7"
+    },
+    {
+      "id": "claim-005",
+      "question": "What is the speed of light in a vacuum?",
+      "answer": "299792458 m/s"
+    },
+    {
+      "id": "claim-006",
+      "question": "What is the default path of the Zoveli math audit log?",
+      "answer": "~/.mathcore/audit.jsonl"
+    },
+    {
+      "id": "claim-007",
+      "question": "Which environment variable overrides the trusted knowledge base?",
+      "answer": "MATHCORE_TRUSTED_KB"
+    },
+    {
+      "id": "claim-008",
+      "question": "Which command runs the Zoveli evaluation harness?",
+      "answer": "zoveli eval"
+    },
+    {
+      "id": "claim-009",
+      "question": "Which command checks for and installs a Zoveli update?",
+      "answer": "zoveli update"
+    }
+  ]
+}

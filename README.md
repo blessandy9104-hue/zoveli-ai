@@ -79,7 +79,9 @@ irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/i
 The Windows installer leaves `PATH` unchanged by default and prints the full
 `zoveli.cmd` path. Pass `-AddToPath` to add its directory to your user `PATH`.
 State defaults to `~/.zoveli` (`%USERPROFILE%\.zoveli` on Windows) and survives
-upgrades.
+upgrades. Later, `zoveli update --check` reports new releases and
+`zoveli update` verifies the published SHA-256 before upgrading. Release builds
+also publish a signed and notarized macOS `.dmg` and a signed Windows `.exe`.
 
 ### Docker Compose
 
@@ -163,10 +165,12 @@ same verified math engine and local memory. Details:
 - **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, calculus, statistics, logic, units, discrete, arithmetic, geometry, trigonometry, probability, linear, number). Python specialists load lazily on first use.
 - **🧠 Local-First Memory** — SQLite store with FTS5 ranked search, wiki-links and tags (Markdown vault kept as human-readable export mirror)
 - **🤖 Full Agent Framework** — 22 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 58 default tools; desktop adds 2 auth tools)
-- **🛡️ Pluggable claim verification** — check non-math claims with a Python syntax verifier, a trusted local knowledge base, or your own registered verifier; math remains the final fallback
+- **🛡️ Pluggable claim verification** — check non-math claims with a Python syntax verifier, a manifest-authenticated local knowledge base (SHA-256, fail-closed), or your own registered verifier; math remains the final fallback
+- **📊 Public trust score** — `zoveli eval` runs GSM8K-mini, HumanEval-mini, and trusted-claim fixtures, publishes the score on the Trust page, and blocks a 5% relative regression in CI
 - **🖥️ System & Hardware Awareness** — local OS/CPU/memory/disk/GPU/battery/network insight with budget checks (`@zoveli/sysinfo`)
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
-- **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports
+- **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports; math operations declare model-size tiers so an 0.8B model fails high-tier work instead of guessing
+- **🔄 Verifiable updates** — `zoveli update` resolves the latest GitHub release with host-restricted manual redirects, verifies SHA-256, and runs the unified installer; release installers are signed/notarized
 - **🔍 Vault Search** — SQLite FTS5 ranked full-text search over the knowledge store
 - **🕸️ Knowledge Graph** — wiki-link graph with orphans, hubs, DOT export
 - **🧪 Code Review** — complexity hotspots, duplication, dead code, secret detection

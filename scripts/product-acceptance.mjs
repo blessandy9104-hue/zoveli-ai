@@ -23,13 +23,16 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const IS_WIN = process.platform === 'win32';
 const CLEARED_ENV = [
   'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
   'DEEPSEEK_API_KEY',
   'OPENROUTER_API_KEY',
   'GROQ_API_KEY',
   'TOGETHER_API_KEY',
   'ZOVELI_API_KEY',
   'ZOVELI_API_BASE',
+  'ZOVELI_PROVIDER',
   'ZOVELI_MODEL',
+  'ZOVELI_MODEL_PARAMS',
   'ZOVELI_OLLAMA_MODEL',
   'ZOVELI_MEMORY_DB',
   'ZOVELI_VAULT_PATH',

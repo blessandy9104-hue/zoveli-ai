@@ -1,0 +1,6 @@
+{
+  "format": "zoveli-eval-baseline-v1",
+  "score": 1,
+  "total": 23,
+  "note": "All checked-in fixtures must match. CI blocks a relative score drop of 5% or more."
+}

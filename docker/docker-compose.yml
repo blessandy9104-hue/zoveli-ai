@@ -13,9 +13,6 @@ services:
       disable: true
     stdin_open: true
     tty: true
-    depends_on:
-      ollama:
-        condition: service_healthy
     volumes:
       - zoveli-data:/app/data
     environment:
@@ -39,6 +36,7 @@ services:
       - ZOVELI_SESSION_PATH=
     profiles:
       - cli
+      - smoke
 
   # Optional local Ollama chat; it is not needed to use local CLI tools.
   ollama:
