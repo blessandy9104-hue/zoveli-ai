@@ -57,7 +57,7 @@ jobs:
       - name: pip-audit
         run: |
           python -m pip install pip-audit
-          python -m pip_audit --progress-spinner off --strict --skip-editable
+          python -m pip_audit mathcore --progress-spinner off --strict
       - name: Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
