@@ -48,9 +48,10 @@ install/install-zoveli-runtime.ps1 -Check
 `zoveli update` follows GitHub release redirects manually and refuses anything
 outside HTTPS GitHub hosts on port 443, including localhost and private network
 addresses. It verifies the published SHA-256 before invoking the unified
-installer. Release downloads include a signed and notarized macOS `.dmg` and a
-signed Windows `.exe`; the portable `.tar.gz` archives remain the
-cross-platform fallback.
+installer. Release downloads include unsigned macOS `.dmg` and Windows `.exe`
+installers; the portable `.tar.gz` archives remain the cross-platform fallback.
+Gatekeeper and SmartScreen warnings are expected on first launch; follow the
+[Sovereign Install Guide](../INSTALL_GUIDE.md).
 
 Rerunning `install-zoveli-runtime.sh` or `install-zoveli-runtime.ps1` (with no
 archive) upgrades to the latest release. Both installers report the installed

@@ -43,6 +43,8 @@ ZOVELI_DESKTOP_SMOKE=1 pnpm --filter @zoveli/desktop start
 
 ## Packaged installers
 
-Not shipped: `.exe`/`.dmg`/`.AppImage` builds require OS code-signing
-certificates and `electron-builder` configuration, which are intentionally
-not in this repo. The development shell above is the supported path.
+Not shipped: packaged Electron `.exe`/`.dmg`/`.AppImage` builds require
+`electron-builder` configuration, which is intentionally not in this repo. The
+development shell above is the supported desktop path. The portable CLI runtime
+does ship unsigned macOS `.dmg` and Windows `.exe` installers; see the
+[Sovereign Install Guide](../INSTALL_GUIDE.md).

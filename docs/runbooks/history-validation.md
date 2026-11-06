@@ -131,7 +131,8 @@ newer, so a green local run on Node 24 is not a substitute for CI.
   commit. A commit that is syntactically valid can still be semantically broken;
   CI and release acceptance cover the tip.
 - Whitespace warnings are advisory and allowed to remain.
-- Signing and notarization are validated only in release workflows on macOS and
-  Windows runners. No local substitute exists without the certificates.
+- Unsigned installer builds are exercised in the release workflow on macOS and
+  Windows runners. Physical Gatekeeper and SmartScreen first-launch behavior is
+  documented in `docs/INSTALL_GUIDE.md` but is not automated in CI.
 - Bash scripts are not parsed by this audit; CI's installer and shell checks
   cover them.

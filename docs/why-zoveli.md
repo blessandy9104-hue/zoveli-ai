@@ -77,11 +77,23 @@ that exist today.
 - Planes, labs, and locked-down networks — the local tool loop works offline.
 - Tinkerers: 22 packages, a plugin surface, and an HTTP API you can extend in an afternoon.
 
+## Sovereign distribution
+
+Zoveli is independently developed. To keep the project free and independent of
+corporate gatekeepers, official macOS and Windows binaries are **unsigned**.
+There is no Apple Developer Program membership and no Microsoft Authenticode
+certificate. macOS Gatekeeper and Windows SmartScreen will warn you on first
+launch; that is expected.
+
+Follow the [Sovereign Install Guide](INSTALL_GUIDE.md) for the exact SmartScreen
+and Gatekeeper steps, checksum verification, and troubleshooting.
+
 ## Honest limits
 
 - Frontier reasoning, vision, voice, or image generation aren't built in
   (Zoveli can call outside models via API, but the models themselves aren't ours).
-- It needs a 10-minute install instead of opening a browser tab.
+- It needs a 10-minute install instead of opening a browser tab, and unsigned
+  installers trigger a one-time Gatekeeper or SmartScreen warning.
 - Team collaboration with shared workspaces, SSO/SAML, audit logs, HIPAA —
   Zoveli is single-user local-first today (see `docs/enterprise.md` for status).
 

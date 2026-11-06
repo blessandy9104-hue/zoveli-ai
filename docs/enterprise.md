@@ -1,5 +1,9 @@
 # Zoveli Enterprise Notes
 
+> Zoveli is **sovereign and independent**, not enterprise-certified. These notes
+> describe deployment patterns for operators who want to run it in controlled
+> environments; they are not compliance certifications.
+
 ## Air-gapped deployment
 1. Build images: `docker build -f docker/Dockerfile .`
 2. Pre-install: Python + mathcore wheel; optionally Ollama + a GGUF model for chat.
@@ -16,7 +20,7 @@
 - Optional JSONL tool trace: set `ZOVELI_TRACE_LOG` and `/trace`/host events
   record redacted tool calls.
 - Math certificates: hash-chained `audit.jsonl` (`mathcore verify-log` detects edits).
-- SBOM per release (CI `sbom` job); release archives and installers carry GitHub build-provenance attestations. Release builds also sign and notarize the macOS `.dmg` and Authenticode-sign the Windows `.exe`; portable `.tar.gz` archives are checksummed but not code-signed.
+- SBOM per release (CI `sbom` job); release archives and installers carry GitHub build-provenance attestations. Official macOS `.dmg` and Windows `.exe` installers are unsigned by design under the Sovereign Distribution model; see the [Sovereign Install Guide](INSTALL_GUIDE.md). Portable `.tar.gz` archives are checksummed.
 - EU AI Act Art.12 logging/retention is not implemented; a durable audit log is roadmap work.
 
 ## FIPS / regulated

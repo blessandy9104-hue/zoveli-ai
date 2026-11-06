@@ -5,9 +5,9 @@
  * - macOS: a compressed UDZO disk image.
  * - Windows: an Inno Setup installer (requires ISCC.exe).
  *
- * Code signing and macOS notarization are separate steps so PR builds can
- * produce unsigned artifacts while release builds require the signing
- * secrets. `node scripts/package-installers.mjs --help` documents the paths.
+ * Official Zoveli installers are unsigned by design under the Sovereign
+ * Distribution model. See docs/INSTALL_GUIDE.md for the first-launch guidance
+ * users receive for Gatekeeper and SmartScreen.
  */
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -102,11 +102,11 @@ function main() {
       '--version': { key: 'version' },
       '--arch': { key: 'arch' },
     },
-    booleans: { '--unsigned': 'unsigned', '--help': 'help' },
+    booleans: { '--help': 'help' },
   });
   if (options.help) {
     console.log(
-      'usage: node scripts/package-installers.mjs [--runtime DIR] [--out DIR] [--version V] [--arch ARCH] [--unsigned]'
+      'usage: node scripts/package-installers.mjs [--runtime DIR] [--out DIR] [--version V] [--arch ARCH]'
     );
     return;
   }

@@ -9,7 +9,7 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
-## [0.1.3] - 2026-11-05
+## [0.1.3] - 2026-11-06
 
 ### Added
 
@@ -33,11 +33,12 @@ the new section **before** running `pnpm release:check --release`.
 - **Resilient OpenAI transport:** native OpenAI-compatible transport with
   retries, a circuit breaker, a pre-routing health ping, and unified error
   mapping alongside Anthropic.
-- **Signed updates and installers:** `zoveli update` checks the latest GitHub
-  release, verifies SHA-256, and invokes the unified installer using manual
-  redirects restricted to GitHub HTTPS hosts. Installers gained read-only
-  version checks and upgrade/downgrade prompts; release CI builds a signed,
-  notarized macOS `.dmg` and a signed Windows `.exe`.
+- **Verifiable updates and unsigned installers:** `zoveli update` checks the
+  latest GitHub release, verifies SHA-256, and invokes the unified installer
+  using manual redirects restricted to GitHub HTTPS hosts. Installers gained
+  read-only version checks and upgrade/downgrade prompts; release CI builds
+  unsigned macOS `.dmg` and Windows `.exe` installers under the Sovereign
+  Distribution model.
 - **Model portability:** `ZOVELI_OLLAMA_MODEL` selects any local Ollama model
   (0.8B through 70B), and `ZOVELI_MODEL` remains the global override. The
   installer accepts `--model` / `-Model`, and
@@ -60,12 +61,21 @@ the new section **before** running `pnpm release:check --release`.
   [docs/why-zoveli.md](docs/why-zoveli.md) now explain the "professionally safe"
   positioning and the confidence-signal, proof-on-demand, and audit-mode trust
   experience, with current implementation status called out.
+- **Sovereign Install Guide:** [docs/INSTALL_GUIDE.md](docs/INSTALL_GUIDE.md)
+  provides step-by-step Windows SmartScreen and macOS Gatekeeper guidance,
+  screenshot placeholders, checksum/attestation verification, and
+  troubleshooting.
 - **Interface tiers:** [docs/interfaces.md](docs/interfaces.md) names Desktop as
   the primary interface, CLI as the supported automation surface, the browser UI
   as experimental, and other clients as community-supported.
 
 ### Changed
 
+- **Sovereign distribution:** official macOS and Windows installers are now
+  unsigned by design. Release CI no longer uses Apple or Microsoft signing
+  certificates, fails if signing secrets are absent, or runs codesign,
+  notarization, or signtool steps. Gatekeeper and SmartScreen warnings are
+  documented as an expected first-launch step.
 - Python math specialists now load lazily through `ops_catalog.py`; importing
   `mathcore` no longer imports every `ops_*` module, and the first operation
   loads only its own domain.

@@ -22,8 +22,6 @@ on:
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
-      - 'scripts/sign-macos.sh'
-      - 'scripts/sign-windows.ps1'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
@@ -41,14 +39,15 @@ on:
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
-      - 'scripts/sign-macos.sh'
-      - 'scripts/sign-windows.ps1'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
 
 permissions:
   contents: read
+
+# Sovereign Distribution: official macOS and Windows installers are unsigned
+# by design. See docs/INSTALL_GUIDE.md. No code-signing secrets are used.
 
 env:
   NODE_VERSION: '22'
@@ -119,22 +118,10 @@ jobs:
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
           node scripts/product-acceptance.mjs --archive $archive --report "acceptance-${{ matrix.os }}.json"
 
-      - name: Sign macOS runtime binaries
-        if: runner.os == 'macOS' && github.event_name == 'release'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        shell: bash
-        run: |
-          RUNTIME=$(find release -maxdepth 1 -type d -name 'zoveli-*-macos-*' | head -n 1)
-          if [ -z "$RUNTIME" ]; then echo 'macOS runtime directory not found' >&2; exit 1; fi
-          bash scripts/sign-macos.sh --runtime "$RUNTIME"
-
-      - name: Package macOS disk image
+      - name: Package unsigned macOS disk image
         if: runner.os == 'macOS'
         shell: bash
-        run: node scripts/package-installers.mjs --unsigned
+        run: node scripts/package-installers.mjs
 
       - name: Install Inno Setup
         if: runner.os == 'Windows'
@@ -143,40 +130,10 @@ jobs:
           choco install innosetup --no-progress -y
           Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files (x86)\Inno Setup 6'
 
-      - name: Package Windows installer
+      - name: Package unsigned Windows installer
         if: runner.os == 'Windows'
         shell: pwsh
-        run: node scripts/package-installers.mjs --unsigned
-
-      - name: Sign and notarize macOS disk image
-        if: runner.os == 'macOS' && github.event_name == 'release'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-        shell: bash
-        run: |
-          RUNTIME=$(find release -maxdepth 1 -type d -name 'zoveli-*-macos-*' | head -n 1)
-          DMG=$(find release -maxdepth 1 -name '*.dmg' | head -n 1)
-          if [ -z "$RUNTIME" ] || [ -z "$DMG" ]; then
-            echo 'macOS runtime or disk image not found' >&2
-            exit 1
-          fi
-          bash scripts/sign-macos.sh --runtime "$RUNTIME" --dmg "$DMG" --notarize
-
-      - name: Sign Windows installer
-        if: runner.os == 'Windows' && github.event_name == 'release'
-        env:
-          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        shell: pwsh
-        run: |
-          $exe = (Get-ChildItem release -Filter *.exe | Select-Object -First 1).FullName
-          if (-not $exe) { throw 'Windows installer not found' }
-          pwsh -NoProfile -File scripts/sign-windows.ps1 -Path $exe
+        run: node scripts/package-installers.mjs
 
       - name: Attest runtime archive
         if: github.event_name != 'pull_request'

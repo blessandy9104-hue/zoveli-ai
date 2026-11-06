@@ -10,10 +10,16 @@
 </head>
 <body>
 <header>
-  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Install Guide</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
   <h1>Download &amp; launch Zoveli AI</h1>
   <p class="tagline">Own hardware. Ten minutes. No account needed to start.</p>
 </header>
+
+<section id="first-launch">
+  <h2>First launch on macOS or Windows</h2>
+  <p>Zoveli is independently developed and ships <strong>unsigned binaries</strong>. macOS Gatekeeper and Windows SmartScreen will show a security warning on first launch. That is expected.</p>
+  <p><a class="btn" href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Open the Sovereign Install Guide</a></p>
+</section>
 
 <section>
   <h2>0. One command (recommended)</h2>
@@ -31,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/in
 # Windows PowerShell
 irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-zoveli.ps1 | iex
 # from a checkout: .\install\install-zoveli.ps1 -Model qwen3:8b</code></pre>
-  <p>Then run the printed <code>zoveli</code> (or <code>zoveli.cmd</code>) path. Re-running the installer stages and preflights the new runtime, creates a verified backup, and rolls back automatically if the upgrade fails. <code>zoveli update --check</code> reports the latest release, and <code>zoveli update</code> verifies the published SHA-256 before installing; release downloads include a signed and notarized macOS <code>.dmg</code> and a signed Windows <code>.exe</code>. After install, <code>zoveli health</code> reports readiness and <code>zoveli recovery-check</code> proves backup/restore in an isolated temporary vault without touching your real data. CI builds Linux, Windows, and macOS archives and runs a clean-install acceptance test on each; see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/runbooks/product-acceptance.md">acceptance runbook</a>.</p>
+  <p>Then run the printed <code>zoveli</code> (or <code>zoveli.cmd</code>) path. Re-running the installer stages and preflights the new runtime, creates a verified backup, and rolls back automatically if the upgrade fails. <code>zoveli update --check</code> reports the latest release, and <code>zoveli update</code> verifies the published SHA-256 before installing; release downloads include unsigned macOS <code>.dmg</code> and Windows <code>.exe</code> installers; see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Sovereign Install Guide</a> for the first-launch warning. After install, <code>zoveli health</code> reports readiness and <code>zoveli recovery-check</code> proves backup/restore in an isolated temporary vault without touching your real data. CI builds Linux, Windows, and macOS archives and runs a clean-install acceptance test on each; see the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/runbooks/product-acceptance.md">acceptance runbook</a>.</p>
   <p>Optional Cloud Brain: set <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GROQ_API_KEY</code>, or any OpenAI-compatible key. Pin one with <code>ZOVELI_PROVIDER</code>. Verified math and the audit log always stay local — see <a href="trust.html">Trust &amp; Transparency</a>.</p>
 </section>
 

@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Install Guide</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
   <h1>Questions, answered</h1>
 </header>
 
@@ -51,7 +51,12 @@
 
 <section>
   <h2>How do I install it?</h2>
-  <p>Ten minutes with the portable runtime, which needs no toolchain: use the one-line installer or a signed release <code>.dmg</code>/<code>.exe</code>. Source installs need Node.js 22.16+, Python 3.11+, pnpm, and Git. Later, <code>zoveli update --check</code> reports new releases and <code>zoveli update</code> verifies the SHA-256 before upgrading. See the <a href="install.html">step-by-step guides</a>.</p>
+  <p>Ten minutes with the portable runtime, which needs no toolchain: use the one-line installer or an unsigned release <code>.dmg</code>/<code>.exe</code>. Source installs need Node.js 22.16+, Python 3.11+, pnpm, and Git. Later, <code>zoveli update --check</code> reports new releases and <code>zoveli update</code> verifies the SHA-256 before upgrading. See the <a href="install.html">step-by-step guides</a>.</p>
+</section>
+
+<section>
+  <h2>Why are the binaries unsigned?</h2>
+  <p>Zoveli is independently developed. Paid Apple Developer Program and Microsoft Authenticode certificates would add recurring fees and corporate gatekeepers to every release. Instead, official binaries are unsigned and verified with published checksums and GitHub build-provenance attestations. macOS Gatekeeper and Windows SmartScreen will warn on first launch; the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Sovereign Install Guide</a> shows the exact steps.</p>
 </section>
 
 <footer>

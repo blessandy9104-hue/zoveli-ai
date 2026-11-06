@@ -12,6 +12,10 @@ your machine, and how to inspect the records.
   JSONL file you control.
 - **Memory is local.** Notes live in a SQLite database with a Markdown mirror.
 - **No telemetry.** Zoveli does not send usage analytics.
+- **Installers are unsigned by design.** Zoveli uses the Sovereign Distribution
+  model: no Apple or Microsoft certificate fees, no corporate gatekeeper.
+  Gatekeeper and SmartScreen warnings are expected; follow the
+  [Sovereign Install Guide](INSTALL_GUIDE.md).
 - **Cloud chat is opt-in.** If you set a provider key, the chat text you send
   goes to that provider. Verified math, the audit log, and local tools do not.
 
@@ -170,8 +174,11 @@ URLs, and more than five redirects are rejected, so a release lookup cannot be
 redirected to another machine on your network. The downloaded archive is
 checked against its published SHA-256 before the installer runs.
 
-Release builds publish a signed and notarized macOS `.dmg` and a
-signed Windows `.exe` in addition to the checksummed `.tar.gz` archives. The
+Release builds publish **unsigned** macOS `.dmg` and Windows `.exe` installers
+under the Sovereign Distribution model, in addition to the checksummed `.tar.gz`
+archives. The installers carry GitHub build-provenance attestations. macOS
+Gatekeeper and Windows SmartScreen will warn on first launch; the
+[Sovereign Install Guide](INSTALL_GUIDE.md) documents the expected steps. The
 portable installers can also report the installed and target versions without
 changing anything (`--check` / `-Check`).
 

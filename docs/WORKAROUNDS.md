@@ -23,7 +23,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 - **Clean-machine smoke**: `[done]` `.github/workflows/runtime-artifacts.yml` builds and smoke-tests Linux, macOS, and Windows archives, including the portable installer.
 - **Source-installer smoke**: `[done]` `.github/workflows/installer-check.yml` runs the Bash and Windows PowerShell source installers without privileges, verifies the built CLI and mathcore import, and checks the Windows installer is idempotent.
 - **Build provenance**: `[done]` push/release builds attest each archive with `actions/attest-build-provenance`; verify a download with `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`.
-- **Signed installers**: `[done]` release builds sign and notarize a macOS `.dmg` and Authenticode-sign a Windows `.exe`; PR builds publish unsigned installers. `.tar.gz` archives remain checksummed and attested.
+- **Unsigned sovereign installers**: `[done]` release builds produce an unsigned macOS `.dmg` and Windows `.exe` by design, with no certificate secrets. `.tar.gz` archives and installers carry checksums and build-provenance attestations; the [Sovereign Install Guide](INSTALL_GUIDE.md) covers the expected Gatekeeper and SmartScreen warnings.
 - **Updater / rollback**: `[done]` `zoveli update [--check]` resolves the latest GitHub release with manual, host-restricted redirects, verifies SHA-256, and invokes the unified installer. The installer keeps the verified pre-upgrade backup and rolls back a failed swap.
 - **Source install**: `[partial]` `install/install-zoveli.sh` and `install/install-zoveli.ps1` remain for contributors and still require the development toolchain.
 
@@ -200,7 +200,7 @@ Practical status of the known negative consequences in the Zoveli architecture.
 | mathcore Standalone Runtime | Done | `scripts/build-mathcore-runtime.mjs` (PyInstaller) |
 | Portable Installer | Done | `install/install-zoveli-runtime.sh`, `install/install-zoveli-runtime.ps1` |
 | Clean-Machine Runtime CI | Done | `.github/workflows/runtime-artifacts.yml` |
-| Signed / Notarized Installers | Done | `scripts/sign-macos.sh`, `scripts/sign-windows.ps1`; release-only CI |
+| Unsigned Sovereign Installers | Done | `scripts/package-installers.mjs`; `docs/INSTALL_GUIDE.md`; release CI |
 | Updater / Rollback | Done | `apps/cli/src/update.ts`; `zoveli update`; installer rollback |
 | Automatic Pre-Upgrade Backup | Partial | portable installers run `backup` + `verify`; source upgrades stay manual |
 | Connection Pooling | Done | `packages/math-intelligence/src/transport.ts`; multi-server pool planned |

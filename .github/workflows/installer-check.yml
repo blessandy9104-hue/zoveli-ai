@@ -51,12 +51,11 @@ jobs:
         run: |
           bash -n install/install-zoveli.sh
           bash -n install/install-zoveli-runtime.sh
-          bash -n scripts/sign-macos.sh
 
       - name: ShellCheck (if available)
         run: |
           if command -v shellcheck >/dev/null 2>&1; then
-            shellcheck -S warning install/install-zoveli.sh install/install-zoveli-runtime.sh scripts/sign-macos.sh
+            shellcheck -S warning install/install-zoveli.sh install/install-zoveli-runtime.sh
           else
             echo "shellcheck not installed on runner; skipped (bash -n already passed)"
           fi
@@ -70,7 +69,7 @@ jobs:
         run: |
           bash install/install-zoveli.sh --help
           bash install/install-zoveli-runtime.sh --help
-          ZOVELI_VERSION=0.1.2 bash install/install-zoveli-runtime.sh --check --dir "$GITHUB_WORKSPACE"
+          ZOVELI_VERSION=0.1.3 bash install/install-zoveli-runtime.sh --check --dir "$GITHUB_WORKSPACE"
 
       - name: Run installer (non-privileged, reuses checkout)
         run: bash install/install-zoveli.sh --yes --dir "$GITHUB_WORKSPACE" --skip-update
@@ -116,7 +115,7 @@ jobs:
       - name: Parse installer scripts
         shell: pwsh
         run: |
-          foreach ($file in @('install/install-zoveli.ps1', 'install/install-zoveli-runtime.ps1', 'scripts/sign-windows.ps1')) {
+          foreach ($file in @('install/install-zoveli.ps1', 'install/install-zoveli-runtime.ps1')) {
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$null, [ref]$errors)
             if ($errors.Count -gt 0) {
@@ -129,7 +128,7 @@ jobs:
       - name: Runtime installer version check
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install-zoveli-runtime.ps1 -Check -Version 0.1.2 -Dir "$env:GITHUB_WORKSPACE"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install-zoveli-runtime.ps1 -Check -Version 0.1.3 -Dir "$env:GITHUB_WORKSPACE"
           if ($LASTEXITCODE -ne 0) { throw "runtime installer check exited with $LASTEXITCODE" }
 
       - name: Run installer (Windows PowerShell 5.1, reuses checkout)

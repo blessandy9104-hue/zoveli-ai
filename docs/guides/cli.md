@@ -158,8 +158,9 @@ platform, verifies its published SHA-256, and runs the same runtime installer
 used for a manual install. Redirects are followed manually and restricted to
 HTTPS GitHub hosts on port 443; localhost, private addresses, and credentials
 are rejected, so an update cannot be redirected to another machine on your
-network. Release builds also publish a signed and notarized macOS `.dmg` and a
-signed Windows `.exe`.
+network. Release builds also publish unsigned macOS `.dmg` and Windows `.exe`
+installers; first-launch Gatekeeper and SmartScreen steps are in the
+[Sovereign Install Guide](../INSTALL_GUIDE.md).
 
 Installer scripts support the same version check without changing anything:
 

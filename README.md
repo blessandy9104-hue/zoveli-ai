@@ -63,6 +63,23 @@ The current desktop build marks verified math with a **VERIFIED** badge and
 writes a sealed certificate to the local audit chain; proof-on-demand and audit
 mode extend that same trust model. See [Trust & Transparency](docs/TRUST.md).
 
+## Sovereign Distribution
+
+Zoveli is independently developed. To keep the project free, self-funded, and
+independent of corporate gatekeepers, official macOS and Windows binaries are
+**unsigned** — no Apple Developer Program membership, no Microsoft Authenticode
+certificate, and no recurring platform fees passed on to users.
+
+That means Gatekeeper and SmartScreen will warn you the first time you launch
+Zoveli. This is expected, not a defect. Follow the
+**[Sovereign Install Guide](docs/INSTALL_GUIDE.md)** for the exact Windows
+SmartScreen and macOS Gatekeeper steps. Always download from the official
+[GitHub Releases page](https://github.com/blessandy9104-hue/zoveli-ai/releases)
+and verify the published checksums and build-provenance attestations.
+
+We do not claim "enterprise-certified." We claim **sovereign and independent**:
+open source, local-first, publicly built, and yours to inspect.
+
 ## Install
 
 ### One command (source installer)
@@ -114,7 +131,8 @@ The Windows installer leaves `PATH` unchanged by default and prints the full
 State defaults to `~/.zoveli` (`%USERPROFILE%\.zoveli` on Windows) and survives
 upgrades. Later, `zoveli update --check` reports new releases and
 `zoveli update` verifies the published SHA-256 before upgrading. Release builds
-also publish a signed and notarized macOS `.dmg` and a signed Windows `.exe`.
+also publish unsigned macOS `.dmg` and Windows `.exe` installers; see the
+[Sovereign Install Guide](docs/INSTALL_GUIDE.md) for first-launch steps.
 
 ### Docker Compose
 
@@ -204,7 +222,7 @@ same verified math engine and local memory. Details:
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
 - **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports; math operations declare model-size tiers so an 0.8B model fails high-tier work instead of guessing
 - **📈 Self-Efficiency** — `efficiency_review` measures bounded recent tool latency and failures, then offers advisory, user-approved improvements; it never edits code or settings and never enables persistent telemetry
-- **🔄 Verifiable updates** — `zoveli update` resolves the latest GitHub release with host-restricted manual redirects, verifies SHA-256, and runs the unified installer; release installers are signed/notarized
+- **🔄 Verifiable updates** — `zoveli update` resolves the latest GitHub release with host-restricted manual redirects, verifies SHA-256, and runs the unified installer; release installers are unsigned by design, with checksums and build-provenance attestations
 - **🔍 Vault Search** — SQLite FTS5 ranked full-text search over the knowledge store
 - **🕸️ Knowledge Graph** — wiki-link graph with orphans, hubs, DOT export
 - **🧪 Code Review** — complexity hotspots, duplication, dead code, secret detection

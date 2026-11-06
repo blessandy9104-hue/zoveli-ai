@@ -10,7 +10,7 @@
 </head>
 <body>
 <header>
-  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
+  <nav><a href="index.html">Zoveli AI</a> · <a href="install.html">Install</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Install Guide</a> · <a href="features.html">Features</a> · <a href="security.html">Security</a> · <a href="trust.html">Trust</a> · <a href="faq.html">FAQ</a> · <a href="https://github.com/blessandy9104-hue/zoveli-ai">GitHub</a></nav>
   <h1>Trust &amp; Transparency</h1>
   <p class="tagline">Check the machine's work instead of trusting a summary.</p>
 </header>
@@ -24,6 +24,12 @@
     <tr><th>Telemetry</th><td><strong>None.</strong> Zoveli does not send usage analytics.</td></tr>
     <tr><th>Cloud chat</th><td><strong>Opt-in.</strong> If you set a provider key, the chat text you send goes to that provider.</td></tr>
   </table>
+</section>
+
+<section id="sovereign-distribution">
+  <h2>Sovereign distribution</h2>
+  <p>Zoveli is independently developed. To avoid corporate licensing fees and maintain total sovereignty, we distribute <strong>unsigned binaries</strong>. macOS Gatekeeper and Windows SmartScreen will warn you on first launch; that is expected.</p>
+  <p><a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Read the Sovereign Install Guide</a> for the exact SmartScreen and Gatekeeper steps, checksum verification, and troubleshooting.</p>
 </section>
 
 <!-- EVAL:START -->
@@ -83,7 +89,7 @@ mathcore --json "evaluate 6*7"</code></pre>
 <section>
   <h2>Updates you can verify</h2>
   <p><code>zoveli update --check</code> reports whether a newer release exists; <code>zoveli update</code> downloads the archive, verifies its published SHA-256, and runs the same installer used for a manual install. Redirects are followed manually and restricted to HTTPS GitHub hosts on port 443, so a lookup cannot be redirected to localhost or another machine on your network.</p>
-  <p>Release builds publish a signed and notarized macOS <code>.dmg</code> and a signed Windows <code>.exe</code>. Portable installers also support <code>--check</code> / <code>-Check</code> for a read-only version report.</p>
+  <p>Release builds publish <strong>unsigned</strong> macOS <code>.dmg</code> and Windows <code>.exe</code> installers under the sovereign distribution model. They carry build-provenance attestations, and the portable archives publish SHA-256 sidecars. Follow the <a href="https://github.com/blessandy9104-hue/zoveli-ai/blob/main/docs/INSTALL_GUIDE.md">Sovereign Install Guide</a> for the first-launch warning. Portable installers also support <code>--check</code> / <code>-Check</code> for a read-only version report.</p>
 </section>
 
 <section>
