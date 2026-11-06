@@ -25,7 +25,6 @@ CHECK=false
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-ORANGE='\033[38;2;255;140;0m'
 NC='\033[0m'
 
 info() { printf '%b%s%b\n' "$GREEN" "$1" "$NC"; }
