@@ -41,6 +41,10 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `language_run_tests {projectPath, language, testPath?, args?}`
 - `language_get_tooling {language}`
 
+## Self-efficiency
+
+- `efficiency_review {slowMs?, minCalls?}` reviews the bounded in-memory trace of recent tool calls and returns advisory findings (average latency, failure count/rate, and a safe next step). It never edits code or settings, never includes error text, and never enables persistent telemetry. Applying a suggestion requires user approval and tests.
+
 ## Capability awareness
 
 - `capability_scan {deep?, category?}`

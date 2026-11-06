@@ -11,6 +11,12 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- **Core self-efficiency review:** `efficiency_review` reads a bounded
+  in-memory sample of recent tool latency and failures, then returns advisory,
+  evidence-based suggestions. It never edits code or settings, never includes
+  error text, and never enables persistent telemetry. Applying a suggestion
+  requires explicit user approval and a test; the default surface grows to 59
+  tools.
 - **Trusted KB manifests:** `trusted_kb/` now authenticates curated domains with
   SHA-256 manifests. A missing, malformed, or mismatched manifest fails closed,
   and knowledge verdicts record `verifier=knowledge`. `MATHCORE_TRUSTED_KB`
@@ -258,7 +264,7 @@ the new section **before** running `pnpm release:check --release`.
   are reported; nonexistent filesystem, shell, browser, terminal and LSP
   capabilities are no longer invented, and scans populate the registry so
   `capability_check`/`capability_list` see actual results.
-- Default surface is 26 plugins / 58 tools: legacy `core`, `memory`, `search`
+- Default surface is 26 plugins / 59 tools: legacy `core`, `memory`, `search`
   and `skills` packages are no longer mounted, duplicate tool registrations
   fail `pnpm plugin:check`, and `guard` is opt-in for custom shell tools.
 - The system prompt now describes the tools that are actually mounted and no

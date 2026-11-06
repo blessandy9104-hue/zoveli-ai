@@ -14,8 +14,8 @@ list rather than inventing capabilities.
 ## Diagnosis
 
 ### 1. Check the live tool list
-In the CLI, run `/tools`. It should show 58 default tools. The desktop mounts
-two auth tools on top, so `GET /api/tools` returns 60 as JSON.
+In the CLI, run `/tools`. It should show 59 default tools. The desktop mounts
+two auth tools on top, so `GET /api/tools` returns 61 as JSON.
 
 ### 2. Scan and inspect
 ```text

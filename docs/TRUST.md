@@ -43,6 +43,20 @@ Provider keys are read from the environment and are not written into the vault.
 Your provider's retention and training policies apply to the chat text you send
 it; Zoveli cannot override them.
 
+## Self-efficiency telemetry
+
+`efficiency_review` reads the host's bounded in-memory trace of the most recent
+200 tool calls. Each sample contains only the tool name, duration and success
+flag. Arguments, results, prompts and error text are not exposed to the review,
+and the trace resets when the process restarts.
+
+The review runs locally, makes no network requests, writes nothing to disk and
+does not enable the opt-in JSONL trace log. Its output is advisory: the
+assistant must explain the evidence, propose the smallest safe change, and wait
+for explicit approval before editing code or settings. After approval, the
+change needs a focused test and a re-run of the review. `ZOVELI_TRACE_LOG`
+remains the only persistent tool-call log and stays off unless the user sets it.
+
 ## Audit logs
 
 ### Math audit chain

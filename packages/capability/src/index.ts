@@ -2,6 +2,11 @@ import { definePlugin } from '@deepseek-ai/dsh-core';
 import { CapabilityScanner } from './scanner';
 import { CapabilityRegistry } from './registry';
 import { CapabilityAdaptation } from './adaptation';
+import {
+  reviewEfficiency,
+  type EfficiencyOptions,
+  type EfficiencySnapshot,
+} from './efficiency';
 
 export const zoveliCapability = definePlugin({
   name: 'zoveli-capability',
@@ -18,6 +23,15 @@ export const zoveliCapability = definePlugin({
       for (const cap of caps) registry.register(cap);
       return caps;
     };
+    // The host owns the bounded in-memory tool trace. Falling back to an empty
+    // snapshot keeps the tool usable in minimal profiles without inventing data.
+    const efficiencySnapshot = (): EfficiencySnapshot =>
+      ctx.get?.('host-efficiency')?.snapshot?.() ?? {
+        calls: 0,
+        failures: 0,
+        totalMs: 0,
+        recent: [],
+      };
 
     ctx.provide('capability', {
       scanner,
@@ -27,7 +41,11 @@ export const zoveliCapability = definePlugin({
       getCapabilities: () => registry.getAll(),
       getCapability: (name: string) => registry.get(name),
       can: (capability: string) => registry.has(capability),
-      adapt: (task: any) => adaptation.adapt(task)
+      adapt: (task: any) => adaptation.adapt(task),
+      reviewEfficiency: (
+        snapshot?: EfficiencySnapshot,
+        options?: EfficiencyOptions
+      ) => reviewEfficiency(snapshot ?? efficiencySnapshot(), options),
     });
 
     ctx.register('capability-config', {
@@ -42,6 +60,21 @@ export const zoveliCapability = definePlugin({
     });
 
     ctx.register('capability-tools', [
+      {
+        name: 'efficiency_review',
+        description: 'Review bounded recent tool-call latency and failures, then return advisory, user-approved optimization suggestions. Never edits code or settings and never enables persistent telemetry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            slowMs: { type: 'number', default: 100 },
+            minCalls: { type: 'number', default: 3 }
+          }
+        },
+        async execute(args: { slowMs?: number; minCalls?: number } | null = {}) {
+          const { slowMs, minCalls } = args ?? {};
+          return reviewEfficiency(efficiencySnapshot(), { slowMs, minCalls });
+        }
+      },
       {
         name: 'capability_scan',
         description: 'Scan and discover all available capabilities',
@@ -149,5 +182,13 @@ export { CapabilityScanner } from './scanner';
 export { CapabilityRegistry } from './registry';
 export { CapabilityAdaptation } from './adaptation';
 export type { Capability, CapabilityCategory, CapabilityStatus } from './types';
+export { reviewEfficiency } from './efficiency';
+export type {
+  EfficiencyReview,
+  EfficiencyFinding,
+  EfficiencyOptions,
+  EfficiencySnapshot,
+  EfficiencyTrace,
+} from './efficiency';
 
 

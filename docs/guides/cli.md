@@ -58,7 +58,7 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures, timings and JSONL log status
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all 58 default tools (desktop adds 2 auth tools)
+- **Tool list:** `/tools` → all 59 default tools (desktop adds 2 auth tools)
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 

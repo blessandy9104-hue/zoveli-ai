@@ -119,6 +119,23 @@ export class ZoveliHost {
     this.ctx.provide('tool-inventory', {
       list: () => this.tools(),
     });
+    // Bounded, in-process evidence for the self-efficiency review. Strip the
+    // redacted error strings so capability code only sees latency/outcome data.
+    this.ctx.provide('host-efficiency', {
+      snapshot: () => {
+        const stats = this.toolStats(MAX_TRACE_ENTRIES);
+        return {
+          calls: stats.calls,
+          failures: stats.failures,
+          totalMs: stats.totalMs,
+          recent: stats.recent.map(({ tool, durationMs, ok }) => ({
+            tool,
+            durationMs,
+            ok,
+          })),
+        };
+      },
+    });
   }
 
   /** Mount plugins and fire agent/created so prompt injections apply. */
