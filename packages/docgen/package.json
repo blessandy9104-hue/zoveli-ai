@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/docgen",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Automated documentation generation from code and vault notes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

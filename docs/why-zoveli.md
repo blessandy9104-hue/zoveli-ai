@@ -18,6 +18,57 @@
 | Memory | SQLite store you own (+ Markdown mirror), wiki-links, knowledge graph |
 | Login | Passwordless email OTP, any inbox incl. @proton.me — the only password you'll ever need is your email account's |
 
+## Professionally safe AI
+
+Zoveli aims to make AI **professionally safe by making it provable**. It gives
+you the power of a world-class brain without the anxiety of not knowing whether
+that brain is lying to you or spying on you.
+
+Most people have to choose between a "dumb" AI that runs locally on their laptop
+and a "smart" AI that lives in the cloud. Zoveli lets you mix and match: use a
+giant cloud brain for the thinking while verification and sensitive data stay
+local. You get the intelligence of the cloud with the security of your own
+device.
+
+### 1. The confidence signal (the surface)
+
+Trust should be felt, not audited. Instead of showing the whole audit trail on
+every answer, Zoveli is designed to show a simple visual cue:
+
+- **Verified** — a subtle green checkmark or "Verified" badge next to the
+  response.
+- **Unverified** — a neutral gray icon or a quiet warning: "AI-generated; not
+  verified."
+- **Partially verified** — a yellow icon meaning the reasoning is sound, but one
+  specific fact could not be cross-referenced.
+
+The user gets the safety and trust signal without reading a single line of
+technical log.
+
+### 2. Proof on demand (the interaction)
+
+If a user wonders "How does it know that?" or "I don't believe this number,"
+they can click the badge or **Show proof**. That opens a side panel or
+collapsible drawer where technical records are translated into human-readable
+receipts:
+
+| Raw record | Human view |
+| --- | --- |
+| `verifier=mathcore; op=integral; result=15.4` | "Calculated using local math engine (Integration)." |
+| `verifier=knowledge; hash=sha256:a1b2...` | "Verified against Trusted KB: [Official Tax Code 2026]." |
+
+### 3. Audit mode (the deep dive)
+
+Power users, developers, and lawyers who need the raw data for a report can turn
+on **Audit mode** or **Developer view** in settings. That exposes the raw
+JSON-style verifier records and keeps the noise away from the other 95% of users
+while keeping the truth available to the 5% who need it.
+
+The current desktop build already marks verified math with a **VERIFIED** badge
+and writes a sealed certificate to the local audit chain. Proof-on-demand and
+audit mode extend that same design. See [TRUST.md](TRUST.md) for the records
+that exist today.
+
 ## When to pick Zoveli
 
 - Private notes, journals, or client work that must not touch a third-party server.

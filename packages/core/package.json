@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "System prompt and shared version exports for Zoveli AI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -32,6 +32,37 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/** · Trust & Transpare
 
 Details: [docs/why-zoveli.md](docs/why-zoveli.md).
 
+## Professionally safe AI
+
+Zoveli aims to make AI **professionally safe by making it provable** — the
+power of a world-class brain without the anxiety of not knowing whether it is
+lying to you or spying on you.
+
+Most people have to choose between a "dumb" AI that runs locally and a "smart"
+AI that lives in the cloud. Zoveli lets you mix and match: use a giant cloud
+brain for the thinking while verification and sensitive data stay on your
+device. You get the intelligence of the cloud with the security of your own
+machine.
+
+The trust experience is designed around three layers:
+
+- **Confidence signal.** Every answer carries a quiet verdict: **Verified**
+  (green check), **Partially verified** (yellow — the reasoning is sound, but a
+  specific fact could not be cross-referenced), or **Unverified** (neutral gray,
+  "AI-generated; not verified"). The user feels the safety without reading a
+  technical log.
+- **Proof on demand.** Clicking the badge or **Show proof** opens
+  human-readable receipts such as "Calculated using local math engine
+  (Integration)" or "Verified against Trusted KB: [Official Tax Code 2026]."
+  Raw verifier records are translated, not dumped.
+- **Audit mode.** A separate developer view exposes the raw JSON-style logs for
+  reports, code reviews, or legal work. It keeps noise away from everyday use
+  while preserving the full truth for the people who need it.
+
+The current desktop build marks verified math with a **VERIFIED** badge and
+writes a sealed certificate to the local audit chain; proof-on-demand and audit
+mode extend that same trust model. See [Trust & Transparency](docs/TRUST.md).
+
 ## Install
 
 ### One command (source installer)

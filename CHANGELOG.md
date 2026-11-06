@@ -9,6 +9,8 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-05
+
 ### Added
 
 - **Core self-efficiency review:** `efficiency_review` reads a bounded
@@ -54,6 +56,10 @@ the new section **before** running `pnpm release:check --release`.
 - **Public Trust & Transparency page:** [docs/TRUST.md](docs/TRUST.md) and
   `website/trust.html` document what stays local, what a cloud provider sees,
   the hash-chained audit log, vault handling, and honest limits.
+- **Benefits and trust narrative:** the README, website, and
+  [docs/why-zoveli.md](docs/why-zoveli.md) now explain the "professionally safe"
+  positioning and the confidence-signal, proof-on-demand, and audit-mode trust
+  experience, with current implementation status called out.
 - **Interface tiers:** [docs/interfaces.md](docs/interfaces.md) names Desktop as
   the primary interface, CLI as the supported automation surface, the browser UI
   as experimental, and other clients as community-supported.

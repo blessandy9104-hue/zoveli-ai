@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/secscan",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Security scanning: secrets, risky patterns, dependency audit guidance",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
