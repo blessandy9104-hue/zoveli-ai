@@ -1,0 +1,47 @@
+{
+  "format": "zoveli-eval-suite-v1",
+  "name": "gsm8k-mini",
+  "description": "Grade-school arithmetic phrased as GSM8K-style word problems and verified by local math.",
+  "cases": [
+    {
+      "id": "gsm8k-001",
+      "question": "what is 5 * 8 + 12",
+      "answer": "52"
+    },
+    {
+      "id": "gsm8k-002",
+      "question": "what is (18 + 6) / 3",
+      "answer": "8"
+    },
+    {
+      "id": "gsm8k-003",
+      "question": "what is 3^4 - 16",
+      "answer": "65"
+    },
+    {
+      "id": "gsm8k-004",
+      "question": "what is 144 / 12 + 7 * 3",
+      "answer": "33"
+    },
+    {
+      "id": "gsm8k-005",
+      "question": "what is 9 * (7 - 2)",
+      "answer": "45"
+    },
+    {
+      "id": "gsm8k-006",
+      "question": "what is 100 - 4 * 9",
+      "answer": "64"
+    },
+    {
+      "id": "gsm8k-007",
+      "question": "what is (7 + 5) * (11 - 6)",
+      "answer": "60"
+    },
+    {
+      "id": "gsm8k-008",
+      "question": "what is 2^3 * 3^2",
+      "answer": "72"
+    }
+  ]
+}

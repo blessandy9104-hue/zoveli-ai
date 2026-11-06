@@ -62,6 +62,27 @@ curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/in
 Small models get a reduced tool list automatically (verified math, memory, and a
 few essentials) so they stay responsive. Larger models see the full tool set.
 
+### Capability tiers
+
+Math operations declare a minimum model size in billions of parameters. The
+active size comes from `ZOVELI_MODEL_PARAMS` (for example `0.8` or `70`) or is
+read from the model tag (`llama3.2:0.8b`, `qwen3:70b`); an unknown size is
+allowed rather than guessed.
+
+| Tier | Operations | Examples |
+|---|---|---|
+| Any model | Arithmetic, evaluation, conversion, geometry, integer math, probability, trig | `2+2`, `is 1000003 prime` |
+| 1B+ | Simplification, factoring, statistics, shortest path | `factor x^2-1`, `stat mean [1,2,3]` |
+| 2B+ | Solving equations | `solve x^2-5x+6=0` |
+| 3B+ | Calculus and linear algebra | `derivative of x^3*sin(x)`, `determinant of [[1,2],[3,4]]` |
+| 7B+ | Differential equations, SAT, proofs | `dsolve y'=y`, `prove x^2 >= 0` |
+
+A smaller local model fails fast with a clear `CapabilityError` and an `ERROR`
+certificate instead of producing a plausible-looking guess. If you pin a cloud
+provider with `ZOVELI_PROVIDER` (`openai`, `anthropic`, `deepseek`,
+`openrouter`, `groq`, or `together`), the operation falls back to that provider
+instead of being denied.
+
 ## Cloud Brain (optional)
 
 Any OpenAI-compatible key works, and Anthropic is supported through its native
@@ -88,6 +109,12 @@ Supported values: `custom`, `ollama`, `openai`, `anthropic`, `deepseek`,
 `openrouter`, `groq`, `together`. An unknown value fails at startup instead of
 silently using a different provider. `ZOVELI_PROVIDER=ollama` forces the local
 server even when a cloud key is set.
+
+The OpenAI-compatible transport retries transient failures (rate limits,
+timeouts, and server errors) on the native path, opens a 30-second circuit
+breaker after three retryable failures, and performs a pre-routing health ping
+so an unreachable endpoint fails once instead of stalling every turn. Provider
+errors are mapped to the same user-facing categories as Anthropic.
 
 | Variable | Purpose |
 |---|---|

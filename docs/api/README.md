@@ -3,6 +3,7 @@
 Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/index.ts`.
 
 ## Math (verified, one governed subsystem — see `docs/math-subsystem.md`)
+
 - `mathcore_compute {expression, operation?}` → verified result + certificate (auto-memorized)
 - `mathcore_check_answer {question, answer}` → MATCH | MISMATCH | UNCOMPARABLE | UNVERIFIABLE
 - `mathcore_list_operations {}` → operation catalog
@@ -10,6 +11,7 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - Intelligence: `math_recall {query, limit?, domain?}`, `math_recall_semantic {query, domain?, limit?}` (vector cosine when an embedding model is available, else keyword overlap), `math_route {request, operation?}`, `math_memorize {request, result}`, `math_stats {}`
 
 ## Memory / store (SQLite + FTS5 — see `docs/memory-store.md`)
+
 - `memory_create_note {title, content, tags?, links?}`
 - `memory_search {query, tags?}`
 - `memory_read_note {title}`
@@ -20,15 +22,18 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `vault_graph {vaultPath?, format?}` → nodes/edges/orphans/hubs or DOT
 
 ## Persona (trusted, switchable)
+
 - `persona_switch {persona}` → friend, tutor, engineer, or coach (remembered)
 - `persona_current {}` → active persona + choices
 - CLI: `/persona [name]` shows or switches; `ZOVELI_PERSONA` env pins one
 
 ## Web research (trusted sources, SSRF-guarded)
-- `web_fetch {url, maxChars?}` → title + readable text + trusted flag
-- `web_search {query, limit?}` → keyless source discovery with trust flags
+
+- `web_fetch {url, maxChars?}` → title + readable text + trusted flag; manually validates redirect destinations and pins built-in requests to checked DNS addresses
+- `web_search {query, limit?}` → keyless source discovery with trust flags; uses the same SSRF protections
 
 ## Languages
+
 - `language_detect {filePath, content?}`
 - `language_analyze {filePath, content?, language?, includeMetrics?, includeIssues?}`
 - `language_format {filePath, content, language?, options?}`
@@ -36,7 +41,12 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `language_run_tests {projectPath, language, testPath?, args?}`
 - `language_get_tooling {language}`
 
+## Self-efficiency
+
+- `efficiency_review {slowMs?, minCalls?}` reviews the bounded in-memory trace of recent tool calls and returns advisory findings (average latency, failure count/rate, and a safe next step). It never edits code or settings, never includes error text, and never enables persistent telemetry. Applying a suggestion requires user approval and tests.
+
 ## Capability awareness
+
 - `capability_scan {deep?, category?}`
 - `capability_check {capability, details?}`
 - `capability_list {category?, status?}`
@@ -44,6 +54,7 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `capability_report {format?, includeRecommendations?}`
 
 ## Code / project
+
 - `code_review {filePath, content?}` → complexity, duplication, dead code, secrets
 - `docs_generate {path, outDir?}`
 - `project_health {projectPath}` → score + checks
@@ -51,6 +62,7 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `tasks_schedule {tasks[]}` → scored + time-blocked
 
 ## Auth (`@zoveli/auth`, passwordless email OTP)
+
 - `auth_request_code {email}` → sends 6-digit code (any inbox incl. proton.me)
 - `auth_verify_code {email, code}` → `{ok, email, token}` or `{ok:false, reason}`
 - HTTP: `POST /api/auth/request`, `POST /api/auth/verify` (sets `zoveli_session` cookie),
@@ -66,6 +78,7 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
   Malformed emails return `400` before any rate limit is consumed.
 
 ## System & hardware (`@zoveli/sysinfo`, local-only)
+
 - `sysinfo_snapshot {diskPath?, fresh?}` → full host snapshot (30s cache)
 - `sysinfo_cpu {}`, `sysinfo_memory {}`, `sysinfo_disk {path?}`
 - `sysinfo_gpu {}`, `sysinfo_battery {}` (best effort; unavailable = unknown)
@@ -73,11 +86,13 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `sysinfo_check {minFreeMemBytes?, minFreeDiskBytes?, maxCpuPercent?}` → budget gate
 
 ## Daily brief (`@zoveli/daily-brief`, optional, local-only)
+
 - `daily_brief_get {timeZone?}` → date, weekday, time, time zone, greeting, message, and ISO timestamp
 - Uses the system clock and `Intl` time-zone data; no network requests
 - Enable with `ZOVELI_PLUGINS=zoveli-daily-brief pnpm start`
 
 ## Plugins
+
 - Default tools come from the default plugins; optional plugins mount only when
   named in `ZOVELI_PLUGINS=<plugin-name,...>` (see
   [plugin SDK](../plugin-sdk/README.md)).
@@ -95,4 +110,3 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - `POST /api/run {tool, args}` → `{ok, result}` on success, `{ok:false, error}` when the tool throws (unknown tools included); malformed bodies get 400
 - `GET /login`, `POST /api/auth/request`, `POST /api/auth/verify`, `GET /api/auth/me`, `POST /api/auth/logout` (passwordless email OTP)
 - `POST /api/run` and `/api/chat` accept an optional bearer gate: set `ZOVELI_API_TOKEN` (min 16 chars) to require `Authorization: Bearer`; when login is required and no bearer token is set, a valid session cookie is required. Per-IP rate limits apply (auth 30/min, chat/run 120/min; disabled when `ZOVELI_AUTH_DEV_ECHO=1` test mode is on).
-

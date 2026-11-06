@@ -1,5 +1,7 @@
 # Zoveli AI — local-first personal assistant
+
 [![M8ven Score](https://m8ven.ai/badge/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?v=a871bb4a46ab2bd9a64bf585d0dc5ffe)](https://m8ven.ai/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?s=readme)
+
 > The assistant that proves its math, runs on your hardware, and never trains on your data.
 
 > **Product scope:** the **Desktop app** is the primary interface. The CLI remains
@@ -18,15 +20,15 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/** · Trust & Transpare
 
 ## Why local-first?
 
-| | Zoveli AI |
-|---|---|
-| Price | **Free forever**, MIT |
-| Your data | **Stays on your machine**, never trained on |
-| Offline | **Yes for local tools** — 58 default tools; web research needs network |
-| Math | **Verified or withheld** (+ hash-chained audit certificate) |
-| Models | Free local Ollama (0.8B → 70B) or your own cloud key |
-| Lock-in | None — swap models or run fully offline |
-| Login | Optional passwordless email code; off by default, enable with `ZOVELI_AUTH_REQUIRED=1` |
+|           | Zoveli AI                                                                              |
+| --------- | -------------------------------------------------------------------------------------- |
+| Price     | **Free forever**, MIT                                                                  |
+| Your data | **Stays on your machine**, never trained on                                            |
+| Offline   | **Yes for local tools** — 59 default tools; web research needs network                 |
+| Math      | **Verified or withheld** (+ hash-chained audit certificate)                            |
+| Models    | Free local Ollama (0.8B → 70B) or your own cloud key                                   |
+| Lock-in   | None — swap models or run fully offline                                                |
+| Login     | Optional passwordless email code; off by default, enable with `ZOVELI_AUTH_REQUIRED=1` |
 
 Details: [docs/why-zoveli.md](docs/why-zoveli.md).
 
@@ -79,7 +81,9 @@ irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/i
 The Windows installer leaves `PATH` unchanged by default and prints the full
 `zoveli.cmd` path. Pass `-AddToPath` to add its directory to your user `PATH`.
 State defaults to `~/.zoveli` (`%USERPROFILE%\.zoveli` on Windows) and survives
-upgrades.
+upgrades. Later, `zoveli update --check` reports new releases and
+`zoveli update` verifies the published SHA-256 before upgrading. Release builds
+also publish a signed and notarized macOS `.dmg` and a signed Windows `.exe`.
 
 ### Docker Compose
 
@@ -102,12 +106,12 @@ ollama pull qwen3:4b
 pnpm start
 ```
 
-| Preset | Model | Good for | Rough RAM |
-|---|---|---|---|
-| Tiny | `qwen3.5:0.8b` | Old laptops, CPU-only | ~1–2 GB |
-| Balanced (default) | `qwen3:4b` | Everyday chat plus tool use | ~4–6 GB |
-| Strong local | `qwen3:8b` | Better reasoning on a modern laptop | ~8–10 GB |
-| Large local | `llama3.1:70b` | Workstations and GPUs | ~48 GB+ |
+| Preset             | Model          | Good for                            | Rough RAM |
+| ------------------ | -------------- | ----------------------------------- | --------- |
+| Tiny               | `qwen3.5:0.8b` | Old laptops, CPU-only               | ~1–2 GB   |
+| Balanced (default) | `qwen3:4b`     | Everyday chat plus tool use         | ~4–6 GB   |
+| Strong local       | `qwen3:8b`     | Better reasoning on a modern laptop | ~8–10 GB  |
+| Large local        | `llama3.1:70b` | Workstations and GPUs               | ~48 GB+   |
 
 `ZOVELI_OLLAMA_MODEL` selects the local model; `ZOVELI_MODEL` is the global
 override and wins when both are set. Small models automatically get a reduced
@@ -142,12 +146,12 @@ your machine. A cloud provider sees only the chat text you send. See
 
 ## Interfaces
 
-| Tier | Surface | Status |
-|---|---|---|
-| 1 | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
-| 2 | **CLI** — scripts, servers, CI, headless machines | **Supported** |
-| 3 | Browser/web UI served over HTTP | Experimental |
-| — | TUI wrappers, editor/messaging integrations | Community-supported |
+| Tier | Surface                                                | Status              |
+| ---- | ------------------------------------------------------ | ------------------- |
+| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
+| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported**       |
+| 3    | Browser/web UI served over HTTP                        | Experimental        |
+| —    | TUI wrappers, editor/messaging integrations            | Community-supported |
 
 ```bash
 pnpm run desktop   # primary app
@@ -162,11 +166,14 @@ same verified math engine and local memory. Details:
 
 - **🔬 Verified Mathematics** — one AI math intelligence subsystem: mathcore MCP gives zero-hallucination math with hash-chained audit certificates, governed with 12 specialists (algebra, calculus, statistics, logic, units, discrete, arithmetic, geometry, trigonometry, probability, linear, number). Python specialists load lazily on first use.
 - **🧠 Local-First Memory** — SQLite store with FTS5 ranked search, wiki-links and tags (Markdown vault kept as human-readable export mirror)
-- **🤖 Full Agent Framework** — 22 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 58 default tools; desktop adds 2 auth tools)
-- **🛡️ Pluggable claim verification** — check non-math claims with a Python syntax verifier, a trusted local knowledge base, or your own registered verifier; math remains the final fallback
+- **🤖 Full Agent Framework** — 22 packages: agent loop, tools, chat, verified math, memory, and system capabilities (`/tools` or `GET /api/tools` lists the 59 default tools; desktop adds 2 auth tools)
+- **🛡️ Pluggable claim verification** — check non-math claims with a Python syntax verifier, a manifest-authenticated local knowledge base (SHA-256, fail-closed), or your own registered verifier; math remains the final fallback
+- **📊 Public trust score** — `zoveli eval` runs GSM8K-mini, HumanEval-mini, and trusted-claim fixtures, publishes the score on the Trust page, and blocks a 5% relative regression in CI
 - **🖥️ System & Hardware Awareness** — local OS/CPU/memory/disk/GPU/battery/network insight with budget checks (`@zoveli/sysinfo`)
 - **💻 Programming Languages** — detection, analysis, formatting, linting, testing, tooling for 17+ languages (`@zoveli/languages`)
-- **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports
+- **⚡ Capability Awareness** — runtime discovery, introspection, adaptation, and gap reports; math operations declare model-size tiers so an 0.8B model fails high-tier work instead of guessing
+- **📈 Self-Efficiency** — `efficiency_review` measures bounded recent tool latency and failures, then offers advisory, user-approved improvements; it never edits code or settings and never enables persistent telemetry
+- **🔄 Verifiable updates** — `zoveli update` resolves the latest GitHub release with host-restricted manual redirects, verifies SHA-256, and runs the unified installer; release installers are signed/notarized
 - **🔍 Vault Search** — SQLite FTS5 ranked full-text search over the knowledge store
 - **🕸️ Knowledge Graph** — wiki-link graph with orphans, hubs, DOT export
 - **🧪 Code Review** — complexity hotspots, duplication, dead code, secret detection
@@ -174,7 +181,9 @@ same verified math engine and local memory. Details:
 - **❤️ Project Health** — tests/CI/docs/deps/TODO-debt scoring
 - **🗓️ Smart Scheduler** — energy-aware prioritization + time-blocking
 - **🎭 Personas** — switchable friend, tutor, engineer, coach (`/persona`, remembered locally)
-- **🌐 Web Research** — SSRF-guarded fetch + keyless search, trusted-source flags
+- **🌐 Web Research** — SSRF-guarded fetch and keyless search; validates redirects,
+  blocks private/reserved IPv4 and non-public IPv6, and pins built-in requests
+  to validated DNS addresses
 - **🛡️ Security Scanner** — secrets + risky-pattern scanning
 - **🔑 Passwordless login** — optional email OTP for any inbox incl. @proton.me, `GET /login`; enable the gate with `ZOVELI_AUTH_REQUIRED=1`
 - **🔒 Privacy-First** — runs locally, no cloud required, MIT licensed

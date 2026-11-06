@@ -213,6 +213,22 @@ const CAPABILITIES: CapabilityDefinition[] = [
     tags: ['health', 'diagnostics'],
   },
   {
+    name: 'efficiency.self-review',
+    displayName: 'Self-Efficiency Review',
+    description:
+      'Reviews bounded recent tool latency and failure samples and recommends user-approved optimizations',
+    category: 'reasoning',
+    subcategory: 'efficiency',
+    priority: 'medium',
+    tools: ['efficiency_review'],
+    provides: [
+      'latency-review',
+      'failure-review',
+      'efficiency-recommendations',
+    ],
+    tags: ['local-first', 'bounded-telemetry', 'recommendations-only'],
+  },
+  {
     name: 'agent.loop',
     displayName: 'Agent Loop',
     description: 'The host tool-dispatch and multi-turn loop',

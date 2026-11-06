@@ -25,6 +25,12 @@ The former `memory`, `search`, and `skills` wrappers were removed because
 
 Rules for core:
 
+- The capability plugin exposes `efficiency_review`. It reads only the host's
+  bounded in-memory tool trace (tool name, duration and success), returns
+  advisory findings, and never edits code or settings or enables persistent
+  telemetry. Applying a suggestion needs user approval, tests and review;
+  persistent JSONL tracing stays opt-in via `ZOVELI_TRACE_LOG`. See
+  [ADR 008](adr/008-self-efficiency.md).
 - Changes should include tests; breaking changes need an ADR entry.
 - New packages start as experimental — promotion to core needs an ADR
   and maintainer sign-off.

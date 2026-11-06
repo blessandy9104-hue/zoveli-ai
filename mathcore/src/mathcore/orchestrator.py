@@ -15,6 +15,7 @@ import json
 import os
 import re
 import time
+import warnings
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
@@ -24,6 +25,7 @@ import mpmath as mp
 import sympy as sp
 
 from . import ops_catalog  # noqa: F401  (declares lazy specialist modules)
+from .capability import CapabilityError, require_capability
 from .claims import ClaimVerdict
 from .command import Authorization, Command, authorize, parse
 from .framework import ERROR, PARTIAL, REGISTRY, REJECTED, VERIFIED, Certificate, compute
@@ -109,6 +111,14 @@ class Coordinator:
         if not auth.allows(cmd.op):
             c = Certificate(cmd.canonical, cmd.op, REJECTED, errors=[f"operation '{cmd.op}' was not authorized by the request"])
             return c.seal()
+        try:
+            require_capability(cmd.op)
+        except CapabilityError as exc:
+            # Fast fail before loading a heavy specialist module or running a
+            # model that cannot represent the operation. The audit certificate
+            # records ERROR; the warning makes the cause visible to a person.
+            warnings.warn(str(exc), RuntimeWarning, stacklevel=2)
+            return Certificate(cmd.canonical, cmd.op, ERROR, errors=[str(exc)]).seal()
         try:
             op = REGISTRY.get(cmd.op)
         except KeyError:

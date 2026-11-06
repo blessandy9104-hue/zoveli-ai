@@ -3,7 +3,7 @@
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 0.1.x   | ✅        |
 
 ## Reporting a Vulnerability
@@ -13,6 +13,7 @@
 Please report security vulnerabilities to: **blessandy9104@gmail.com**
 
 Include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -23,6 +24,7 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 ## Security Measures
 
 ### Supply Chain
+
 - Dependencies scanned via `pnpm audit` (CI gate) and Trivy
 - SBOM generated for each release (Syft/Anchore)
 - Dependabot for automated updates
@@ -30,6 +32,7 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
   are not implemented yet
 
 ### Runtime
+
 - The default tool surface has no shell, filesystem or browser tool
 - The shell guard is opt-in for custom `shell_exec` tools
   (`ZOVELI_PLUGINS=zoveli-guard`)
@@ -42,6 +45,7 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 - No OS-level sandbox: tools and plugins run in the same Node process
 
 ### Data Protection
+
 - Local-first architecture (no cloud required; no cloud sync exists —
   backups are user-managed copies)
 - Secrets are read from environment variables; there is no OS-keychain or
@@ -55,7 +59,10 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 - mathcore verification prevents hallucinated outputs
 
 ### Network
+
 - Localhost-only by default (binds 127.0.0.1)
+- Web research follows redirects manually, validates each destination (up to five hops), checks every DNS answer, and blocks private/reserved IPv4 and non-public IPv6 addresses.
+- Built-in web-research HTTP(S) connections use the validated DNS answers to reduce DNS-rebinding risk; these controls do not replace network egress restrictions or sandboxing.
 - DNS-rebinding guard: non-loopback `Host` headers rejected
   (`ZOVELI_ALLOWED_HOSTS` for explicit extras)
 - Hardening headers on every response (nosniff, SAMEORIGIN framing,
@@ -71,6 +78,7 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 
 See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the current controls and
 open gaps. In short:
+
 - **Spoofing**: email OTP login and bearer tokens; no OIDC/SAML yet
 - **Tampering**: hash-chained math audit certificates; no signed releases or
   immutable session log yet
@@ -90,6 +98,7 @@ but certification and formal retention controls are roadmap work.
 ## Responsible Disclosure
 
 We follow coordinated vulnerability disclosure:
+
 1. Report received → 48h acknowledgment
 2. Investigation → 7d initial assessment
 3. Fix development → 30d target for critical

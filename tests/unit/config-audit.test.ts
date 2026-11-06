@@ -167,6 +167,18 @@ describe('config audit: environment drift', () => {
     ).toBeUndefined();
   });
 
+  it('accepts a trusted KB root that is either a file or a directory', () => {
+    const dir = tempDir();
+    const kbFile = join(dir, 'trusted.jsonl');
+    writeFileSync(kbFile, '');
+    // A manifest-authenticated KB is a directory; a legacy KB is one JSONL
+    // file. Both are valid, so neither may raise a config warning.
+    expect(issueFor(auditEnv({ MATHCORE_TRUSTED_KB: dir }), 'env MATHCORE_TRUSTED_KB')).toBeUndefined();
+    expect(
+      issueFor(auditEnv({ MATHCORE_TRUSTED_KB: kbFile }), 'env MATHCORE_TRUSTED_KB')
+    ).toBeUndefined();
+  });
+
   it('reports chat key precedence and ignored overrides', () => {
     const multi = auditEnv({ OPENAI_API_KEY: 'a', DEEPSEEK_API_KEY: 'b' });
     expect(issueFor(multi, 'env chat keys')?.detail).toMatch(/OPENAI_API_KEY/);

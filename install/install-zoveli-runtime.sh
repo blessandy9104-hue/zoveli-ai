@@ -20,17 +20,110 @@ ASSUME_YES=false
 VERIFY=true
 FORCE=false
 SKIP_BACKUP=false
+CHECK=false
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-ORANGE='\033[38;2;255;140;0m'
 NC='\033[0m'
 
 info() { printf '%b%s%b\n' "$GREEN" "$1" "$NC"; }
 warn() { printf '%b%s%b\n' "$YELLOW" "$1" "$NC"; }
 error() { printf '%b%s%b\n' "$RED" "$1" "$NC" >&2; }
 last_line() { printf '%s\n' "$1" | tail -n 1 | tr -d '\r'; }
+
+validate_url() {
+  case "$1" in
+    https://*) ;;
+    *) error "Refusing non-HTTPS download URL: $1"; return 1 ;;
+  esac
+  rest=${1#https://}
+  authority=${rest%%/*}
+  case "$authority" in
+    *@*) error 'Refusing download URL with embedded credentials.'; return 1 ;;
+  esac
+  host=${authority%%:*}
+  if [ "$host" != "$authority" ] && [ "$authority" != "$host:443" ]; then
+    error "Refusing download URL on a non-HTTPS port: $1"
+    return 1
+  fi
+  host=$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')
+  case "$host" in
+    github.com|objects.githubusercontent.com|raw.githubusercontent.com|release-assets.githubusercontent.com|github-releases.githubusercontent.com) ;;
+    *) error "Refusing download from unauthorized host: $host"; return 1 ;;
+  esac
+}
+
+# Follow redirects by hand so a redirect cannot point at localhost, a
+# link-local metadata service, or another machine on the user's network.
+download() {
+  url=$1
+  out=$2
+  hops=0
+  while [ "$hops" -le 5 ]; do
+    validate_url "$url" || return 1
+    headers="$TMP_DIR/headers.$$.$hops"
+    code=$(curl --proto '=https' --tlsv1.2 --max-redirs 0 -sS -o "$out" -D "$headers" -w '%{http_code}' "$url") || {
+      error "Download failed: $url"
+      rm -f "$headers"
+      return 1
+    }
+    if [ "$code" = 301 ] || [ "$code" = 302 ] || [ "$code" = 303 ] || [ "$code" = 307 ] || [ "$code" = 308 ]; then
+      location=$(awk 'tolower($1) == "location:" { sub(/\r$/, "", $2); print $2 }' "$headers" | tail -n 1)
+      rm -f "$headers"
+      if [ -z "$location" ]; then
+        error "Redirect from $url had no Location header"
+        return 1
+      fi
+      case "$location" in
+        https://*) url="$location" ;;
+        *) error "Refusing non-HTTPS redirect target: $location"; return 1 ;;
+      esac
+      hops=$((hops + 1))
+      continue
+    fi
+    rm -f "$headers"
+    if [ "$code" != 200 ]; then
+      error "Download failed with HTTP $code: $url"
+      return 1
+    fi
+    return 0
+  done
+  error "Too many redirects while downloading $url"
+  return 1
+}
+
+download_text() {
+  file="$TMP_DIR/download.$$.$RANDOM"
+  download "$1" "$file" || return 1
+  cat "$file"
+  rm -f "$file"
+}
+
+compare_versions() {
+  awk -v a="${1#v}" -v b="${2#v}" 'BEGIN {
+    sub(/-.*/, "", a); sub(/-.*/, "", b);
+    split(a, x, "."); split(b, y, ".");
+    for (i = 1; i <= 3; i++) {
+      if ((x[i] + 0) > (y[i] + 0)) { print 1; exit }
+      if ((x[i] + 0) < (y[i] + 0)) { print -1; exit }
+    }
+    print 0;
+  }'
+}
+
+installed_version() {
+  launcher="$TARGET_DIR/zoveli"
+  if [ -x "$launcher" ]; then
+    text=$("$launcher" --version 2>/dev/null | tail -n 1 | tr -d '\r') || true
+    case "$text" in
+      "zoveli "*) printf '%s\n' "${text#zoveli }"; return ;;
+    esac
+  fi
+  if [ -f "$TARGET_DIR/runtime.json" ]; then
+    sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$TARGET_DIR/runtime.json" | head -n 1
+  fi
+}
 
 usage() {
   cat <<EOF
@@ -45,6 +138,7 @@ Options:
       --no-verify      Skip SHA-256 verification (not recommended)
       --force          Replace a non-Zoveli directory
       --skip-backup    Do not back up an existing install (not recommended)
+      --check          Report the installed and target versions, then exit
   -h, --help           Show this help
 EOF
 }
@@ -59,6 +153,7 @@ while [ $# -gt 0 ]; do
     --no-verify) VERIFY=false; shift ;;
     --force) FORCE=true; shift ;;
     --skip-backup) SKIP_BACKUP=true; shift ;;
+    --check) CHECK=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) error "Unknown option: $1"; usage; exit 1 ;;
   esac
@@ -80,15 +175,6 @@ case "$TARGET_DIR" in
   ""|"/"|"$HOME") error "Refusing to install into protected directory: $TARGET_DIR"; exit 1 ;;
 esac
 
-if [ "$ASSUME_YES" != true ] && [ -t 0 ]; then
-  printf 'Install Zoveli into %s? [y/N] ' "$TARGET_DIR"
-  read -r answer || true
-  case "$answer" in
-    [yY]|[yY][eE][sS]) ;;
-    *) error "Aborted."; exit 1 ;;
-  esac
-fi
-
 TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/zoveli-install.XXXXXX")
 STAGE=""
 cleanup() {
@@ -97,20 +183,70 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+VERSION="${VERSION#v}"
+if [ -z "$VERSION" ] && [ -n "$ARCHIVE" ]; then
+  VERSION=$(basename "$ARCHIVE" | sed -n 's/^zoveli-\([0-9][0-9.]*\)-.*/\1/p')
+fi
+if [ -z "$ARCHIVE" ] && [ -z "$VERSION" ]; then
+  info "Resolving the current Zoveli version..."
+  VERSION=$(download_text "https://raw.githubusercontent.com/$REPO/$BRANCH/package.json" \
+    | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -n 1)
+  if [ -z "$VERSION" ]; then error "Could not resolve Zoveli version."; exit 1; fi
+fi
+if [ -z "$ARCHIVE" ] && [ -z "$ASSET_URL" ]; then
+  ASSET_URL="https://github.com/$REPO/releases/download/v$VERSION/zoveli-$VERSION-$os-$arch.tar.gz"
+fi
+
+INSTALL_VERB="Install"
+INSTALLED_VERSION=$(installed_version || true)
+if [ -n "$INSTALLED_VERSION" ] && [ -n "$VERSION" ]; then
+  comparison=$(compare_versions "$INSTALLED_VERSION" "$VERSION")
+  if [ "$CHECK" = true ]; then
+    if [ "$comparison" = -1 ]; then
+      info "Update available: Zoveli $INSTALLED_VERSION -> $VERSION"
+    elif [ "$comparison" = 1 ]; then
+      info "Installed Zoveli $INSTALLED_VERSION is newer than requested $VERSION"
+    else
+      info "Zoveli $INSTALLED_VERSION is already installed in $TARGET_DIR"
+    fi
+    exit 0
+  fi
+  if [ "$comparison" = -1 ]; then
+    info "Upgrading Zoveli $INSTALLED_VERSION -> $VERSION"
+    INSTALL_VERB="Upgrade"
+  elif [ "$comparison" = 1 ]; then
+    warn "Downgrading Zoveli $INSTALLED_VERSION -> $VERSION"
+    INSTALL_VERB="Downgrade"
+  else
+    warn "Zoveli $INSTALLED_VERSION is already installed in $TARGET_DIR."
+  fi
+elif [ "$CHECK" = true ]; then
+  if [ -n "$VERSION" ]; then
+    info "No Zoveli runtime in $TARGET_DIR; target $VERSION is available"
+  else
+    info "No Zoveli runtime in $TARGET_DIR and no version was selected"
+  fi
+  exit 0
+fi
+
+if [ "$ASSUME_YES" != true ] && [ -t 0 ]; then
+  if [ "$INSTALL_VERB" = "Install" ]; then
+    printf 'Install Zoveli into %s? [y/N] ' "$TARGET_DIR"
+  else
+    printf '%s Zoveli in %s? [y/N] ' "$INSTALL_VERB" "$TARGET_DIR"
+  fi
+  read -r answer || true
+  case "$answer" in
+    [yY]|[yY][eE][sS]) ;;
+    *) error "Aborted."; exit 1 ;;
+  esac
+fi
+
 if [ -z "$ARCHIVE" ]; then
-  if [ -z "$VERSION" ]; then
-    info "Resolving the current Zoveli version..."
-    VERSION=$(curl --proto '=https' --tlsv1.2 -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/package.json" \
-      | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -n 1)
-    if [ -z "$VERSION" ]; then error "Could not resolve Zoveli version."; exit 1; fi
-  fi
-  if [ -z "$ASSET_URL" ]; then
-    ASSET_URL="https://github.com/$REPO/releases/download/v$VERSION/zoveli-$VERSION-$os-$arch.tar.gz"
-  fi
   ARCHIVE="$TMP_DIR/zoveli.tar.gz"
   info "Downloading $ASSET_URL"
-  curl --proto '=https' --tlsv1.2 -fL --retry 3 -o "$ARCHIVE" "$ASSET_URL"
-  curl --proto '=https' --tlsv1.2 -fL --retry 3 -o "$ARCHIVE.sha256" "$ASSET_URL.sha256"
+  download "$ASSET_URL" "$ARCHIVE"
+  download "$ASSET_URL.sha256" "$ARCHIVE.sha256"
 else
   if [ ! -f "$ARCHIVE" ]; then error "Archive not found: $ARCHIVE"; exit 1; fi
   ARCHIVE=$(cd "$(dirname "$ARCHIVE")" && pwd)/$(basename "$ARCHIVE")

@@ -278,7 +278,9 @@ def test_mcp_server_speaks_the_protocol(tmp_path):
         assert init["result"]["serverInfo"]["name"] == "mathcore"
         p.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"); p.stdin.flush()
         tools = _rpc(p, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-        assert {t["name"] for t in tools["result"]["tools"]} == {"compute", "check_answer", "list_operations"}
+        assert {t["name"] for t in tools["result"]["tools"]} == {
+            "compute", "check_answer", "list_verifiers", "list_operations"
+        }
         r = _rpc(p, {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                      "params": {"name": "compute", "arguments": {"request": "solve x^2 - 9 = 0"}}})
         body = json.loads(r["result"]["content"][0]["text"])

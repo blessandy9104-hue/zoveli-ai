@@ -246,6 +246,7 @@ export function auditEnv(
         break;
       case 'path-file':
       case 'path-dir':
+      case 'path-any':
         issue = checkPath(spec, value, { exists, isDirectory, isFile, writable });
         break;
       case 'secret':

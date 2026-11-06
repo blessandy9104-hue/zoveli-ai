@@ -15,10 +15,15 @@ on:
       - 'apps/cli/**'
       - 'packages/**'
       - 'mathcore/**'
+      - 'trusted_kb/**'
+      - 'eval/**'
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/product-acceptance.mjs'
+      - 'scripts/package-installers.mjs'
+      - 'scripts/sign-macos.sh'
+      - 'scripts/sign-windows.ps1'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
@@ -29,10 +34,15 @@ on:
       - 'apps/cli/**'
       - 'packages/**'
       - 'mathcore/**'
+      - 'trusted_kb/**'
+      - 'eval/**'
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/product-acceptance.mjs'
+      - 'scripts/package-installers.mjs'
+      - 'scripts/sign-macos.sh'
+      - 'scripts/sign-windows.ps1'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/runtime-artifacts.yml'
@@ -109,11 +119,73 @@ jobs:
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
           node scripts/product-acceptance.mjs --archive $archive --report "acceptance-${{ matrix.os }}.json"
 
+      - name: Sign macOS runtime binaries
+        if: runner.os == 'macOS' && github.event_name == 'release'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          RUNTIME=$(find release -maxdepth 1 -type d -name 'zoveli-*-macos-*' | head -n 1)
+          if [ -z "$RUNTIME" ]; then echo 'macOS runtime directory not found' >&2; exit 1; fi
+          bash scripts/sign-macos.sh --runtime "$RUNTIME"
+
+      - name: Package macOS disk image
+        if: runner.os == 'macOS'
+        shell: bash
+        run: node scripts/package-installers.mjs --unsigned
+
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files (x86)\Inno Setup 6'
+
+      - name: Package Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: node scripts/package-installers.mjs --unsigned
+
+      - name: Sign and notarize macOS disk image
+        if: runner.os == 'macOS' && github.event_name == 'release'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        shell: bash
+        run: |
+          RUNTIME=$(find release -maxdepth 1 -type d -name 'zoveli-*-macos-*' | head -n 1)
+          DMG=$(find release -maxdepth 1 -name '*.dmg' | head -n 1)
+          if [ -z "$RUNTIME" ] || [ -z "$DMG" ]; then
+            echo 'macOS runtime or disk image not found' >&2
+            exit 1
+          fi
+          bash scripts/sign-macos.sh --runtime "$RUNTIME" --dmg "$DMG" --notarize
+
+      - name: Sign Windows installer
+        if: runner.os == 'Windows' && github.event_name == 'release'
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem release -Filter *.exe | Select-Object -First 1).FullName
+          if (-not $exe) { throw 'Windows installer not found' }
+          pwsh -NoProfile -File scripts/sign-windows.ps1 -Path $exe
+
       - name: Attest runtime archive
         if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: release/*.tar.gz
+          subject-path: |
+            release/*.tar.gz
+            release/*.dmg
+            release/*.exe
 
       - uses: actions/upload-artifact@v4
         with:
@@ -122,6 +194,24 @@ jobs:
             release/*.tar.gz
             release/*.sha256
             acceptance-*.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload macOS installer
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zoveli-installer-macos
+          path: release/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Windows installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zoveli-installer-windows
+          path: release/*.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -139,6 +229,12 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zoveli-installer-*
+          path: installer-assets
+          merge-multiple: true
+
       - uses: softprops/action-gh-release@v1
         with:
           # download-artifact keeps the artifact's `release/` prefix, so the
@@ -147,3 +243,5 @@ jobs:
           files: |
             release-assets/**/*.tar.gz
             release-assets/**/*.sha256
+            installer-assets/**/*.dmg
+            installer-assets/**/*.exe

@@ -1,0 +1,5 @@
+{"question":"Which command prints the Zoveli version?","answer":"zoveli --version","source":"Zoveli CLI guide"}
+{"question":"What is the default path of the Zoveli math audit log?","answer":"~/.mathcore/audit.jsonl","source":"Zoveli trust documentation"}
+{"question":"Which environment variable overrides the trusted knowledge base?","answer":"MATHCORE_TRUSTED_KB","source":"mathcore verifier documentation"}
+{"question":"Which command runs the Zoveli evaluation harness?","answer":"zoveli eval","source":"Zoveli CLI guide"}
+{"question":"Which command checks for and installs a Zoveli update?","answer":"zoveli update","source":"Zoveli CLI guide"}

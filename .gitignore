@@ -36,6 +36,7 @@ test-report.html
 playwright-report/
 test-results/
 acceptance-*.json
+eval/report.json
 test-audit.jsonl
 test-auth-data/
 # test-vault/ ships a README so the dir exists on clone (kills the

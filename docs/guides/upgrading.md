@@ -33,8 +33,29 @@ This guide covers a safe upgrade and rollback.
 
 ## Upgrade
 
-Portable install: stop Zoveli, then rerun `install-zoveli-runtime.sh` or
-`install-zoveli-runtime.ps1`. When an existing runtime is present, the
+Portable install: check first, then let the updater or installer do the work:
+
+```bash
+zoveli update --check          # latest release vs. this runtime
+zoveli update                  # downloads, verifies SHA-256, runs the installer
+zoveli update --yes            # non-interactive (scripts/CI)
+
+# Or download an installer/archive yourself:
+install/install-zoveli-runtime.sh --check
+install/install-zoveli-runtime.ps1 -Check
+```
+
+`zoveli update` follows GitHub release redirects manually and refuses anything
+outside HTTPS GitHub hosts on port 443, including localhost and private network
+addresses. It verifies the published SHA-256 before invoking the unified
+installer. Release downloads include a signed and notarized macOS `.dmg` and a
+signed Windows `.exe`; the portable `.tar.gz` archives remain the
+cross-platform fallback.
+
+Rerunning `install-zoveli-runtime.sh` or `install-zoveli-runtime.ps1` (with no
+archive) upgrades to the latest release. Both installers report the installed
+and target versions, prompt before an upgrade or downgrade, and keep
+`--check`/`-Check` read-only. When an existing runtime is present, the
 installer:
 
 1. stages the new archive beside the install and runs its `--version` check

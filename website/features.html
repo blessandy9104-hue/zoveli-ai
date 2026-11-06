@@ -21,6 +21,11 @@
 </section>
 
 <section>
+  <h2>📊 Public trust score</h2>
+  <p><code>zoveli eval</code> runs GSM8K-mini, HumanEval-mini, and trusted-claim fixtures through the real verifier, writes a JSON report, and publishes the score on the <a href="trust.html">Trust page</a>. Every case names the verifier that decided it, and CI blocks a relative drop of 5% or more.</p>
+</section>
+
+<section>
   <h2>🧠 Local-first memory</h2>
   <p>A local SQLite knowledge store with wiki-links, tags, ranked full-text search, and a knowledge graph — mirrored as Markdown files you can open anywhere. CLI: <code>/remember &lt;fact&gt;</code> and <code>/recall &lt;query&gt;</code> work with no model or network. Tools: <code>memory_create_note</code>, <code>memory_search</code>, <code>vault_search</code>, <code>vault_graph</code>.</p>
 </section>
@@ -42,7 +47,7 @@
 
 <section>
   <h2>⚡ Capability awareness</h2>
-  <p>The assistant inventories the tools actually mounted in the host, adapts plans to what's available, and reports gaps. Access: <code>capability_scan</code>, <code>capability_adapt</code>, <code>capability_report</code>.</p>
+  <p>The assistant inventories the tools actually mounted in the host, adapts plans to what's available, and reports gaps. Math operations also declare model-size tiers: an 0.8B local model fails high-tier work with a clear error, while a 70B model proceeds, and a pinned cloud provider can take over. Access: <code>capability_scan</code>, <code>capability_adapt</code>, <code>capability_report</code>.</p>
 </section>
 
 <section>

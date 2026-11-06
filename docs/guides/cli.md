@@ -58,7 +58,7 @@ to algebra/calculus/statistics/logic/units/discrete specialists.
 - **Health:** `/health` → config, vault, MCP pool and capability rollup; `/trace` → recent tool calls, failures, timings and JSONL log status
 - **Capabilities:** `/caps` → available/total count
 - **Persona:** `/persona [friend|tutor|engineer|coach]` → show or switch the assistant's style (remembered locally; `ZOVELI_PERSONA` pins one)
-- **Tool list:** `/tools` → all 58 default tools (desktop adds 2 auth tools)
+- **Tool list:** `/tools` → all 59 default tools (desktop adds 2 auth tools)
 - **Chat:** any other text, once a chat model is available (see below —
   any API key or free local Ollama)
 
@@ -95,9 +95,13 @@ fail at startup instead of silently choosing another key;
 `ZOVELI_PROVIDER=ollama` forces the local server. `ZOVELI_MODEL` overrides the
 model for any provider and wins over `ZOVELI_OLLAMA_MODEL`.
 `ZOVELI_MAX_TOKENS` sets the Anthropic reply budget (256–8192, default 4096).
+The OpenAI-compatible transport retries transient failures, opens a short
+circuit breaker after repeated failures, and checks provider health before
+routing, so an unreachable endpoint fails with one clear error instead of a
+stack of retries.
 
-Local presets from 0.8B to 70B, Cloud Brain details, and what still stays local:
-[models.md](models.md). Trust boundary and audit records:
+Local presets from 0.8B to 70B, Cloud Brain details, capability tiers, and what
+still stays local: [models.md](models.md). Trust boundary and audit records:
 [../TRUST.md](../TRUST.md).
 
 ```bash
@@ -113,6 +117,56 @@ Ollama uses CPU by default; uncomment the `deploy` block in
 `docker/docker-compose.yml` for NVIDIA GPU acceleration. Vault, sessions and
 audit data live in the `zoveli-data` volume; `docker compose down` keeps it and
 `docker compose down -v` deletes it.
+
+## Trust evaluation
+
+```bash
+zoveli eval                  # run the suites, write the report, update the website
+zoveli eval --json           # print the full report instead of the summary
+zoveli eval --no-site        # leave website/trust.html untouched
+zoveli eval --no-gate        # report only; do not compare with the baseline
+zoveli eval --max-drop 2     # fail on a smaller relative drop
+```
+
+`zoveli eval` runs the checked-in `gsm8k-mini`, `humaneval-mini`, and
+`simple_claims` fixtures through mathcore's real claim verifier. Each result
+records the verdict and the verifier that decided it (`math`, `code`, or
+`knowledge`), so a score cannot hide which component was exercised. The score
+is matched cases divided by total cases.
+
+The JSON report is written to `eval/report.json` (gitignored), and the score
+block in `website/trust.html` is regenerated between its `EVAL:START` /
+`EVAL:END` markers. The run compares the score with `eval/baseline.json`; a
+relative drop of **5% or more** exits non-zero, which is what the CI
+`Trust Eval Gate` job enforces. Point `MATHCORE_BIN` at a specific executable to
+pin the backend. Evaluation uses a temporary audit log, so it never appends
+entries to your own trust history.
+
+## Updates
+
+Portable runtime installs can update themselves:
+
+```bash
+zoveli update --check        # report the latest release without installing
+zoveli update                # prompt, verify, and install
+zoveli update --yes          # non-interactive
+zoveli update --dir <path>   # install directory passed to the installer
+```
+
+The updater queries the latest GitHub release, downloads the archive for this
+platform, verifies its published SHA-256, and runs the same runtime installer
+used for a manual install. Redirects are followed manually and restricted to
+HTTPS GitHub hosts on port 443; localhost, private addresses, and credentials
+are rejected, so an update cannot be redirected to another machine on your
+network. Release builds also publish a signed and notarized macOS `.dmg` and a
+signed Windows `.exe`.
+
+Installer scripts support the same version check without changing anything:
+
+```bash
+install/install-zoveli-runtime.sh --check
+install/install-zoveli-runtime.ps1 -Check
+```
 
 ## Data maintenance
 
@@ -220,10 +274,10 @@ prints CLI/mount/tool-call metrics and enforces regression budgets.
 
 ## Env
 
-`ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`, `ZOVELI_MATHCORE_PREWARM`,
+`ZOVELI_VAULT_PATH`, `ZOVELI_MEMORY_DB`, `ZOVELI_MEMORY_EXPORT`, `ZOVELI_MATH_MEMORIZE`, `ZOVELI_EMBED_MODEL`, `MATHCORE_AUDIT`, `MATHCORE_MCP_COMMAND`, `MATHCORE_TIMEOUT_MS`, `MATHCORE_TRUSTED_KB`, `MATHCORE_VERIFIERS`, `ZOVELI_MATHCORE_PREWARM`,
 `ZOVELI_PLUGINS`, `ZOVELI_DISABLE_PLUGINS`,
-`ZOVELI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
-`GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_MODEL`,
+`ZOVELI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`,
+`GROQ_API_KEY`, `TOGETHER_API_KEY`, `ZOVELI_API_BASE`, `ZOVELI_PROVIDER`, `ZOVELI_MODEL`, `ZOVELI_MODEL_PARAMS`, `ZOVELI_MAX_TOKENS`,
 `ZOVELI_OLLAMA_URL`, `ZOVELI_OLLAMA_MODEL`, `ZOVELI_TRACE`, `ZOVELI_TRACE_LOG`,
 `ZOVELI_TRACE_LOG_MAX_BYTES`, `ZOVELI_TRACE_LOG_KEEP`, `ZOVELI_CHAT_TIMEOUT_MS`.
 `ZOVELI_PERSONA` pins a persona (friend, tutor, engineer, coach);
