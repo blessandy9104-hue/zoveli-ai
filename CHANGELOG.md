@@ -111,6 +111,7 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Security
 
+- Web research now validates every redirect hop, rejects private/reserved IPv4 and non-public IPv6 destinations, checks all DNS answers, and pins built-in HTTP(S) connections to validated addresses to reduce DNS-rebinding risk.
 - Windows launcher arguments containing `cmd.exe` metacharacters (`&`, `|`,
   `<`, `>`, `^`, parentheses) are now quoted, so runtime and acceptance checks
   cannot split or redirect a launcher command.

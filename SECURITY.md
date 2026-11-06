@@ -56,6 +56,8 @@ We aim to respond within 48 hours and provide a fix timeline within 7 days.
 
 ### Network
 - Localhost-only by default (binds 127.0.0.1)
+- Web research follows redirects manually, validates each destination (up to five hops), checks every DNS answer, and blocks private/reserved IPv4 and non-public IPv6 addresses.
+- Built-in web-research HTTP(S) connections use the validated DNS answers to reduce DNS-rebinding risk; these controls do not replace network egress restrictions or sandboxing.
 - DNS-rebinding guard: non-loopback `Host` headers rejected
   (`ZOVELI_ALLOWED_HOSTS` for explicit extras)
 - Hardening headers on every response (nosniff, SAMEORIGIN framing,

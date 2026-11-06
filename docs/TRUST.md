@@ -15,12 +15,19 @@ your machine, and how to inspect the records.
 - **Cloud chat is opt-in.** If you set a provider key, the chat text you send
   goes to that provider. Verified math, the audit log, and local tools do not.
 
-## What leaves your machine
+## Web research network protections
 
+`web_fetch` and `web_search` follow redirects manually, validate each destination
+before fetching it, and stop after five redirects. The guard checks every DNS
+answer, blocks private/reserved IPv4 and non-public IPv6 addresses, and pins
+built-in HTTP(S) requests to the validated addresses to reduce DNS-rebinding
+risk. These application controls do not replace network egress restrictions or
+sandboxing.
+## What leaves your machine
 | Action | Data | Destination |
 |---|---|---|
 | Chat with a cloud provider | Prompt, conversation history, tool results needed for the turn | The provider you configured |
-| Web research tool | The URL/query you ask it to fetch | The target site (SSRF-guarded) |
+| Web research tool | Requested URL/query and redirect-validated page requests | Target websites; unsafe private/reserved destinations are blocked |
 | Local Ollama chat | Nothing | Stays on your machine |
 | Verified math | Nothing | Local `mathcore` process |
 | Local tools | Nothing | Your machine |

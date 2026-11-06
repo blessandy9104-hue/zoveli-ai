@@ -25,8 +25,8 @@ Tools are the agent-facing API. Full JSON schemas live in each plugin's `src/ind
 - CLI: `/persona [name]` shows or switches; `ZOVELI_PERSONA` env pins one
 
 ## Web research (trusted sources, SSRF-guarded)
-- `web_fetch {url, maxChars?}` → title + readable text + trusted flag
-- `web_search {query, limit?}` → keyless source discovery with trust flags
+- `web_fetch {url, maxChars?}` → title + readable text + trusted flag; manually validates redirect destinations and pins built-in requests to checked DNS addresses
+- `web_search {query, limit?}` → keyless source discovery with trust flags; uses the same SSRF protections
 
 ## Languages
 - `language_detect {filePath, content?}`

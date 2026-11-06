@@ -178,7 +178,9 @@ same verified math engine and local memory. Details:
 - **❤️ Project Health** — tests/CI/docs/deps/TODO-debt scoring
 - **🗓️ Smart Scheduler** — energy-aware prioritization + time-blocking
 - **🎭 Personas** — switchable friend, tutor, engineer, coach (`/persona`, remembered locally)
-- **🌐 Web Research** — SSRF-guarded fetch + keyless search, trusted-source flags
+- **🌐 Web Research** — SSRF-guarded fetch and keyless search; validates redirects,
+  blocks private/reserved IPv4 and non-public IPv6, and pins built-in requests
+  to validated DNS addresses
 - **🛡️ Security Scanner** — secrets + risky-pattern scanning
 - **🔑 Passwordless login** — optional email OTP for any inbox incl. @proton.me, `GET /login`; enable the gate with `ZOVELI_AUTH_REQUIRED=1`
 - **🔒 Privacy-First** — runs locally, no cloud required, MIT licensed
