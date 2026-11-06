@@ -23,14 +23,16 @@ answer, blocks private/reserved IPv4 and non-public IPv6 addresses, and pins
 built-in HTTP(S) requests to the validated addresses to reduce DNS-rebinding
 risk. These application controls do not replace network egress restrictions or
 sandboxing.
+
 ## What leaves your machine
-| Action | Data | Destination |
-|---|---|---|
-| Chat with a cloud provider | Prompt, conversation history, tool results needed for the turn | The provider you configured |
-| Web research tool | Requested URL/query and redirect-validated page requests | Target websites; unsafe private/reserved destinations are blocked |
-| Local Ollama chat | Nothing | Stays on your machine |
-| Verified math | Nothing | Local `mathcore` process |
-| Local tools | Nothing | Your machine |
+
+| Action                     | Data                                                           | Destination                                                       |
+| -------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Chat with a cloud provider | Prompt, conversation history, tool results needed for the turn | The provider you configured                                       |
+| Web research tool          | Requested URL/query and redirect-validated page requests       | Target websites; unsafe private/reserved destinations are blocked |
+| Local Ollama chat          | Nothing                                                        | Stays on your machine                                             |
+| Verified math              | Nothing                                                        | Local `mathcore` process                                          |
+| Local tools                | Nothing                                                        | Your machine                                                      |
 
 Zoveli never sends the math audit log, the SQLite memory database, or the
 Markdown vault to a model provider. The memory brief is added to chat only for a
@@ -62,12 +64,12 @@ mathcore --json "evaluate 6*7"
 
 Useful environment variables:
 
-| Variable | Meaning |
-|---|---|
-| `MATHCORE_AUDIT` | Audit log path |
+| Variable              | Meaning                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `MATHCORE_AUDIT`      | Audit log path                                                                                       |
 | `MATHCORE_TRUSTED_KB` | Manifest-authenticated knowledge directory, or a legacy JSONL file, used by the `knowledge` verifier |
-| `MATHCORE_VERIFIERS` | Comma-separated verifier chain; `off` disables plugins |
-| `ZOVELI_TRACE_LOG` | Structured tool-call trace log |
+| `MATHCORE_VERIFIERS`  | Comma-separated verifier chain; `off` disables plugins                                               |
+| `ZOVELI_TRACE_LOG`    | Structured tool-call trace log                                                                       |
 
 `pnpm health:check` and `zoveli health` summarize config, vault, and MCP state;
 `/trace` in the CLI and the desktop status panel show recent tool calls.
@@ -163,12 +165,12 @@ changing anything (`--check` / `-Check`).
 
 Default locations:
 
-| Data | Path |
-|---|---|
-| Memory database | `~/.zoveli/memory.db` (`ZOVELI_MEMORY_DB`) |
-| Markdown vault | `./knowledge-vault` (`ZOVELI_VAULT_PATH`) |
-| Audit log | `~/.mathcore/audit.jsonl` (`MATHCORE_AUDIT`) |
-| Sessions | `~/.zoveli/sessions` (`ZOVELI_SESSION_PATH`) |
+| Data            | Path                                         |
+| --------------- | -------------------------------------------- |
+| Memory database | `~/.zoveli/memory.db` (`ZOVELI_MEMORY_DB`)   |
+| Markdown vault  | `./knowledge-vault` (`ZOVELI_VAULT_PATH`)    |
+| Audit log       | `~/.mathcore/audit.jsonl` (`MATHCORE_AUDIT`) |
+| Sessions        | `~/.zoveli/sessions` (`ZOVELI_SESSION_PATH`) |
 
 The SQLite database is authoritative; the Markdown mirror is for reading,
 grepping, and exporting. Notes are never uploaded by Zoveli.

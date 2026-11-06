@@ -1,5 +1,7 @@
 # Zoveli AI — local-first personal assistant
+
 [![M8ven Score](https://m8ven.ai/badge/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?v=a871bb4a46ab2bd9a64bf585d0dc5ffe)](https://m8ven.ai/mcp/blessandy9104-hue-zoveli-ai-1m1d8z?s=readme)
+
 > The assistant that proves its math, runs on your hardware, and never trains on your data.
 
 > **Product scope:** the **Desktop app** is the primary interface. The CLI remains
@@ -18,15 +20,15 @@ Website: **https://blessandy9104-hue.github.io/zoveli-ai/** · Trust & Transpare
 
 ## Why local-first?
 
-| | Zoveli AI |
-|---|---|
-| Price | **Free forever**, MIT |
-| Your data | **Stays on your machine**, never trained on |
-| Offline | **Yes for local tools** — 58 default tools; web research needs network |
-| Math | **Verified or withheld** (+ hash-chained audit certificate) |
-| Models | Free local Ollama (0.8B → 70B) or your own cloud key |
-| Lock-in | None — swap models or run fully offline |
-| Login | Optional passwordless email code; off by default, enable with `ZOVELI_AUTH_REQUIRED=1` |
+|           | Zoveli AI                                                                              |
+| --------- | -------------------------------------------------------------------------------------- |
+| Price     | **Free forever**, MIT                                                                  |
+| Your data | **Stays on your machine**, never trained on                                            |
+| Offline   | **Yes for local tools** — 58 default tools; web research needs network                 |
+| Math      | **Verified or withheld** (+ hash-chained audit certificate)                            |
+| Models    | Free local Ollama (0.8B → 70B) or your own cloud key                                   |
+| Lock-in   | None — swap models or run fully offline                                                |
+| Login     | Optional passwordless email code; off by default, enable with `ZOVELI_AUTH_REQUIRED=1` |
 
 Details: [docs/why-zoveli.md](docs/why-zoveli.md).
 
@@ -104,12 +106,12 @@ ollama pull qwen3:4b
 pnpm start
 ```
 
-| Preset | Model | Good for | Rough RAM |
-|---|---|---|---|
-| Tiny | `qwen3.5:0.8b` | Old laptops, CPU-only | ~1–2 GB |
-| Balanced (default) | `qwen3:4b` | Everyday chat plus tool use | ~4–6 GB |
-| Strong local | `qwen3:8b` | Better reasoning on a modern laptop | ~8–10 GB |
-| Large local | `llama3.1:70b` | Workstations and GPUs | ~48 GB+ |
+| Preset             | Model          | Good for                            | Rough RAM |
+| ------------------ | -------------- | ----------------------------------- | --------- |
+| Tiny               | `qwen3.5:0.8b` | Old laptops, CPU-only               | ~1–2 GB   |
+| Balanced (default) | `qwen3:4b`     | Everyday chat plus tool use         | ~4–6 GB   |
+| Strong local       | `qwen3:8b`     | Better reasoning on a modern laptop | ~8–10 GB  |
+| Large local        | `llama3.1:70b` | Workstations and GPUs               | ~48 GB+   |
 
 `ZOVELI_OLLAMA_MODEL` selects the local model; `ZOVELI_MODEL` is the global
 override and wins when both are set. Small models automatically get a reduced
@@ -144,12 +146,12 @@ your machine. A cloud provider sees only the chat text you send. See
 
 ## Interfaces
 
-| Tier | Surface | Status |
-|---|---|---|
-| 1 | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
-| 2 | **CLI** — scripts, servers, CI, headless machines | **Supported** |
-| 3 | Browser/web UI served over HTTP | Experimental |
-| — | TUI wrappers, editor/messaging integrations | Community-supported |
+| Tier | Surface                                                | Status              |
+| ---- | ------------------------------------------------------ | ------------------- |
+| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
+| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported**       |
+| 3    | Browser/web UI served over HTTP                        | Experimental        |
+| —    | TUI wrappers, editor/messaging integrations            | Community-supported |
 
 ```bash
 pnpm run desktop   # primary app
