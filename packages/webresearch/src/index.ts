@@ -1,5 +1,7 @@
 import { definePlugin } from '@deepseek-ai/dsh-core';
-import { lookup } from 'node:dns/promises';
+import { lookup, type LookupAddress, type LookupOptions } from 'node:dns';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 
 /**
  * Authoritative sources the research tools prefer. Subdomains included
@@ -62,8 +64,16 @@ function isPrivateIPv4(ip: string): boolean {
     inRange('10.0.0.0', 8) ||
     inRange('172.16.0.0', 12) ||
     inRange('192.168.0.0', 16) ||
+    inRange('100.64.0.0', 10) ||
     inRange('127.0.0.0', 8) ||
     inRange('169.254.0.0', 16) ||
+    inRange('192.0.0.0', 24) ||
+    inRange('192.0.2.0', 24) ||
+    inRange('198.18.0.0', 15) ||
+    inRange('198.51.100.0', 24) ||
+    inRange('203.0.113.0', 24) ||
+    inRange('224.0.0.0', 4) ||
+    inRange('240.0.0.0', 4) ||
     inRange('0.0.0.0', 8)
   );
 }
@@ -115,9 +125,59 @@ function isBlockedLiteral(host: string): boolean {
 export type DnsLookup = (host: string) => Promise<{ address: string }[]>;
 
 async function defaultLookup(host: string): Promise<{ address: string }[]> {
-  return (await lookup(host, { all: true })) as unknown as { address: string }[];
+  return new Promise((resolve, reject) => {
+    lookup(host, { all: true }, (error, addresses) => {
+      if (error) reject(error);
+      else resolve(addresses);
+    });
+  });
 }
 
+function fetchPinned(url: URL, addresses: LookupAddress[], init: RequestInit): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const pinnedLookup = (
+      _hostname: string,
+      options: LookupOptions,
+      callback: (error: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void
+    ): void => {
+      if (typeof options === 'object' && options.all) {
+        callback(null, addresses);
+        return;
+      }
+      const first = addresses[0];
+      callback(null, first.address, first.family);
+    };
+    const transport = url.protocol === 'https:' ? httpsRequest : httpRequest;
+    const request = transport(url, {
+      method: 'GET',
+      headers: Object.fromEntries(new Headers(init.headers).entries()),
+      signal: init.signal ?? undefined,
+      lookup: pinnedLookup,
+    }, (response) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      response.on('data', (chunk: Buffer | string) => {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        size += buffer.length;
+        if (size > 2_000_000) {
+          request.destroy(new Error('page too large'));
+          return;
+        }
+        chunks.push(buffer);
+      });
+      response.on('end', () => {
+        const headers = new Headers();
+        for (const [name, value] of Object.entries(response.headers)) {
+          if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
+        }
+        resolve(new Response(Buffer.concat(chunks), { status: response.statusCode ?? 502, headers }));
+      });
+      response.on('error', reject);
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
 async function resolveSafeUrl(
   url: string,
   lookupFn: DnsLookup
@@ -142,7 +202,7 @@ async function resolveSafeUrl(
   if (records.length === 0) throw new Error(`cannot resolve host: ${parsed.hostname}`);
   const addresses = records.map(({ address }) => {
     if (isBlockedAddress(address)) throw new Error(`blocked host (resolves privately): ${parsed.hostname}`);
-    return { address, family: address.includes(':') ? 6 : 4 };
+    return { address, family: (address.includes(':') ? 6 : 4) as 4 | 6 };
   });
   return { url: parsed, addresses };
 }
@@ -250,13 +310,16 @@ export interface FetchResult {
  */
 async function fetchFollowingSafeRedirects(
   url: string,
-  fetchImpl: typeof fetch,
+  fetchImpl: typeof fetch | undefined,
   init: RequestInit,
   lookupFn: DnsLookup = defaultLookup
 ): Promise<{ response: Response; finalUrl: string }> {
-  let current = await assertSafeUrl(url, lookupFn);
+  let currentUrl = url;
   for (let redirects = 0; ; redirects += 1) {
-    const response = await fetchImpl(current.toString(), { ...init, redirect: 'manual' });
+    const { url: current, addresses } = await resolveSafeUrl(currentUrl, lookupFn);
+    const response = fetchImpl
+      ? await fetchImpl(current.toString(), { ...init, redirect: 'manual' })
+      : await fetchPinned(current, addresses, init);
     if (![301, 302, 303, 307, 308].includes(response.status)) {
       return { response, finalUrl: current.toString() };
     }
@@ -268,7 +331,7 @@ async function fetchFollowingSafeRedirects(
     } catch {
       // Ignore failures closing the redirect body; do not follow it unchecked.
     }
-    current = await assertSafeUrl(new URL(location, current).toString(), lookupFn);
+    currentUrl = new URL(location, current).toString();
   }
 }
 
@@ -282,10 +345,9 @@ export async function fetchReadable(
 ): Promise<FetchResult> {
   const maxChars = Math.min(Math.max(opts.maxChars ?? 12000, 500), 100000);
   const timeoutMs = Math.min(Math.max(opts.timeoutMs ?? 15000, 1000), 60000);
-  const doFetch = opts.fetchImpl || fetch;
   const { response: res, finalUrl } = await fetchFollowingSafeRedirects(
     url,
-    doFetch,
+    opts.fetchImpl,
     {
       signal: AbortSignal.timeout(timeoutMs),
       headers: { 'User-Agent': 'ZoveliAI/0.1 (local research; contact: blessandy9104@gmail.com)', Accept: 'text/html,text/plain' },
@@ -357,11 +419,10 @@ export async function searchTrusted(
 ): Promise<{ results: SearchHit[]; note: string }> {
   const limit = Math.min(Math.max(opts.limit ?? 5, 1), 10);
   const timeoutMs = Math.min(Math.max(opts.timeoutMs ?? 15000, 1000), 60000);
-  const doFetch = opts.fetchImpl || fetch;
   try {
     const { response: res } = await fetchFollowingSafeRedirects(
       `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`,
-      doFetch,
+      opts.fetchImpl,
       {
         signal: AbortSignal.timeout(timeoutMs),
         headers: { 'User-Agent': 'ZoveliAI/0.1 (local research; contact: blessandy9104@gmail.com)' },

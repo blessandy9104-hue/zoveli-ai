@@ -48,6 +48,23 @@ describe('SSRF guard', () => {
     await expect(assertSafeUrl('https://internal.example.com/', evilDNS)).rejects.toThrow('resolves privately');
   });
 
+  it('blocks reserved IPv4 and non-public IPv6 destinations', async () => {
+    for (const ip of ['100.64.0.1', '192.0.2.1', '198.18.0.1', '224.0.0.1', '240.0.0.1']) {
+      await expect(assertSafeUrl(`http://${ip}/`, PUBLIC_DNS)).rejects.toThrow('blocked host');
+    }
+    for (const ip of ['fc00::1', 'fe80::1', 'ff02::1', '2001:db8::1', '::ffff:192.168.1.1']) {
+      await expect(assertSafeUrl(`http://[${ip}]/`, PUBLIC_DNS)).rejects.toThrow('blocked host');
+    }
+  });
+
+  it('rejects mixed public and private DNS answers', async () => {
+    const mixedDNS = async () => [
+      { address: '93.184.216.34' },
+      { address: 'fd00::1' },
+    ];
+    await expect(assertSafeUrl('https://mixed.example/', mixedDNS)).rejects.toThrow('resolves privately');
+  });
+
   it('allows public hosts', async () => {
     const u = await assertSafeUrl('https://example.com/x', PUBLIC_DNS);
     expect(u.hostname).toBe('example.com');
