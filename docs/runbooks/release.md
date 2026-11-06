@@ -34,7 +34,9 @@ node apps/cli/dist/cli.js --version   # must print the new version
 ```
 
 CI runs the same gate plus Docker, SBOM, e2e, and security scans. Do not tag
-with any check red. The Docker job also boots the image and checks
+with any check red. For validating every commit behind the release, not just
+`HEAD`, follow [history validation](history-validation.md). The Docker job also
+boots the image and checks
 `zoveli --version`, the plugin inventory (`zoveli plugins --json`), and
 `mathcore ops`.
 
