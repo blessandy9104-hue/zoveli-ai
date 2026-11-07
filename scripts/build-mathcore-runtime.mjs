@@ -102,6 +102,8 @@ function main() {
         'mathcore-mcp',
         '--collect-all',
         'z3',
+        '--collect-all',
+        'mathcore',
         ...opsModules.flatMap((module) => ['--hidden-import', `mathcore.${module}`]),
         '--paths',
         join(ROOT, 'mathcore', 'src'),
