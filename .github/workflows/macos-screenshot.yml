@@ -12,10 +12,12 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 15
     steps:
-      - name: Check display capture
+      - name: Check display and Gatekeeper status
         run: |
           screencapture -x desktop.png || echo "screencapture failed"
           file desktop.png || true
+          spctl --status || true
+          csrutil status || true
 
       - name: Download unsigned disk image
         run: |
@@ -24,20 +26,64 @@ jobs:
           xattr -w com.apple.quarantine "0083;00000000;Safari;" zoveli.dmg
           xattr -l zoveli.dmg
 
-      - name: Open disk image and capture
+      - name: Mount and inspect disk image
         run: |
-          open zoveli.dmg || echo "open failed"
+          hdiutil attach zoveli.dmg -nobrowse -mountpoint /tmp/zoveli-dmg
+          {
+            echo "== volume =="
+            xattr -l /tmp/zoveli-dmg || true
+            for f in zoveli node app.cjs mathcore/mathcore-mcp; do
+              echo "== $f =="
+              xattr -l "/tmp/zoveli-dmg/$f" || true
+              spctl --assess --type execute --verbose=4 "/tmp/zoveli-dmg/$f" 2>&1 || true
+              codesign -dv --verbose=2 "/tmp/zoveli-dmg/$f" 2>&1 | head -8 || true
+            done
+          } | tee mount-report.txt
+
+      - name: Copy runtime and apply quarantine
+        run: |
+          mkdir -p "$HOME/Applications"
+          ditto /tmp/zoveli-dmg "$HOME/Applications/zoveli-0.1.3-macos-arm64"
+          find "$HOME/Applications/zoveli-0.1.3-macos-arm64" -type f -print0 \
+            | xargs -0 -I{} xattr -w com.apple.quarantine "0083;00000000;Safari;" "{}"
+          {
+            echo "== copied volume =="
+            xattr -l /tmp/zoveli-dmg || true
+            for f in zoveli node mathcore/mathcore-mcp; do
+              echo "== copied $f =="
+              xattr -l "$HOME/Applications/zoveli-0.1.3-macos-arm64/$f" || true
+              spctl --assess --type execute --verbose=4 "$HOME/Applications/zoveli-0.1.3-macos-arm64/$f" 2>&1 || true
+              codesign -dv --verbose=2 "$HOME/Applications/zoveli-0.1.3-macos-arm64/$f" 2>&1 | head -8 || true
+            done
+          } | tee copied-report.txt
+          screencapture -x copied.png
+
+      - name: Launch copied runtime and capture
+        run: |
+          set +e
+          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/zoveli"
+          sleep 4
+          screencapture -x open-script.png
+          osascript -e 'tell application "System Events" to get name of every process whose visible is true' 2>&1 | tee -a launch-report.txt
+          open -a Terminal "$HOME/Applications/zoveli-0.1.3-macos-arm64/zoveli"
           sleep 6
-          screencapture -x gatekeeper.png || echo "screencapture failed"
-          file gatekeeper.png || true
-          hdiutil info | head -40 || true
+          screencapture -x terminal-script.png
+          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/node"
+          sleep 4
+          screencapture -x open-node.png
+          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/mathcore/mathcore-mcp"
+          sleep 4
+          screencapture -x open-mathcore.png
+          osascript -e 'tell application "System Events" to get name of every process whose visible is true' 2>&1 | tee -a launch-report.txt
+          ps aux | grep -E 'zoveli|mathcore|node' | grep -v grep | tee -a launch-report.txt
+          log show --last 3m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' 2>&1 | tail -80 | tee -a launch-report.txt
 
       - name: Upload captures
         uses: actions/upload-artifact@v4
         with:
           name: macos-gatekeeper-capture
           path: |
-            desktop.png
-            gatekeeper.png
+            *.png
+            *-report.txt
           if-no-files-found: warn
           retention-days: 7
