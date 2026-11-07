@@ -58,41 +58,25 @@ jobs:
           } | tee copied-report.txt
           screencapture -x copied.png
 
-      - name: Open launcher via LaunchServices
+      - name: Capture launch attempts
         run: |
           set +e
-          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/zoveli"
-          echo "open exit=$?"
-          sleep 5
+          APP="$HOME/Applications/zoveli-0.1.3-macos-arm64"
+          open "$APP/zoveli" > /tmp/open-script.log 2>&1 &
+          sleep 8
           screencapture -x open-script.png
-          ps aux | grep -E 'zoveli|mathcore' | grep -v grep | tee launch-report.txt || true
-
-      - name: Open launcher in Terminal
-        run: |
-          set +e
-          open -a Terminal "$HOME/Applications/zoveli-0.1.3-macos-arm64/zoveli"
-          echo "terminal exit=$?"
-          sleep 7
+          ps aux | grep -E 'zoveli|mathcore|Terminal' | grep -v grep | tee launch-report.txt || true
+          open -a Terminal "$APP/zoveli" > /tmp/open-terminal.log 2>&1 &
+          sleep 8
           screencapture -x terminal-script.png
-          ps aux | grep -E 'zoveli|mathcore' | grep -v grep | tee -a launch-report.txt || true
-
-      - name: Open bundled node
-        run: |
-          set +e
-          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/node"
-          echo "node exit=$?"
-          sleep 5
+          open "$APP/node" > /tmp/open-node.log 2>&1 &
+          sleep 6
           screencapture -x open-node.png
-          ps aux | grep -E 'zoveli|mathcore|node' | grep -v grep | tee -a launch-report.txt || true
-
-      - name: Open bundled mathcore
-        run: |
-          set +e
-          open "$HOME/Applications/zoveli-0.1.3-macos-arm64/mathcore/mathcore-mcp"
-          echo "mathcore exit=$?"
-          sleep 5
+          open "$APP/mathcore/mathcore-mcp" > /tmp/open-mathcore.log 2>&1 &
+          sleep 6
           screencapture -x open-mathcore.png
-          ps aux | grep -E 'zoveli|mathcore|node' | grep -v grep | tee -a launch-report.txt || true
+          ps aux | grep -E 'zoveli|mathcore|node|Terminal' | grep -v grep | tee -a launch-report.txt || true
+          cat /tmp/open-*.log | tee -a launch-report.txt
 
       - name: Upload captures
         uses: actions/upload-artifact@v4
