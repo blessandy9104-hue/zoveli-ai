@@ -96,8 +96,8 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
 - CI/release workflow is green.
 - `docker pull ghcr.io/blessandy9104-hue/zoveli-ai:X.Y.Z` works.
 - Installer smoke (`Installer Check` workflow) passes.
-- `Runtime Artifacts` passes on Linux, macOS, and Windows, including
-  clean-install acceptance.
+- `Runtime Artifacts` passes on Linux, macOS (arm64 and x64), and Windows,
+  including clean-install acceptance.
 - The release has `zoveli-X.Y.Z-linux-x64.tar.gz`,
   `zoveli-X.Y.Z-windows-x64.tar.gz`, `zoveli-X.Y.Z-macos-arm64.tar.gz`, and
   `zoveli-X.Y.Z-macos-x64.tar.gz` with matching `.sha256` files, plus

@@ -94,6 +94,7 @@ published SHA-256 sidecar, and check the build-provenance attestation.
 **macOS or Linux:**
 
 ```bash
+# Use macos-x64 instead of macos-arm64 on an Intel Mac.
 shasum -a 256 zoveli-0.1.3-macos-arm64.tar.gz
 cat zoveli-0.1.3-macos-arm64.tar.gz.sha256
 ```
