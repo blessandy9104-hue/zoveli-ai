@@ -881,3 +881,214 @@ describe('usage snapshots', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Usage accounting concurrency tests
+// ---------------------------------------------------------------------------
+
+describe('usage accounting concurrency', () => {
+  it('many concurrent same-credential requests produce exact requests and blockedRequests counts', async () => {
+    // requestsPerMinute: 0 means the token bucket never refills, so the
+    // allowed/blocked split is deterministic regardless of request arrival timing.
+    const manager = new CredentialManager([
+      {
+        name: 'concurrent',
+        token: 'concurrent-token-0123456789abcdef01234567',
+        requestsPerMinute: 0,
+        burst: 3,
+      },
+    ]);
+    const { url } = await start({ credentials: manager });
+
+    const N = 10;
+    const responses = await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        rawPost(
+          url,
+          {
+            jsonrpc: '2.0',
+            id: i + 1,
+            method: 'tools/list',
+            params: {},
+            _meta: {
+              'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+              'io.modelcontextprotocol/clientCapabilities': {},
+            },
+          },
+          {
+            'mcp-protocol-version': '2026-07-28',
+            'mcp-method': 'tools/list',
+            authorization: 'Bearer concurrent-token-0123456789abcdef01234567',
+          }
+        )
+      )
+    );
+
+    const allowed = responses.filter((r) => r.status === 200).length;
+    const blocked = responses.filter((r) => r.status === 429).length;
+
+    expect(allowed + blocked).toBe(N);
+    expect(allowed).toBe(3); // burst capacity
+    expect(blocked).toBe(N - 3);
+
+    const snapshots = manager.snapshots();
+    expect(snapshots.length).toBe(1);
+    expect(snapshots[0].name).toBe('concurrent');
+    // Every authenticated request that reaches the rate limiter counts,
+    // whether allowed or blocked.
+    expect(snapshots[0].requests).toBe(N);
+    expect(snapshots[0].blockedRequests).toBe(blocked);
+    expect(snapshots[0].requests - snapshots[0].blockedRequests).toBe(allowed);
+  });
+
+  it('rate-limited requests count toward requests', async () => {
+    const manager = new CredentialManager([
+      {
+        name: 'limited',
+        token: 'limited-token-0123456789abcdef01234567',
+        requestsPerMinute: 0,
+        burst: 1,
+      },
+    ]);
+    const { url } = await start({ credentials: manager });
+
+    // First request succeeds (burst = 1)
+    const first = await rawPost(url, {
+      jsonrpc: '2.0', id: 1, method: 'tools/list', params: {},
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+      },
+    }, {
+      'mcp-protocol-version': '2026-07-28',
+      'mcp-method': 'tools/list',
+      authorization: 'Bearer limited-token-0123456789abcdef01234567',
+    });
+    expect(first.status).toBe(200);
+
+    // Second request is rate limited but still counts toward requests
+    const second = await rawPost(url, {
+      jsonrpc: '2.0', id: 2, method: 'tools/list', params: {},
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+      },
+    }, {
+      'mcp-protocol-version': '2026-07-28',
+      'mcp-method': 'tools/list',
+      authorization: 'Bearer limited-token-0123456789abcdef01234567',
+    });
+    expect(second.status).toBe(429);
+
+    const snapshots = manager.snapshots();
+    expect(snapshots[0].requests).toBe(2);
+    expect(snapshots[0].blockedRequests).toBe(1);
+    expect(snapshots[0].requests - snapshots[0].blockedRequests).toBe(1);
+  });
+
+  it('request that passes rate limiting but fails during tool execution still counts as an attempt', async () => {
+    const failingHost: RemoteToolHost = {
+      tools: () => [
+        {
+          name: 'failing_tool',
+          description: 'always throws',
+          parameters: { type: 'object', properties: {} },
+        },
+      ],
+      async runTool() {
+        throw new Error('tool execution failure');
+      },
+    };
+
+    const manager = new CredentialManager([
+      {
+        name: 'tool-fail',
+        token: 'tool-fail-token-0123456789abcdef01234567',
+        requestsPerMinute: 0,
+        burst: 5,
+      },
+    ]);
+    const { url } = await start({
+      credentials: manager,
+      host: failingHost,
+      allowedTools: ['failing_tool'],
+    });
+
+    const res = await rawPost(url, {
+      jsonrpc: '2.0', id: 1, method: 'tools/call',
+      params: { name: 'failing_tool', arguments: {} },
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+      },
+    }, {
+      'mcp-protocol-version': '2026-07-28',
+      'mcp-method': 'tools/call',
+      'mcp-name': 'failing_tool',
+      authorization: 'Bearer tool-fail-token-0123456789abcdef01234567',
+    });
+
+    // Rate limit passed, tool failed -> HTTP 200 with isError result
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.result.isError).toBe(true);
+
+    // The attempt was counted even though the tool failed
+    const snapshots = manager.snapshots();
+    expect(snapshots[0].requests).toBe(1);
+    expect(snapshots[0].blockedRequests).toBe(0);
+  });
+
+  it('usage snapshots do not expose bearer tokens under concurrency', async () => {
+    const manager = new CredentialManager([
+      {
+        name: 'alice',
+        token: 'alice-token-0123456789abcdef01234567',
+        requestsPerMinute: 0,
+        burst: 3,
+      },
+      {
+        name: 'bob',
+        token: 'bob-token-0123456789abcdef0123456789',
+        requestsPerMinute: 0,
+        burst: 3,
+      },
+    ]);
+    const { url } = await start({ credentials: manager });
+
+    const aliceToken = 'alice-token-0123456789abcdef01234567';
+    const bobToken = 'bob-token-0123456789abcdef0123456789';
+
+    await Promise.all([
+      rawPost(url, {
+        jsonrpc: '2.0', id: 1, method: 'tools/list', params: {},
+        _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} },
+      }, {
+        'mcp-protocol-version': '2026-07-28',
+        'mcp-method': 'tools/list',
+        authorization: `Bearer ${aliceToken}`,
+      }),
+      rawPost(url, {
+        jsonrpc: '2.0', id: 2, method: 'tools/list', params: {},
+        _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} },
+      }, {
+        'mcp-protocol-version': '2026-07-28',
+        'mcp-method': 'tools/list',
+        authorization: `Bearer ${bobToken}`,
+      }),
+    ]);
+
+    const snapshots = manager.snapshots();
+    expect(snapshots.length).toBe(2);
+
+    for (const s of snapshots) {
+      // No token field exposed
+      expect(Object.keys(s)).not.toContain('token');
+      expect(Object.keys(s)).toEqual(['name', 'requests', 'blockedRequests', 'lastRequestAt']);
+      // No token value serialized anywhere
+      const serialized = JSON.stringify(s);
+      expect(serialized).not.toContain(aliceToken);
+      expect(serialized).not.toContain(bobToken);
+    }
+  });
+});
