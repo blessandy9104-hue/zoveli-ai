@@ -5,9 +5,9 @@ account, API key, or network connection is required for local tools.
 
 ## 1. Prerequisites
 
-Portable install (recommended): currently Linux x64, Windows x64, and macOS
-arm64; network access for the one-time download. Git, Node.js, Python, pnpm,
-and a compiler are bundled in the archive and are not required. Other
+Portable install (recommended): currently Linux x64, Windows x64, macOS arm64,
+and macOS x64; network access for the one-time download. Git, Node.js, Python,
+pnpm, and a compiler are bundled in the archive and are not required. Other
 architectures use the source install.
 
 Source checkout: Node.js 22.16+ (the memory store uses `node:sqlite` with

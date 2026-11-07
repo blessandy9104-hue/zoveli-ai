@@ -38,7 +38,7 @@ The Windows installer is
 7. Launch Zoveli from the Start menu or run `zoveli.cmd` from the install
    directory.
 
-![Windows SmartScreen warning placeholder](./assets/windows-smartscreen.png)
+![Windows SmartScreen warning for the unsigned Zoveli installer](./assets/windows-smartscreen.png)
 
 > **No "Run anyway" button?** The device is probably managed by SmartScreen,
 > AppLocker, or WDAC policy. Use the portable `.tar.gz` archive instead: extract
@@ -46,30 +46,45 @@ The Windows installer is
 
 ## macOS (Gatekeeper)
 
-The official macOS installer is `zoveli-0.1.3-macos-arm64-setup.dmg` for Apple
-Silicon (M-series) Macs. Intel Macs are not covered by the prebuilt macOS
-artifacts yet; build from source using the
-[onboarding guide](guides/onboarding.md).
+The official macOS installers are:
 
-1. Download the `.dmg` from the official Releases page.
-2. Open the disk image and drag **Zoveli** into **Applications**.
-3. Open **Applications**, then **Control-click** Zoveli and choose **Open**.
-4. Click **Open** in the confirmation dialog.
-5. If you already double-clicked and macOS blocked the app, open **System
-   Settings → Privacy & Security**, scroll to the **Security** section, click
-   **Open Anyway**, authenticate, then click **Open**.
-6. If macOS says the app is damaged, verify the download first, then remove the
-   quarantine flag for this app only:
+- `zoveli-0.1.3-macos-arm64-setup.dmg` for Apple Silicon (M-series) Macs.
+- `zoveli-0.1.3-macos-x64-setup.dmg` for Intel Macs.
+
+The disk image contains the portable `zoveli-<version>-macos-<arch>` runtime. It
+is not a `.app` bundle, so Gatekeeper assesses the `zoveli` launcher itself
+rather than an app bundle.
+
+1. Download the `.dmg` that matches your Mac from the official Releases page.
+2. Double-click the disk image, then copy the `zoveli-<version>-macos-<arch>`
+   folder to a location you control, such as `~/Applications`.
+3. Open the copied folder in Finder and double-click `zoveli`. The first launch
+   shows **“zoveli” Not Opened** with **Done** and **Move to Trash**. Click
+   **Done**; do not move the runtime to the trash.
+4. Open **System Settings → Privacy & Security**, scroll to the **Security**
+   section, and click **Open Anyway** next to the blocked `zoveli` item.
+   Authenticate, then click **Open** in the confirmation dialog.
+5. Run `zoveli` again from Finder, or from Terminal. Use the folder that
+   matches your Mac:
 
    ```bash
-   xattr -dr com.apple.quarantine /Applications/Zoveli.app
-   open /Applications/Zoveli.app
+   ~/Applications/zoveli-0.1.3-macos-arm64/zoveli   # Apple Silicon
+   ~/Applications/zoveli-0.1.3-macos-x64/zoveli    # Intel
    ```
 
-7. Never disable Gatekeeper globally. Use the per-app **Open Anyway** flow or
-   the quarantine command only for a download you have verified.
+6. If macOS still blocks the executable, verify the download first, then remove
+   the quarantine flag from the folder you copied. The example below is for
+   Apple Silicon; use `macos-x64` on Intel:
 
-![macOS Gatekeeper warning placeholder](./assets/macos-gatekeeper.png)
+   ```bash
+   xattr -dr com.apple.quarantine ~/Applications/zoveli-0.1.3-macos-arm64
+   ~/Applications/zoveli-0.1.3-macos-arm64/zoveli
+   ```
+
+7. Never disable Gatekeeper globally. Use **Open Anyway** or the quarantine
+   command only for a download you have verified.
+
+![macOS Gatekeeper warning for the unsigned zoveli launcher](./assets/macos-gatekeeper.png)
 
 ## Verify before you bypass
 
@@ -126,16 +141,18 @@ independent. The steps above make it predictable.
 | --- | --- |
 | Windows shows "Windows protected your PC" | Click **More info**, then **Run anyway**. |
 | Windows has no **Run anyway** button | The device is policy-managed. Use the portable `.tar.gz` or contact IT. |
-| macOS says "cannot be opened because the developer cannot be verified" | **System Settings → Privacy & Security → Open Anyway**, or Control-click the app and choose **Open**. |
-| macOS says the app is damaged | Verify the checksum, then remove the quarantine flag for `/Applications/Zoveli.app` only. |
-| macOS blocks the app after an update | Repeat the first-launch **Open Anyway** step for the new version. |
+| macOS shows **“zoveli” Not Opened** (Apple could not verify it) | Click **Done**, then **System Settings → Privacy & Security → Open Anyway**, authenticate, and click **Open**. |
+| macOS blocks the disk image or says it cannot be verified | Open **System Settings → Privacy & Security → Open Anyway** for the disk image. |
+| macOS still blocks the `zoveli` executable after you approve it | Verify the checksum, then remove the quarantine flag from the copied runtime folder. |
+| macOS blocks the runtime after an update | Repeat the first-launch **Open Anyway** or `xattr` step for the new version. |
 | You are unsure whether a download is genuine | Delete it and download again from the official Releases page; verify the checksum and attestation. |
 
-## Screenshot placeholders
+## Screenshots
 
-The images in this guide are placeholders so the layout and steps are clear.
-Replace them with current Windows 11 SmartScreen and macOS Gatekeeper
-screenshots when available:
+The Windows image is a real Windows 11 SmartScreen capture from the unsigned
+`zoveli-0.1.3-windows-x64-setup.exe`. The macOS image is a real macOS 15
+Sequoia Gatekeeper capture from the unsigned portable `zoveli` launcher. Both
+are refreshed when the installers or the operating-system dialogs change.
 
 - `docs/assets/windows-smartscreen.png`
 - `docs/assets/macos-gatekeeper.png`

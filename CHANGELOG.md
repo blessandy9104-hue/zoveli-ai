@@ -16,6 +16,12 @@ the new section **before** running `pnpm release:check --release`.
   `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
   now covers both architectures.
 
+### Changed
+
+- **Real installer screenshots:** the Sovereign Install Guide now uses a real
+  Windows 11 SmartScreen capture and a real macOS 15 Gatekeeper capture from the
+  unsigned builds instead of placeholders.
+
 ## [0.1.3] - 2026-11-06
 
 ### Added
