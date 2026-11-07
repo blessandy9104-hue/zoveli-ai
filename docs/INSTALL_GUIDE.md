@@ -46,9 +46,10 @@ The Windows installer is
 
 ## macOS (Gatekeeper)
 
-The macOS installer is
-`zoveli-0.1.3-macos-arm64-setup.dmg` on Apple Silicon or
-`zoveli-0.1.3-macos-x64-setup.dmg` on Intel.
+The official macOS installer is `zoveli-0.1.3-macos-arm64-setup.dmg` for Apple
+Silicon (M-series) Macs. Intel Macs are not covered by the prebuilt macOS
+artifacts yet; build from source using the
+[onboarding guide](guides/onboarding.md).
 
 1. Download the `.dmg` from the official Releases page.
 2. Open the disk image and drag **Zoveli** into **Applications**.

@@ -98,10 +98,11 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
 - Installer smoke (`Installer Check` workflow) passes.
 - `Runtime Artifacts` passes on Linux, macOS, and Windows, including
   clean-install acceptance.
-- The release has `zoveli-X.Y.Z-{linux,macos,windows}-{x64,arm64}.tar.gz` and
-  matching `.sha256` files where the runner supports that architecture, plus
-  `zoveli-X.Y.Z-macos-<arch>-setup.dmg` and
-  `zoveli-X.Y.Z-windows-<arch>-setup.exe`.
+- The release has `zoveli-X.Y.Z-linux-x64.tar.gz`,
+  `zoveli-X.Y.Z-windows-x64.tar.gz`, and `zoveli-X.Y.Z-macos-arm64.tar.gz` with
+  matching `.sha256` files, plus `zoveli-X.Y.Z-macos-arm64-setup.dmg` and
+  `zoveli-X.Y.Z-windows-x64-setup.exe`. Intel macOS builds are not produced
+  yet because the workflow has no Intel runner.
 - `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai
   --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`
   finds a build-provenance attestation for each published archive and
