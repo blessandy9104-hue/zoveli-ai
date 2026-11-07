@@ -17,7 +17,6 @@ jobs:
           curl -fL --retry 3 -o zoveli.dmg \
             https://github.com/blessandy9104-hue/zoveli-ai/releases/download/v0.1.3/zoveli-0.1.3-macos-x64-setup.dmg
           xattr -w com.apple.quarantine "0083;00000000;Safari;" zoveli.dmg
-          xattr -l zoveli.dmg
 
       - name: Copy runtime with quarantine
         run: |
@@ -26,21 +25,27 @@ jobs:
           ditto /tmp/zoveli-dmg "$HOME/Applications/zoveli-0.1.3-macos-x64"
           find "$HOME/Applications/zoveli-0.1.3-macos-x64" -type f -print0 \
             | xargs -0 -I{} xattr -w com.apple.quarantine "0083;00000000;Safari;" "{}"
+          spctl --assess --type execute --verbose=4 "$HOME/Applications/zoveli-0.1.3-macos-x64/zoveli" 2>&1 || true
           xattr -l "$HOME/Applications/zoveli-0.1.3-macos-x64/zoveli"
 
       - name: Open launcher and capture
         run: |
           set +e
           open "$HOME/Applications/zoveli-0.1.3-macos-x64/zoveli" &
-          sleep 8
-          screencapture -x gatekeeper-x64.png
-          file gatekeeper-x64.png
-          ps aux | grep -E 'zoveli|Terminal' | grep -v grep || true
+          sleep 5
+          screencapture -x frame-05.png
+          sleep 5
+          screencapture -x frame-10.png
+          sleep 5
+          screencapture -x frame-15.png
+          sleep 10
+          screencapture -x frame-25.png
+          ps -axo pid,stat,comm,args | grep -E 'CoreServicesUIAgent|SecurityAgent|syspolicyd|Terminal|open ' | grep -v grep || true
 
-      - name: Upload capture
+      - name: Upload captures
         uses: actions/upload-artifact@v4
         with:
           name: macos-gatekeeper-x64
-          path: gatekeeper-x64.png
+          path: frame-*.png
           if-no-files-found: error
           retention-days: 7
