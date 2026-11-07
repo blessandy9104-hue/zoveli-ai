@@ -9,6 +9,13 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Added
+
+- **Native Intel macOS builds:** the runtime workflow now builds on
+  `macos-15-intel` as well as Apple Silicon, producing a `macos-x64` archive and
+  `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
+  now covers both architectures.
+
 ## [0.1.3] - 2026-11-06
 
 ### Added
