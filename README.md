@@ -269,6 +269,7 @@ shorthand is available after installing the portable launcher.
 - [Upgrading](docs/guides/upgrading.md) · [Changelog](CHANGELOG.md)
 - [ADRs](docs/adr/)
 - [First-run guide](docs/guides/onboarding.md) · [Desktop guide](docs/guides/desktop.md) · [CLI guide](docs/guides/cli.md)
+- [Remote MCP server and allowlist](docs/guides/remote-mcp.md)
 - [Platform maturity strategy](docs/strategy-platform-upgrades.md)
 
 ## Contributing

@@ -97,5 +97,28 @@ export type { ChatConfig, ChatMessage } from './chat.js';
 export { CircuitBreaker, fromOpenAIResponse, openaiHealthPing, openaiTools, postOpenAITurn, resetOpenAIStateForTests } from './openai.js';
 export { ProviderError, isRetryableProviderError, mapOpenAIError, parseRetryAfter, transportError } from './provider-errors.js';
 export type { ProviderErrorCode } from './provider-errors.js';
+export {
+  REMOTE_MCP_ALLOWLIST_ENV,
+  REMOTE_MCP_ALLOWLIST_FILE_ENV,
+  REMOTE_MCP_DEFAULT_ALLOWED_TOOLS,
+  RemoteMcpConfigError,
+  parseRemoteMcpAllowlistEnv,
+  parseRemoteMcpAllowlistFile,
+  resolveRemoteMcpAllowlist,
+  validateRemoteMcpAllowlist,
+  buildAllowlistedRemoteTools,
+  createRemoteMcpHost,
+  createRemoteMcpRequestHandler,
+  createRemoteMcpServer,
+} from './remote-mcp/index.js';
+export type {
+  AllowlistedRemoteTool,
+  RemoteMcpAllowlist,
+  RemoteMcpAllowlistSource,
+  RemoteMcpServerOptions,
+  RemoteToolDefinition,
+  RemoteToolHost,
+  ResolveRemoteMcpAllowlistOptions,
+} from './remote-mcp/index.js';
 
 

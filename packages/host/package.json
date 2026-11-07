@@ -24,6 +24,11 @@
       "types": "./dist/provider-errors.d.ts",
       "import": "./dist/provider-errors.js",
       "require": "./dist/provider-errors.js"
+    },
+    "./remote-mcp": {
+      "types": "./dist/remote-mcp/index.d.ts",
+      "import": "./dist/remote-mcp/index.js",
+      "require": "./dist/remote-mcp/index.js"
     }
   },
   "scripts": {

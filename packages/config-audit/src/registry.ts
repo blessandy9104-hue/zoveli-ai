@@ -18,7 +18,7 @@ export type EnvKind =
 
 export interface EnvSpec {
   name: string;
-  group: 'Chat' | 'Plugins' | 'Math' | 'Memory' | 'Auth' | 'Desktop' | 'Observability';
+  group: 'Chat' | 'Plugins' | 'Math' | 'Memory' | 'Auth' | 'Desktop' | 'Remote' | 'Observability';
   kind: EnvKind;
   description: string;
   default?: string;
@@ -407,6 +407,78 @@ export const ENV_REGISTRY: EnvSpec[] = [
     group: 'Desktop',
     kind: 'string',
     description: 'custom Unicorn Studio project id for the desktop background',
+  },
+  // Remote MCP (opt-in server; separate from the desktop tool configuration)
+  {
+    name: 'ZOVELI_REMOTE_MCP_HOST',
+    group: 'Remote',
+    kind: 'string',
+    description: 'remote MCP bind address (non-loopback requires a token)',
+    default: '127.0.0.1',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_PORT',
+    group: 'Remote',
+    kind: 'number',
+    parse: 'int',
+    min: 0,
+    max: 65535,
+    description: 'remote MCP listen port (0 picks an ephemeral port)',
+    default: '8790',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_TOKEN',
+    group: 'Remote',
+    kind: 'secret',
+    minLength: 32,
+    description: 'bearer token for the remote MCP server; required for non-loopback binds; minimum 32 characters',
+    default: 'off (loopback only)',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_ALLOWED_TOOLS',
+    group: 'Remote',
+    kind: 'string',
+    description: 'comma-separated remote MCP tool allowlist (startup only)',
+    default: 'built-in math-only allowlist',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_ALLOWLIST_FILE',
+    group: 'Remote',
+    kind: 'path-file',
+    description: 'JSON remote MCP allowlist file (array or { allowedTools: [] })',
+    default: 'built-in math-only allowlist',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_CREDENTIALS_FILE',
+    group: 'Remote',
+    kind: 'path-file',
+    description: 'JSON remote MCP credentials file (takes precedence over ZOVELI_REMOTE_MCP_TOKEN)',
+    default: 'none (single-token shorthand only)',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_ORIGINS',
+    group: 'Remote',
+    kind: 'string',
+    description: 'comma-separated allowed origins for remote MCP (remote/public binds)',
+    default: 'none',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_RATE_LIMIT_RPM',
+    group: 'Remote',
+    kind: 'number',
+    parse: 'int',
+    min: 1,
+    description: 'remote MCP requests per minute per credential',
+    default: '60',
+  },
+  {
+    name: 'ZOVELI_REMOTE_MCP_RATE_LIMIT_BURST',
+    group: 'Remote',
+    kind: 'number',
+    parse: 'int',
+    min: 1,
+    description: 'remote MCP burst allowance per credential',
+    default: '10',
   },
 ];
 
