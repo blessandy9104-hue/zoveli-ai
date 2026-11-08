@@ -232,9 +232,17 @@ function decodeMcpParamValue(value: string): string {
 /** Extract the bearer token from the Authorization header. Never logs the value. */
 function bearerTokenFromReq(req: http.IncomingMessage): string | undefined {
   const header = String(req.headers.authorization || '');
-  const match = /^Bearer\s+(.+)$/i.exec(header);
-  if (!match) return undefined;
-  return match[1];
+  // Linear scan instead of a backtracking regex (ReDoS-safe). HTTP header
+  // values cannot contain line breaks, so spaces and tabs are the only
+  // whitespace that can separate the scheme from the token.
+  const scheme = 'bearer';
+  if (header.length <= scheme.length) return undefined;
+  if (header.slice(0, scheme.length).toLowerCase() !== scheme) return undefined;
+  let i = scheme.length;
+  if (header[i] !== ' ' && header[i] !== '\t') return undefined;
+  while (i < header.length && (header[i] === ' ' || header[i] === '\t')) i++;
+  const token = header.slice(i);
+  return token.length > 0 ? token : undefined;
 }
 
 /** Constant-time bearer authorization against a single shorthand token. */

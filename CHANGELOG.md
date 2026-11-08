@@ -36,6 +36,10 @@ the new section **before** running `pnpm release:check --release`.
   step-scoped, excluded the editable `mathcore` install from the nightly
   `pip-audit` file, and quoted Windows archive paths. CodeQL now watches only
   branches that exist remotely.
+- **Remote MCP bearer parsing:** the `Authorization` header is parsed with a
+  linear scan instead of a backtracking regular expression, removing a
+  polynomial-time worst case on hostile header values without changing which
+  tokens are accepted.
 - **Installer runtime selection:** `findRuntime` now validates and compares full
   SemVer versions, including prerelease identifiers, rejects malformed or
   non-matching directory names, and returns the selected runtime path.

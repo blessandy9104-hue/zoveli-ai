@@ -193,6 +193,27 @@ describe('remote MCP allowlist', () => {
       { authorization: 'Bearer 0123456789abcdef' }
     );
     expect(allowed.status).toBe(200);
+
+    const extraWhitespace = await post(
+      url,
+      { jsonrpc: '2.0', id: 8, method: 'tools/list' },
+      { authorization: `bEaReR \t ${' '.repeat(4096)}0123456789abcdef` }
+    );
+    expect(extraWhitespace.status).toBe(200);
+
+    const wrongScheme = await post(
+      url,
+      { jsonrpc: '2.0', id: 9, method: 'tools/list' },
+      { authorization: 'Basic 0123456789abcdef' }
+    );
+    expect(wrongScheme.status).toBe(401);
+
+    const emptyToken = await post(
+      url,
+      { jsonrpc: '2.0', id: 10, method: 'tools/list' },
+      { authorization: 'Bearer   ' }
+    );
+    expect(emptyToken.status).toBe(401);
   });
 
   it('does not offer a server-initiated SSE stream', async () => {
