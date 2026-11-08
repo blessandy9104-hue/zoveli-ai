@@ -144,7 +144,9 @@ docker compose up --build
 The Compose path keeps the vault and audit log in the `zoveli-data` volume.
 Cloud keys, `ZOVELI_PROVIDER`, and `ZOVELI_OLLAMA_MODEL` are passed through from
 the environment; see [compose.yaml](compose.yaml). The Docker chat stack lives in
-[docker/docker-compose.yml](docker/docker-compose.yml).
+[docker/docker-compose.yml](docker/docker-compose.yml); its optional `postgres`
+and `monitoring` profiles require `POSTGRES_PASSWORD` and
+`GRAFANA_ADMIN_PASSWORD` respectively.
 
 ## Choose your model
 

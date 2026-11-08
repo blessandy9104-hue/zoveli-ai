@@ -46,6 +46,10 @@ describe('findRuntime', () => {
     expect(result).toBeNull();
   });
 
+  it('returns null when the output directory does not exist', () => {
+    expect(findRuntime(join(tmpDir, 'missing'), 'windows', 'x64')).toBeNull();
+  });
+
   it('filters out malformed directory names', () => {
     createDirs(['zoveli-invalid-windows-x64', 'zoveli-0.1.0-windows-x64', 'zoveli-abc-windows-x64']);
     const result = findRuntime(tmpDir, 'windows', 'x64');
@@ -56,6 +60,16 @@ describe('findRuntime', () => {
     createDirs(['zoveli-0.1.0-windows-x64', 'zoveli-0.2.0-darwin-arm64']);
     const result = findRuntime(tmpDir, 'linux', 'x64');
     expect(result).toBeNull();
+  });
+
+  it('matches platform and arch as complete segments', () => {
+    createDirs([
+      'zoveli-0.1.0-windows-x64-extra',
+      'zoveli-0.2.0-linux-x64',
+      'zoveli-0.3.0-windows-x64',
+    ]);
+    const result = findRuntime(tmpDir, 'windows', 'x64');
+    expect(result).toBe(join(tmpDir, 'zoveli-0.3.0-windows-x64'));
   });
 
   it('returns null when no candidates match platform/arch', () => {
@@ -84,5 +98,25 @@ describe('findRuntime', () => {
     createDirs(['zoveli-0.1.0-beta.1-windows-x64', 'zoveli-0.1.0-windows-x64']);
     const result = findRuntime(tmpDir, 'windows', 'x64');
     expect(result).toBe(join(tmpDir, 'zoveli-0.1.0-windows-x64'));
+  });
+
+  it('orders hyphenated prerelease identifiers per SemVer', () => {
+    createDirs([
+      'zoveli-0.1.0-alpha.1-windows-x64',
+      'zoveli-0.1.0-alpha.1-hotfix.1-windows-x64',
+    ]);
+    const result = findRuntime(tmpDir, 'windows', 'x64');
+    expect(result).toBe(join(tmpDir, 'zoveli-0.1.0-alpha.1-hotfix.1-windows-x64'));
+  });
+
+  it('filters out incomplete or non-SemVer version names', () => {
+    createDirs([
+      'zoveli-1.2-windows-x64',
+      'zoveli-1.2.3.4-windows-x64',
+      'zoveli-v1.2.3-windows-x64',
+      'zoveli-1.2.3-windows-x64',
+    ]);
+    const result = findRuntime(tmpDir, 'windows', 'x64');
+    expect(result).toBe(join(tmpDir, 'zoveli-1.2.3-windows-x64'));
   });
 });

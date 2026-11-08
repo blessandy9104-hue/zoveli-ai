@@ -76,53 +76,78 @@ export function dmgCommand({ runtimeDir, outputDir, version, arch }) {
 }
 
 export function findRuntime(outDir, platform, arch) {
+  if (!existsSync(outDir)) return null;
+
   const candidates = readdirSync(outDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('zoveli-'))
-    .map((entry) => entry.name)
-    .filter((name) => name.includes(`-${platform}-${arch}`))
-    .map((name) => {
-      const m = name.match(/zoveli-([\d.]+(?:-[\da-z.-]+)?)-/);
-      if (!m) return null;
-      const version = m[1];
-      // Validate semver-ish version: MAJOR.MINOR.PATCH with optional prerelease
-      if (!/^\d+\.\d+\.\d+(?:-[\da-z.-]+)?$/.test(version)) return null;
-      return { name, version };
+    .map((entry) => {
+      const match = entry.name.match(/^zoveli-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)-(.+)-(.+)$/);
+      if (!match) return null;
+
+      const [, version, platformSlug, archSlug] = match;
+      if (platformSlug !== platform || archSlug !== arch) return null;
+
+      return { path: join(outDir, entry.name), version };
     })
-    .filter(Boolean)
-    .sort((a, b) => {
-      const pa = a.version.split('-')[0].split('.').map(Number);
-      const pb = b.version.split('-')[0].split('.').map(Number);
-      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-        const x = pa[i] || 0;
-        const y = pb[i] || 0;
-        if (x !== y) return x - y;
+    .filter(Boolean);
+
+  if (candidates.length === 0) return null;
+
+  const parseSemver = (version) => {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+    if (!match) return null;
+    const [, major, minor, patch, prerelease = ''] = match;
+    return {
+      major: Number(major),
+      minor: Number(minor),
+      patch: Number(patch),
+      prerelease,
+    };
+  };
+
+  const compareSemver = (a, b) => {
+    const pa = parseSemver(a.version);
+    const pb = parseSemver(b.version);
+    if (!pa || !pb) return 0;
+
+    if (pa.major !== pb.major) return pa.major - pb.major;
+    if (pa.minor !== pb.minor) return pa.minor - pb.minor;
+    if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+
+    if (!pa.prerelease && !pb.prerelease) return 0;
+    if (!pa.prerelease) return 1;
+    if (!pb.prerelease) return -1;
+
+    const aParts = pa.prerelease.split('.');
+    const bParts = pb.prerelease.split('.');
+    const maxLen = Math.max(aParts.length, bParts.length);
+
+    for (let i = 0; i < maxLen; i += 1) {
+      const aPart = aParts[i];
+      const bPart = bParts[i];
+
+      if (aPart === undefined) return -1;
+      if (bPart === undefined) return 1;
+
+      const aNum = Number(aPart);
+      const bNum = Number(bPart);
+      const aIsNum = Number.isInteger(aNum);
+      const bIsNum = Number.isInteger(bNum);
+
+      if (aIsNum && bIsNum) {
+        if (aNum !== bNum) return aNum - bNum;
+        continue;
       }
-      // Same core version: prerelease sorts before release
-      const aPre = a.version.includes('-') ? a.version.split('-')[1] : '';
-      const bPre = b.version.includes('-') ? b.version.split('-')[1] : '';
-      if (aPre && !bPre) return -1; // prerelease before release
-      if (!aPre && bPre) return 1;
-      if (aPre && bPre) {
-        const paPre = aPre.split('.').map((p) => isNaN(Number(p)) ? p : Number(p));
-        const pbPre = bPre.split('.').map((p) => isNaN(Number(p)) ? p : Number(p));
-        for (let i = 0; i < Math.max(paPre.length, pbPre.length); i++) {
-          const x = paPre[i] || '';
-          const y = pbPre[i] || '';
-          if (typeof x === 'string' && typeof y === 'string') {
-            if (x < y) return -1;
-            if (x > y) return 1;
-          } else if (typeof x === 'number' && typeof y === 'number') {
-            if (x < y) return -1;
-            if (x > y) return 1;
-          } else {
-            // number sorts before string
-            return typeof x === 'number' ? -1 : 1;
-          }
-        }
-      }
-      return 0;
-    });
-  return candidates.length > 0 ? join(outDir, candidates[candidates.length - 1].name) : null;
+
+      if (aIsNum !== bIsNum) return aIsNum ? -1 : 1;
+      if (aPart !== bPart) return aPart < bPart ? -1 : 1;
+    }
+
+    return 0;
+  };
+
+  candidates.sort(compareSemver);
+  return candidates[candidates.length - 1].path;
 }
 
 function findIscc() {

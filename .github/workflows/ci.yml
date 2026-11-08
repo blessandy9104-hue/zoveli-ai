@@ -303,7 +303,7 @@ jobs:
           args: --severity-threshold=high
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -321,9 +321,11 @@ jobs:
         # Filesystem mode: base/head diff scanning fails on push-to-main
         # ("BASE and HEAD commits are the same"). --only-verified fails
         # the build only on live, verifiable secrets.
-        uses: trufflesecurity/trufflehog@v3.53.0
+        uses: trufflesecurity/trufflehog@v3.99.8
         with:
           path: ./
+          # Pin the scanner image tag instead of the action's "latest" default.
+          version: 3.99.8
           extra_args: --only-verified
 
   build-docker:
@@ -420,7 +422,7 @@ jobs:
           fetch-depth: 0
 
       - name: Generate SBOM (SPDX + CycloneDX)
-        uses: anchore/sbom-action@v0.36.0
+        uses: anchore/sbom-action@v0.24.3
         with:
           path: ./
           format: spdx-json
