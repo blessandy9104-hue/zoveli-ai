@@ -30,10 +30,12 @@ the new section **before** running `pnpm release:check --release`.
   from `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` secrets instead of
   hard-coded defaults. The `postgres` and `monitoring` profiles now fail closed
   when those variables are unset.
-- **CI pin correctness:** repaired invalid action references, pinned
-  TruffleHog's scanner image instead of its `:latest` default, kept `SNYK_TOKEN`
+- **CI pin correctness:** repaired invalid action references, pinned Snyk to a
+  release commit instead of its mutable `master` branch, pinned TruffleHog's
+  scanner image instead of its `:latest` default, kept `SNYK_TOKEN`
   step-scoped, excluded the editable `mathcore` install from the nightly
-  `pip-audit` file, and quoted Windows archive paths.
+  `pip-audit` file, and quoted Windows archive paths. CodeQL now watches only
+  branches that exist remotely.
 - **Installer runtime selection:** `findRuntime` now validates and compares full
   SemVer versions, including prerelease identifiers, rejects malformed or
   non-matching directory names, and returns the selected runtime path.

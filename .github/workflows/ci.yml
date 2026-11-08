@@ -295,7 +295,9 @@ jobs:
         run: pnpm audit --prod --audit-level=high
 
       - name: Run Snyk
-        uses: snyk/actions/node@master
+        # v1.0.0: 9adf32b1121593767fc3c057af55b55db032dc04. Pin the commit
+        # because the action's master branch is mutable.
+        uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04
         if: env.SNYK_TOKEN_CONFIGURED == 'true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
