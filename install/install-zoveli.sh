@@ -35,7 +35,6 @@ PNPM_VERSION="11.7.0"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-ORANGE='\033[38;2;255;140;0m'
 NC='\033[0m' # No Color
 
 ASSUME_YES=false
@@ -124,7 +123,7 @@ if [ -f "$TARGET_DIR/$MARKER" ] && [ -d "$TARGET_DIR/node_modules" ] && [ -d "$T
   exit 0
 fi
 
-print_message info "Installing ${ORANGE}Zoveli AI${GREEN} (branch: ${YELLOW}$BRANCH${GREEN}) into ${YELLOW}$TARGET_DIR${NC}"
+print_message info "Installing Zoveli AI (branch: ${YELLOW}$BRANCH${GREEN}) into ${YELLOW}$TARGET_DIR${NC}"
 if [ "$ASSUME_YES" != true ]; then
   print_message warning "Review this script before continuing: https://github.com/blessandy9104-hue/zoveli-ai/blob/$BRANCH/install/install-zoveli.sh"
   confirm "Continue with installation?" || { print_message error "Aborted by user."; exit 1; }

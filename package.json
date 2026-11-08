@@ -2,7 +2,7 @@
   "name": "zoveli",
   "version": "0.1.3",
   "private": true,
-  "description": "Zoveli AI - local-first personal assistant with verified math, 22 packages and 59 default tools.",
+  "description": "Zoveli AI - local-first personal assistant with verified math, 22 workspace packages.",
   "author": "Andy <blessandy9104@gmail.com> (https://github.com/blessandy9104-hue)",
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" exec tsc -p tsconfig.json",

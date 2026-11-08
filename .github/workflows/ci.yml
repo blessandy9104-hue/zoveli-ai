@@ -269,6 +269,8 @@ jobs:
     permissions:
       contents: read
       security-events: write
+    env:
+      SNYK_TOKEN_CONFIGURED: ${{ secrets.SNYK_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -294,14 +296,14 @@ jobs:
 
       - name: Run Snyk
         uses: snyk/actions/node@master
-        if: env.SNYK_TOKEN != ''
+        if: env.SNYK_TOKEN_CONFIGURED == 'true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -319,7 +321,7 @@ jobs:
         # Filesystem mode: base/head diff scanning fails on push-to-main
         # ("BASE and HEAD commits are the same"). --only-verified fails
         # the build only on live, verifiable secrets.
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.53.0
         with:
           path: ./
           extra_args: --only-verified
@@ -418,7 +420,7 @@ jobs:
           fetch-depth: 0
 
       - name: Generate SBOM (SPDX + CycloneDX)
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.36.0
         with:
           path: ./
           format: spdx-json

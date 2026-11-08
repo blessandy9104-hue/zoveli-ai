@@ -40,10 +40,10 @@ services:
 
   # Optional local Ollama chat; it is not needed to use local CLI tools.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.40.15
     container_name: zoveli-ollama
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama-data:/root/.ollama
     environment:
@@ -69,13 +69,15 @@ services:
     image: postgres:16-alpine
     container_name: zoveli-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=zoveli
       - POSTGRES_USER=zoveli
-      - POSTGRES_PASSWORD=zoveli
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - postgres_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U zoveli -d zoveli"]
       interval: 10s
@@ -89,7 +91,7 @@ services:
     image: redis:7-alpine
     container_name: zoveli-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -102,10 +104,10 @@ services:
 
   # Optional monitoring services.
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54
     container_name: zoveli-prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -117,18 +119,20 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2
     container_name: zoveli-grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
       - grafana-data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_USERS_ALLOW_SIGN_UP=false
+    secrets:
+      - grafana_admin_password
     profiles:
       - monitoring
 
@@ -139,3 +143,9 @@ volumes:
   redis-data:
   prometheus-data:
   grafana-data:
+
+secrets:
+  postgres_password:
+    environment: POSTGRES_PASSWORD
+  grafana_admin_password:
+    environment: GRAFANA_ADMIN_PASSWORD

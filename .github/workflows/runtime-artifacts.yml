@@ -153,7 +153,7 @@ jobs:
         shell: pwsh
         run: |
           $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
-          node scripts/product-acceptance.mjs --archive $archive --report "acceptance-${{ matrix.platform }}.json"
+          node scripts/product-acceptance.mjs --archive "$archive" --report "acceptance-${{ matrix.platform }}.json"
 
       - name: Package unsigned macOS disk image
         if: runner.os == 'macOS'

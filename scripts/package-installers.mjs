@@ -75,13 +75,54 @@ export function dmgCommand({ runtimeDir, outputDir, version, arch }) {
   };
 }
 
-function findRuntime(outDir, platform, arch) {
-  const entries = readdirSync(outDir, { withFileTypes: true })
+export function findRuntime(outDir, platform, arch) {
+  const candidates = readdirSync(outDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('zoveli-'))
     .map((entry) => entry.name)
     .filter((name) => name.includes(`-${platform}-${arch}`))
-    .sort();
-  return entries.length > 0 ? join(outDir, entries[entries.length - 1]) : null;
+    .map((name) => {
+      const m = name.match(/zoveli-([\d.]+(?:-[\da-z.-]+)?)-/);
+      if (!m) return null;
+      const version = m[1];
+      // Validate semver-ish version: MAJOR.MINOR.PATCH with optional prerelease
+      if (!/^\d+\.\d+\.\d+(?:-[\da-z.-]+)?$/.test(version)) return null;
+      return { name, version };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const pa = a.version.split('-')[0].split('.').map(Number);
+      const pb = b.version.split('-')[0].split('.').map(Number);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] || 0;
+        const y = pb[i] || 0;
+        if (x !== y) return x - y;
+      }
+      // Same core version: prerelease sorts before release
+      const aPre = a.version.includes('-') ? a.version.split('-')[1] : '';
+      const bPre = b.version.includes('-') ? b.version.split('-')[1] : '';
+      if (aPre && !bPre) return -1; // prerelease before release
+      if (!aPre && bPre) return 1;
+      if (aPre && bPre) {
+        const paPre = aPre.split('.').map((p) => isNaN(Number(p)) ? p : Number(p));
+        const pbPre = bPre.split('.').map((p) => isNaN(Number(p)) ? p : Number(p));
+        for (let i = 0; i < Math.max(paPre.length, pbPre.length); i++) {
+          const x = paPre[i] || '';
+          const y = pbPre[i] || '';
+          if (typeof x === 'string' && typeof y === 'string') {
+            if (x < y) return -1;
+            if (x > y) return 1;
+          } else if (typeof x === 'number' && typeof y === 'number') {
+            if (x < y) return -1;
+            if (x > y) return 1;
+          } else {
+            // number sorts before string
+            return typeof x === 'number' ? -1 : 1;
+          }
+        }
+      }
+      return 0;
+    });
+  return candidates.length > 0 ? join(outDir, candidates[candidates.length - 1].name) : null;
 }
 
 function findIscc() {
