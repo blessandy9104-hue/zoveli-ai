@@ -36,7 +36,7 @@
     "capability:report": "node scripts/capability-report.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@types/node": "^20.10.0",
     "@vitest/coverage-v8": "^4.1.12",
     "@vitest/ui": "^4.1.12",
