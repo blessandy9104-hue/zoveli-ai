@@ -19,7 +19,7 @@
     "@deepseek-ai/dsh-core": "workspace:*"
   },
   "devDependencies": {
-    "tsdown": "^0.23.4",
+    "tsdown": "^0.23.5",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "oxlint": "catalog:",
