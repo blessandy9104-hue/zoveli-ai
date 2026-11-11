@@ -3,13 +3,17 @@ name: Verify Commit
 # On-demand verification for a specific commit. This covers commits that never
 # received a push or pull_request run, such as commits merged through native
 # auto-merge with the repository GITHUB_TOKEN.
-run-name: Verify commit ${{ inputs.commit }}
+#
+# Only repository writers can dispatch this workflow, and the requested
+# revision must already be an ancestor of main, so the checked-out tree has
+# passed review before it executes here.
+run-name: Verify revision ${{ inputs.revision }}
 
 on:
   workflow_dispatch:
     inputs:
-      commit:
-        description: Full 40-character commit SHA to verify
+      revision:
+        description: Full 40-character SHA of a commit on main
         required: true
         type: string
 
@@ -27,28 +31,34 @@ jobs:
     name: Core Checks
     runs-on: ubuntu-latest
     steps:
-      - name: Validate commit input
+      - name: Validate revision input
         env:
-          COMMIT: ${{ inputs.commit }}
+          REVISION: ${{ inputs.revision }}
         run: |
-          if ! printf '%s' "$COMMIT" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "::error::commit must be a full 40-character lowercase SHA"
+          if ! printf '%s' "$REVISION" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::revision must be a full 40-character lowercase SHA"
             exit 1
           fi
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }}
+          ref: ${{ inputs.revision }}
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Confirm checked-out commit
+      - name: Confirm revision is on main
         env:
-          EXPECTED_COMMIT: ${{ inputs.commit }}
+          REVISION: ${{ inputs.revision }}
         run: |
           actual="$(git rev-parse HEAD)"
-          echo "Verified commit: $actual"
-          test "$actual" = "$EXPECTED_COMMIT"
+          echo "Verified revision: $actual"
+          test "$actual" = "$REVISION"
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$REVISION" origin/main; then
+            echo "::error::$REVISION is not an ancestor of origin/main"
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -101,8 +111,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }}
+          ref: ${{ inputs.revision }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -150,6 +161,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ inputs.commit }}
+          name: playwright-report-${{ inputs.revision }}
           path: playwright-report/
           retention-days: 7
