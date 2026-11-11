@@ -22,6 +22,30 @@ the new section **before** running `pnpm release:check --release`.
   Windows 11 SmartScreen capture and a real macOS 15 Gatekeeper capture from the
   unsigned builds instead of placeholders.
 
+### Fixed
+
+- **Compose pins and credentials:** optional Ollama, Prometheus, and Grafana
+  images now use verified exact tags (`0.40.15`, `v3.16.0`, `13.2.5`); every
+  published port binds to `127.0.0.1`; and PostgreSQL and Grafana passwords come
+  from `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` secrets instead of
+  hard-coded defaults. The `postgres` and `monitoring` profiles now fail closed
+  when those variables are unset.
+- **CI pin correctness:** repaired invalid action references, pinned Snyk to a
+  release commit instead of its mutable `master` branch, pinned TruffleHog's
+  scanner image instead of its `:latest` default, kept `SNYK_TOKEN`
+  step-scoped, excluded the editable `mathcore` install from the nightly
+  `pip-audit` file, and quoted Windows archive paths. CodeQL now watches only
+  branches that exist remotely.
+- **Remote MCP bearer parsing:** the `Authorization` header is parsed with a
+  linear scan instead of a backtracking regular expression, removing a
+  polynomial-time worst case on hostile header values without changing which
+  tokens are accepted.
+- **Installer runtime selection:** `findRuntime` now validates and compares full
+  SemVer versions, including prerelease identifiers, rejects malformed or
+  non-matching directory names, and returns the selected runtime path.
+- **Verified-math runtime bundle:** PyInstaller now collects the `mathcore`
+  package alongside `z3`.
+
 ## [0.1.3] - 2026-11-06
 
 ### Added

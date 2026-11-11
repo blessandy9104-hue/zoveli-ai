@@ -1,0 +1,21 @@
+{
+  "$comment": "Example remote MCP allowlist. Copy this file outside the repository, edit the list, then start the server with ZOVELI_REMOTE_MCP_ALLOWLIST_FILE=<path>. The built-in default is the same safe math-only list. Never let an MCP caller supply or extend this list.",
+  "allowedTools": [
+    "mathcore_compute",
+    "mathcore_check_answer",
+    "mathcore_list_operations",
+    "math_route",
+    "math_algebra_solve",
+    "math_calculus_solve",
+    "math_stats_solve",
+    "math_logic_solve",
+    "math_units_solve",
+    "math_discrete_solve",
+    "math_arithmetic_solve",
+    "math_geometry_solve",
+    "math_trigonometry_solve",
+    "math_probability_solve",
+    "math_linear_solve",
+    "math_number_solve"
+  ]
+}

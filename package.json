@@ -2,7 +2,7 @@
   "name": "zoveli",
   "version": "0.1.3",
   "private": true,
-  "description": "Zoveli AI - local-first personal assistant with verified math, 22 packages and 59 default tools.",
+  "description": "Zoveli AI - local-first personal assistant with verified math, 22 workspace packages.",
   "author": "Andy <blessandy9104@gmail.com> (https://github.com/blessandy9104-hue)",
   "scripts": {
     "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" exec tsc -p tsconfig.json",
@@ -15,6 +15,8 @@
     "desktop": "pnpm --filter @zoveli/desktop run dev",
     "install:mathcore": "pip install -e ./mathcore",
     "mathcore:mcp": "mathcore-mcp",
+    "remote:mcp": "pnpm run build && node scripts/remote-mcp-server.mjs",
+    "remote:mcp:start": "node scripts/remote-mcp-server.mjs",
     "vault:backup": "pnpm run build:core && node apps/cli/dist/cli.js backup",
     "vault:verify": "pnpm run build:core && node apps/cli/dist/cli.js verify",
     "vault:restore": "pnpm run build:core && node apps/cli/dist/cli.js restore",
@@ -36,6 +38,8 @@
     "capability:report": "node scripts/capability-report.js"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@playwright/test": "^1.64.1",
     "@types/node": "^20.10.0",
     "@vitest/coverage-v8": "^4.1.12",

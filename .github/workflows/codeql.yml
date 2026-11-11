@@ -12,6 +12,8 @@
 name: "CodeQL Advanced"
 
 on:
+  # Keep this list limited to branches that exist remotely. Add any future
+  # long-lived branch (for example, "develop") here when it is created.
   push:
     branches: [ "main" ]
   pull_request:

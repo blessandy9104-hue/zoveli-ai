@@ -118,6 +118,24 @@ Ollama uses CPU by default; uncomment the `deploy` block in
 audit data live in the `zoveli-data` volume; `docker compose down` keeps it and
 `docker compose down -v` deletes it.
 
+The optional `postgres` and `monitoring` profiles read passwords from the host
+environment and mount them as Compose secrets. Set the corresponding variable
+before starting each profile; the services do not fall back to default
+passwords:
+
+```bash
+POSTGRES_PASSWORD='choose-a-strong-password' \
+GRAFANA_ADMIN_PASSWORD='choose-a-strong-password' \
+docker compose -f docker/docker-compose.yml \
+  --profile postgres --profile monitoring up -d
+```
+
+Published ports for Ollama, PostgreSQL, Redis, Prometheus, and Grafana bind to
+`127.0.0.1` only. The optional images are pinned to exact tags
+(`ollama/ollama:0.40.15`, `prom/prometheus:v3.16.0`,
+`grafana/grafana:13.2.5`); update them deliberately after reviewing upstream
+release notes and advisories.
+
 ## Trust evaluation
 
 ```bash

@@ -75,13 +75,79 @@ export function dmgCommand({ runtimeDir, outputDir, version, arch }) {
   };
 }
 
-function findRuntime(outDir, platform, arch) {
-  const entries = readdirSync(outDir, { withFileTypes: true })
+export function findRuntime(outDir, platform, arch) {
+  if (!existsSync(outDir)) return null;
+
+  const candidates = readdirSync(outDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('zoveli-'))
-    .map((entry) => entry.name)
-    .filter((name) => name.includes(`-${platform}-${arch}`))
-    .sort();
-  return entries.length > 0 ? join(outDir, entries[entries.length - 1]) : null;
+    .map((entry) => {
+      const match = entry.name.match(/^zoveli-(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)-(.+)-(.+)$/);
+      if (!match) return null;
+
+      const [, version, platformSlug, archSlug] = match;
+      if (platformSlug !== platform || archSlug !== arch) return null;
+
+      return { path: join(outDir, entry.name), version };
+    })
+    .filter(Boolean);
+
+  if (candidates.length === 0) return null;
+
+  const parseSemver = (version) => {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/);
+    if (!match) return null;
+    const [, major, minor, patch, prerelease = ''] = match;
+    return {
+      major: Number(major),
+      minor: Number(minor),
+      patch: Number(patch),
+      prerelease,
+    };
+  };
+
+  const compareSemver = (a, b) => {
+    const pa = parseSemver(a.version);
+    const pb = parseSemver(b.version);
+    if (!pa || !pb) return 0;
+
+    if (pa.major !== pb.major) return pa.major - pb.major;
+    if (pa.minor !== pb.minor) return pa.minor - pb.minor;
+    if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+
+    if (!pa.prerelease && !pb.prerelease) return 0;
+    if (!pa.prerelease) return 1;
+    if (!pb.prerelease) return -1;
+
+    const aParts = pa.prerelease.split('.');
+    const bParts = pb.prerelease.split('.');
+    const maxLen = Math.max(aParts.length, bParts.length);
+
+    for (let i = 0; i < maxLen; i += 1) {
+      const aPart = aParts[i];
+      const bPart = bParts[i];
+
+      if (aPart === undefined) return -1;
+      if (bPart === undefined) return 1;
+
+      const aNum = Number(aPart);
+      const bNum = Number(bPart);
+      const aIsNum = Number.isInteger(aNum);
+      const bIsNum = Number.isInteger(bNum);
+
+      if (aIsNum && bIsNum) {
+        if (aNum !== bNum) return aNum - bNum;
+        continue;
+      }
+
+      if (aIsNum !== bIsNum) return aIsNum ? -1 : 1;
+      if (aPart !== bPart) return aPart < bPart ? -1 : 1;
+    }
+
+    return 0;
+  };
+
+  candidates.sort(compareSemver);
+  return candidates[candidates.length - 1].path;
 }
 
 function findIscc() {
