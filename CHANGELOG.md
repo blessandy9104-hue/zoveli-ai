@@ -30,12 +30,12 @@ the new section **before** running `pnpm release:check --release`.
   from `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` secrets instead of
   hard-coded defaults. The `postgres` and `monitoring` profiles now fail closed
   when those variables are unset.
-- **CI pin correctness:** repaired invalid action references, replaced Snyk's
-  action with an equivalent `docker run` pinned to the scanner's immutable
-  image digest, pinned TruffleHog's scanner image instead of its `:latest`
-  default, kept `SNYK_TOKEN` step-scoped, excluded the editable `mathcore`
-  install from the nightly `pip-audit` file, and quoted Windows archive paths.
-  CodeQL now watches only branches that exist remotely.
+- **CI pin correctness:** repaired invalid action references, removed the
+  Snyk dependency scan in favor of npm audit, Trivy, CodeQL, and secret
+  scanning, pinned TruffleHog's scanner image instead of its `:latest`
+  default, excluded the editable `mathcore` install from the nightly
+  `pip-audit` file, and quoted Windows archive paths. CodeQL now watches only
+  branches that exist remotely.
 - **Remote MCP bearer parsing:** the `Authorization` header is parsed with a
   linear scan instead of a backtracking regular expression, removing a
   polynomial-time worst case on hostile header values without changing which
