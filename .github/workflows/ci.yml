@@ -295,14 +295,24 @@ jobs:
         run: pnpm audit --prod --audit-level=high
 
       - name: Run Snyk
-        # v1.0.0: 9adf32b1121593767fc3c057af55b55db032dc04. Pin the commit
-        # because the action's master branch is mutable.
-        uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04
         if: env.SNYK_TOKEN_CONFIGURED == 'true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
+          FORCE_COLOR: 2
+          SNYK_INTEGRATION_NAME: GITHUB_ACTIONS
+          SNYK_INTEGRATION_VERSION: node
+        # The upstream snyk/actions/node wrapper hardcodes the mutable
+        # snyk/snyk:node tag, so run the same container by index digest.
+        run: |
+          docker run --rm \
+            --env SNYK_TOKEN \
+            --env FORCE_COLOR \
+            --env SNYK_INTEGRATION_NAME \
+            --env SNYK_INTEGRATION_VERSION \
+            --volume "$GITHUB_WORKSPACE:/github/workspace" \
+            --workdir /github/workspace \
+            snyk/snyk@sha256:d4a83258a5eb8747b03405526e1c969a3887931f3e8cb875435e29d6302f77ef \
+            snyk test --severity-threshold=high
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
