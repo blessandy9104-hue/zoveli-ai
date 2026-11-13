@@ -4,10 +4,12 @@
 
 > The assistant that proves its math, runs on your hardware, and never trains on your data.
 
-> **Product scope:** the **Desktop app** is the primary interface. The CLI remains
-> supported for automation and headless use; the browser/web UI is experimental and
-> other surfaces are community-supported. Every surface shares the same local
-> runtime: verified math, local memory, and local tools. See
+> **Product scope:** the **Desktop app** is the primary interface in the source
+> tree. Packaged Electron installers are not shipped yet, so the currently
+> shipped one-command install is the **portable CLI runtime**. The CLI remains
+> supported for automation and headless use; the browser/web UI is experimental
+> and other surfaces are community-supported. Every surface shares the same
+> local runtime: verified math, local memory, and local tools. See
 > [docs/interfaces.md](docs/interfaces.md) for the support tiers and
 > [docs/core-plugins.md](docs/core-plugins.md) for what counts as core vs experimental.
 
@@ -82,7 +84,50 @@ open source, local-first, publicly built, and yours to inspect.
 
 ## Install
 
-### One command (source installer)
+### Linux (one command)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
+```
+
+The installer resolves the latest published release, downloads the matching
+`linux-x64` or `linux-arm64` runtime, verifies its SHA-256, backs up an existing
+vault before an upgrade, links `~/.local/bin/zoveli`, and runs `zoveli doctor`.
+It needs `curl`, `tar`, `bash`, and `sha256sum` (or `shasum`).
+
+```bash
+# Read-only status (installed vs. latest)
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --yes
+
+# Opt in to a PATH block in ~/.profile
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --add-to-path
+
+# Upgrade later by re-running the installer; uninstall keeps ~/.zoveli
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --purge
+```
+
+`zoveli doctor` checks the installed runtime, configuration drift, vault schema,
+the mathcore command, and a live MCP handshake; `zoveli doctor --offline` skips
+the spawn. The default install directory is `~/.local/share/zoveli`; the vault
+and state stay in `~/.zoveli`. Re-running the installer is idempotent: the same
+version is a no-op, an older install is upgraded, and a failed upgrade rolls
+back to the previous runtime.
+
+**Platform status:** the Linux one-command path is tested on the Ubuntu 22.04
+x64 GitHub runner (install, doctor, idempotent rerun, uninstall, and vault
+preservation) and built for Ubuntu 22.04 arm64 in CI. A true fresh VM, arm64
+hardware, and non-Ubuntu distributions remain **untested**. Release `v0.1.3`
+does not include a `linux-arm64` archive; arm64 installs work once a release
+containing the CI-built archive is published. Release `v0.1.3` also predates
+`zoveli doctor`; the installer reports that as a warning and continues, and the
+doctor check activates with the next published runtime. macOS and Windows
+one-command installers are Phase 3 and Phase 4.
+
+### Legacy source installer
 
 The installer clones the repo, creates a Python venv, installs vendored
 `mathcore`, ensures Node 22 + pnpm 11.7.0, builds, and prints exact run steps.
@@ -108,13 +153,15 @@ From a checkout, the Windows installer accepts the model directly:
 ```
 
 Use `--model` / `-Model` to pick a local Ollama preset (default `qwen3:4b`).
-The install finishes with the Desktop-first run instructions. No telemetry is
-sent; the scripts clone only from the official repository.
+The install finishes with run instructions for the source checkout. No telemetry
+is sent; the scripts clone only from the official repository.
 
 ### Portable runtime (no toolchain)
 
 If you do not want Git, Node, Python, or pnpm installed, use the self-contained
-runtime. It verifies SHA-256 before extracting and supports rollback:
+runtime. Linux users should normally use the one-command `install.sh` above;
+this lower-level script is useful for direct control, macOS, and Windows. It
+verifies SHA-256 before extracting and supports rollback:
 
 ```bash
 # Linux / macOS
@@ -197,15 +244,15 @@ your machine. A cloud provider sees only the chat text you send. See
 
 ## Interfaces
 
-| Tier | Surface                                                | Status              |
-| ---- | ------------------------------------------------------ | ------------------- |
-| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
-| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported**       |
-| 3    | Browser/web UI served over HTTP                        | Experimental        |
-| —    | TUI wrappers, editor/messaging integrations            | Community-supported |
+| Tier | Surface                                                | Status                                      |
+| ---- | ------------------------------------------------------ | ------------------------------------------- |
+| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary in source; installers not shipped** |
+| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported; shipped portable runtime**     |
+| 3    | Browser/web UI served over HTTP                        | Experimental                                |
+| —    | TUI wrappers, editor/messaging integrations            | Community-supported                         |
 
 ```bash
-pnpm run desktop   # primary app
+pnpm run desktop   # primary app from a source checkout
 pnpm start         # CLI automation surface
 ```
 

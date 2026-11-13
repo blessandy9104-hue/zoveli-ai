@@ -15,6 +15,7 @@ on:
         options:
           - all
           - linux-x64
+          - linux-arm64
           - windows-x64
           - macos-arm64
           - macos-x64
@@ -79,6 +80,7 @@ jobs:
           node -e '
             const all = [
               { runner: "ubuntu-22.04", platform: "linux-x64" },
+              { runner: "ubuntu-22.04-arm", platform: "linux-arm64" },
               { runner: "windows-latest", platform: "windows-x64" },
               { runner: "macos-latest", platform: "macos-arm64" },
               { runner: "macos-15-intel", platform: "macos-x64" },
@@ -96,7 +98,9 @@ jobs:
     name: Build (${{ matrix.platform }})
     needs: setup
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
+    # The Linux arm64 leg builds z3-solver from source for the glibc 2.35
+    # floor, which is the slowest step in the matrix.
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -123,6 +127,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
+      - name: Install arm64 mathcore build tools
+        if: matrix.platform == 'linux-arm64'
+        run: |
+          # z3-solver 5.4.1.0 has no aarch64 wheel for this glibc floor, so it
+          # is built from source. Its CMake build enables C++20 and needs
+          # <format>, which jammy's GCC 11 lacks; install GCC 13 from the
+          # toolchain PPA. z3-solver itself stays unpinned.
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y gcc-13 g++-13
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -130,6 +147,16 @@ jobs:
         run: pnpm run build
 
       - name: Install packaging tools
+        if: matrix.platform != 'linux-arm64'
+        run: python -m pip install --disable-pip-version-check pyinstaller -e ./mathcore
+
+      # The arm64 build compiles z3-solver from source; select the GCC 13
+      # installed above so its C++20 <format> requirement is satisfied.
+      - name: Install packaging tools (arm64)
+        if: matrix.platform == 'linux-arm64'
+        env:
+          CC: gcc-13
+          CXX: g++-13
         run: python -m pip install --disable-pip-version-check pyinstaller -e ./mathcore
 
       - name: Build mathcore runtime
@@ -142,17 +169,25 @@ jobs:
         run: node scripts/smoke-runtime.mjs
         shell: bash
 
+      - name: Primary installer acceptance (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ARCHIVE=$(find release -maxdepth 1 -name 'zoveli-*.tar.gz' | head -n 1)
+          test -n "$ARCHIVE"
+          sh scripts/install-acceptance.sh --archive "$ARCHIVE"
+
       - name: Clean-install acceptance (Unix)
         if: runner.os != 'Windows'
         run: |
-          ARCHIVE=$(find release -maxdepth 1 -name '*.tar.gz' | head -n 1)
+          ARCHIVE=$(find release -maxdepth 1 -name 'zoveli-*.tar.gz' | head -n 1)
           node scripts/product-acceptance.mjs --archive "$ARCHIVE" --report "acceptance-${{ matrix.platform }}.json"
 
       - name: Clean-install acceptance (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $archive = (Get-ChildItem release -Filter *.tar.gz | Select-Object -First 1).FullName
+          $archive = (Get-ChildItem release -Filter zoveli-*.tar.gz | Select-Object -First 1).FullName
+          if (-not $archive) { throw 'no runtime archive found under release/' }
           node scripts/product-acceptance.mjs --archive "$archive" --report "acceptance-${{ matrix.platform }}.json"
 
       - name: Package unsigned macOS disk image

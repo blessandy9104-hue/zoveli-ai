@@ -41,9 +41,18 @@ zoveli update                  # downloads, verifies SHA-256, runs the installer
 zoveli update --yes            # non-interactive (scripts/CI)
 
 # Or download an installer/archive yourself:
+install/install.sh --check
+install/install.sh             # same-version no-op; otherwise upgrade
 install/install-zoveli-runtime.sh --check
 install/install-zoveli-runtime.ps1 -Check
 ```
+
+`install/install.sh` is the primary Linux entry point. It resolves the latest
+published release, delegates the checksum/backup/rollback work to
+`install-zoveli-runtime.sh`, records install metadata, and runs `zoveli doctor`.
+Re-running it is idempotent: the same version is a no-op, an older version is
+upgraded, and a failed upgrade restores the previous runtime. Use `--version` to
+pin a release, `--archive` for a local archive, or `--force` to reinstall.
 
 `zoveli update` follows GitHub release redirects manually and refuses anything
 outside HTTPS GitHub hosts on port 443, including localhost and private network
@@ -92,11 +101,17 @@ Then validate before using the vault.
 Portable install:
 
 ```bash
+zoveli doctor            # install/runtime/PATH plus config, vault and mathcore
 zoveli config-check      # environment drift; exit 1 only on blocking issues
 zoveli migrate           # explicit forward migration + report (also runs on open)
 zoveli health            # runtime/config/vault/MCP/capability rollup
 zoveli recovery-check    # backup/restore drill; real data untouched
 ```
+
+`zoveli doctor` is the installation check: it reports the runtime archive and
+bundled Node, the PATH link, configuration drift, vault schema, the mathcore
+command, and a live MCP handshake. Add `--json` for scripts or `--offline` to
+skip the spawn. `zoveli health` remains the broader capability rollup.
 
 Source checkout:
 
@@ -132,6 +147,26 @@ pnpm vault:restore <backup-dir> --force   # source
 variable and suggests the intended one. Update
 your shell profile, `.env`, or Docker Compose file, then re-run it. Nothing is
 rewritten automatically.
+
+## Uninstall
+
+The primary Linux installer removes the runtime and the `~/.local/bin/zoveli`
+link while preserving the vault and state under `~/.zoveli`:
+
+```bash
+sh install/install.sh --uninstall
+```
+
+Add `--purge` to delete `~/.zoveli` as well. Purging is irreversible, so it
+prompts; pass `--yes` only in a script or CI. Uninstalling does not touch a
+source checkout:
+
+```bash
+sh install/install.sh --uninstall --purge --yes
+```
+
+Source checkout: remove the directory you cloned (and the `.venv` inside it).
+Your vault remains in `~/.zoveli` until you delete it manually.
 
 ## Rollback
 
