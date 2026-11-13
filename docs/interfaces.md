@@ -17,8 +17,10 @@ The Electron app in `apps/desktop` is the primary experience:
 Run it from a source checkout with `pnpm run desktop`. The desktop guide covers
 packaging and troubleshooting: [desktop.md](guides/desktop.md).
 
-Desktop is where new user-facing work lands first and where regressions are
-treated as release blockers.
+Packaged Electron installers are not shipped yet, so the currently shipped
+one-command install is the portable CLI runtime
+([install.sh](../install/install.sh)). Desktop remains the primary surface in
+the source tree and the place where new user-facing work lands first.
 
 ## Tier 2 — CLI (supported automation surface)
 

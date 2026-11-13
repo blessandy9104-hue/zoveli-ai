@@ -22,6 +22,63 @@ platform-issued identity. See [Why unsigned?](#why-unsigned) below.
    AppLocker, WDAC, and Gatekeeper can be enforced centrally, and bypassing them
    may violate policy.
 
+## Linux (one command)
+
+The primary Linux install is the portable runtime. It needs no Git, Node,
+Python, pnpm, or compiler toolchain:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
+```
+
+Requirements: Linux `x86_64` or `aarch64`, glibc 2.35+ (Ubuntu 22.04 or newer),
+`curl`, `tar`, `bash`, and `sha256sum` or `shasum`.
+
+The installer:
+
+1. resolves the latest published release (pass `--version` to pin one);
+2. downloads the matching `linux-x64` or `linux-arm64` archive and verifies its
+   published SHA-256;
+3. backs up and verifies an existing vault before an upgrade, then swaps in the
+   new runtime with automatic rollback on failure;
+4. links `~/.local/bin/zoveli` and prints the `PATH` instructions;
+5. runs `zoveli doctor --offline` and reports any blocking problem.
+
+Useful forms:
+
+```bash
+# Read-only: installed vs. latest
+curl -fsSL .../install.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL .../install.sh | sh -s -- --yes
+
+# Append the bin directory to ~/.profile (opt-in)
+curl -fsSL .../install.sh | sh -s -- --add-to-path
+
+# Install a local, already-verified archive
+sh install.sh --archive ./zoveli-0.1.3-linux-x64.tar.gz
+
+# Upgrade by re-running the installer; uninstall keeps ~/.zoveli
+sh install.sh --uninstall
+sh install.sh --uninstall --purge   # also delete the vault and backups
+```
+
+`zoveli doctor` checks the installed runtime, configuration drift, vault schema,
+the mathcore command, and a live MCP handshake. Add `--json` for scripts or
+`--offline` to skip the live spawn.
+
+The install directory defaults to `~/.local/share/zoveli`; set `ZOVELI_HOME` or
+pass `--dir` to change it. State always stays in `~/.zoveli` until `--purge`.
+
+**Platform status:** tested on the Ubuntu 22.04 x64 GitHub runner (install,
+doctor, idempotent rerun, uninstall, vault preservation) and built for Ubuntu
+22.04 arm64 in CI. A true fresh VM, arm64 hardware, and non-Ubuntu distributions
+are **untested**. Release `v0.1.3` has no `linux-arm64` archive; arm64 installs
+work once a release containing the CI-built archive is published. Release
+`v0.1.3` also predates `zoveli doctor`; the installer warns once and continues,
+and the doctor check activates with the next published runtime.
+
 ## Windows 10 and 11 (SmartScreen)
 
 The Windows installer is
