@@ -15,12 +15,21 @@ the new section **before** running `pnpm release:check --release`.
   `macos-15-intel` as well as Apple Silicon, producing a `macos-x64` archive and
   `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
   now covers both architectures.
+- **One-command Docker fallback:** `install/install-docker.sh` runs the browser
+  UI in a local container bound to `127.0.0.1`, keeps vault/session/audit data
+  in a named volume, and supports idempotent upgrades with automatic rollback,
+  `--check`, and uninstall/purge. The release workflow publishes the multi-arch
+  `ghcr.io/blessandy9104-hue/zoveli-ai-web` image for amd64 and arm64, and CI
+  runs the install/upgrade/rollback acceptance on both native runners.
 
 ### Changed
 
 - **Real installer screenshots:** the Sovereign Install Guide now uses a real
   Windows 11 SmartScreen capture and a real macOS 15 Gatekeeper capture from the
   unsigned builds instead of placeholders.
+- **Docker web image base:** the browser-UI image now uses
+  `node:22-trixie-slim` in both stages so arm64 can install the `z3-solver`
+  `manylinux_2_38_aarch64` wheel while amd64 keeps its `manylinux_2_27` wheel.
 
 ### Fixed
 

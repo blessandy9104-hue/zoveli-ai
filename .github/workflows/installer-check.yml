@@ -2,10 +2,11 @@ name: Installer Check
 
 # Validates the opencode-style one-line installer on PRs without privileged
 # operations (no sudo). Uses the runner's preinstalled git/curl/python/node
-# plus setup-node/setup-python/setup-pnpm. Also builds the CLI Docker image so
-# the mathcore z3-solver fix is proven on PRs, because the main CI
-# `build-docker` job is gated with `if: github.event_name != 'pull_request'`
-# and therefore never runs on pull requests.
+# plus setup-node/setup-python/setup-pnpm. Also builds the CLI and browser-UI
+# Docker images so the mathcore z3-solver fix and the Docker fallback installer
+# are proven on PRs, because the main CI `build-docker` jobs are gated with
+# `if: github.event_name != 'pull_request'` and therefore never run on pull
+# requests.
 
 on:
   pull_request:
@@ -50,7 +51,9 @@ jobs:
       - name: Bash syntax check
         run: |
           sh -n install/install.sh
+          sh -n install/install-docker.sh
           sh -n scripts/install-acceptance.sh
+          sh -n scripts/docker-acceptance.sh
           bash -n install/install-zoveli.sh
           bash -n install/install-zoveli-runtime.sh
 
@@ -59,7 +62,11 @@ jobs:
           docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
             -S warning -s sh install/install.sh
           docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
+            -S warning -s sh install/install-docker.sh
+          docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
             -S warning -s sh scripts/install-acceptance.sh
+          docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
+            -S warning -s sh scripts/docker-acceptance.sh
           docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable \
             -S warning install/install-zoveli.sh install/install-zoveli-runtime.sh
 
@@ -71,6 +78,7 @@ jobs:
       - name: Installer help flag
         run: |
           sh install/install.sh --help
+          sh install/install-docker.sh --help
           bash install/install-zoveli.sh --help
           bash install/install-zoveli-runtime.sh --help
           ZOVELI_VERSION=0.1.3 bash install/install-zoveli-runtime.sh --check --dir "$GITHUB_WORKSPACE"
@@ -203,3 +211,39 @@ jobs:
           tags: zoveli-cli:installer-check
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  docker-web:
+    name: Docker Web (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: amd64
+          - runner: ubuntu-22.04-arm
+            platform: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Native builds (no QEMU): the arm64 runner proves the trixie base can
+      # install the z3-solver manylinux_2_38_aarch64 wheel.
+      - name: Build browser-UI image (native ${{ matrix.platform }})
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: zoveli-web:acceptance
+          cache-from: type=gha,scope=docker-web-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=docker-web-${{ matrix.platform }}
+
+      - name: Docker fallback acceptance
+        run: sh scripts/docker-acceptance.sh --image zoveli-web:acceptance --port 18080

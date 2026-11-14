@@ -18,9 +18,11 @@ Run it from a source checkout with `pnpm run desktop`. The desktop guide covers
 packaging and troubleshooting: [desktop.md](guides/desktop.md).
 
 Packaged Electron installers are not shipped yet, so the currently shipped
-one-command install is the portable CLI runtime
-([install.sh](../install/install.sh)). Desktop remains the primary surface in
-the source tree and the place where new user-facing work lands first.
+one-command installs are the portable CLI runtime
+([install.sh](../install/install.sh)) and the Docker browser UI
+([install-docker.sh](../install/install-docker.sh)). Desktop remains the primary
+surface in the source tree and the place where new user-facing work lands
+first.
 
 ## Tier 2 — CLI (supported automation surface)
 
@@ -48,8 +50,12 @@ web deployment is experimental:
   reverse proxy, and an authentication gate.
 - Do not expose an unauthenticated instance to the public internet.
 
-The server keeps desktop security defaults (Host/origin checks, CSP, rate
-limits), but a browser deployment is not a supported product tier.
+`install/install-docker.sh` packages this surface as a one-command Docker
+fallback for Linux amd64/arm64. It binds the container to `127.0.0.1`, keeps
+vault/session/audit data in a Docker volume, and is tested in CI. Docker Desktop
+on macOS/Windows, rootless Docker, and Podman are untested. The server keeps
+desktop security defaults (Host/origin checks, CSP, rate limits), but a browser
+deployment is not a supported product tier.
 
 ## Community surfaces
 

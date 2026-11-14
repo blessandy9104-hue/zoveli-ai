@@ -71,13 +71,71 @@ the mathcore command, and a live MCP handshake. Add `--json` for scripts or
 The install directory defaults to `~/.local/share/zoveli`; set `ZOVELI_HOME` or
 pass `--dir` to change it. State always stays in `~/.zoveli` until `--purge`.
 
-**Platform status:** tested on the Ubuntu 22.04 x64 GitHub runner (install,
-doctor, idempotent rerun, uninstall, vault preservation) and built for Ubuntu
-22.04 arm64 in CI. A true fresh VM, arm64 hardware, and non-Ubuntu distributions
-are **untested**. Release `v0.1.3` has no `linux-arm64` archive; arm64 installs
-work once a release containing the CI-built archive is published. Release
-`v0.1.3` also predates `zoveli doctor`; the installer warns once and continues,
-and the doctor check activates with the next published runtime.
+**Platform status:** tested on the Ubuntu 22.04 x64 and arm64 GitHub runners
+(install, doctor, idempotent rerun, uninstall, vault preservation). A true fresh
+VM, non-CI arm64 hardware, and non-Ubuntu distributions are **untested**.
+Release `v0.1.3` has no `linux-arm64` archive; arm64 installs work once a
+release containing the CI-built archive is published. Release `v0.1.3` also
+predates `zoveli doctor`; the installer warns once and continues, and the doctor
+check activates with the next published runtime.
+
+## Docker fallback (browser UI)
+
+If the native runtime is not an option, the Docker fallback runs the same
+browser UI in a local container. The host needs no Git, Node, Python, pnpm, or
+Compose — only Docker:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-docker.sh | sh
+# then open http://127.0.0.1:8080
+```
+
+Requirements: Docker Engine or Docker Desktop 20.10+ on a `linux/amd64` or
+`linux/arm64` container platform. The container is Linux; macOS and Windows
+hosts are **untested** even though Docker Desktop can run Linux containers.
+Rootless Docker and Podman are also **untested**. Compose is not required.
+
+The installer:
+
+1. pulls `ghcr.io/blessandy9104-hue/zoveli-ai-web` (or uses a local `--image`);
+2. starts a container bound to `127.0.0.1` with a health-check wait;
+3. stores the vault, sessions, and audit log in the `<name>-data` Docker volume;
+4. labels the container so uninstall only removes what it created.
+
+Useful forms:
+
+```bash
+# Read-only: container, image, port, volume, and health
+curl -fsSL .../install-docker.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL .../install-docker.sh | sh -s -- --yes
+
+# Custom host port, container name, or data volume
+curl -fsSL .../install-docker.sh | sh -s -- --port 9090 --name zoveli-work
+
+# Upgrade: re-run the installer; a failed upgrade restores the previous container
+curl -fsSL .../install-docker.sh | sh -s -- --yes
+
+# Uninstall: the data volume is kept unless --purge is added
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --yes
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --purge --yes
+```
+
+Provider keys and runtime settings are read from the current environment (for
+example `OPENAI_API_KEY`, `ZOVELI_PROVIDER`, `ZOVELI_MODEL`,
+`ZOVELI_API_TOKEN`) and passed to the container without being written to disk
+or printed by the installer. Local Ollama is reached through
+`host.docker.internal`. Because the UI is bound to loopback, use an SSH tunnel
+for remote access rather than exposing the port.
+
+**Docker platform status:** the multi-arch image is built natively for amd64
+and arm64 in CI, and the Docker acceptance test covers install, health,
+idempotent rerun, upgrade replacement, rollback, volume persistence, and
+uninstall/purge on both runners. Until the next release publishes the image,
+build it locally with `docker build -t zoveli-web:local .` and pass
+`--image zoveli-web:local`. Public anonymous pulls require the GHCR package to
+be public; use `docker login ghcr.io` if it is still private.
 
 ## Windows 10 and 11 (SmartScreen)
 
@@ -215,4 +273,4 @@ are refreshed when the installers or the operating-system dialogs change.
 - `docs/assets/windows-smartscreen.png`
 - `docs/assets/macos-gatekeeper.png`
 
-_Last reviewed: 2026-11-06._
+_Last reviewed: 2026-11-13._
