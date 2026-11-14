@@ -72,6 +72,24 @@ BROKEN_HEALTH_IMAGE="${NAME}-broken-health:local"
 pass() { printf '[pass] %s\n' "$1"; }
 fail() { printf '[FAIL] %s\n' "$1" >&2; exit 1; }
 
+container_healthcheck() {
+  "$DOCKER_BIN" exec "$NAME" node -e \
+    "fetch('http://127.0.0.1:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
+    >/dev/null 2>&1
+}
+
+wait_for_health() {
+  waited=0
+  while [ "$waited" -lt 60 ]; do
+    if container_healthcheck; then
+      return 0
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  return 1
+}
+
 cleanup() {
   "$DOCKER_BIN" rm -f "$NAME" "${NAME}-previous" "$BLOCKER_NAME" >/dev/null 2>&1 || true
   "$DOCKER_BIN" volume rm "$VOLUME" "${NAME}-data" >/dev/null 2>&1 || true
@@ -131,9 +149,7 @@ grep -q "http://127.0.0.1:$PORT" "$SANDBOX/install.txt" || fail "install did not
   || fail "container is not using the expected data volume"
 [ "$("$DOCKER_BIN" inspect -f '{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{.HostPort}}{{end}}{{end}}' "$NAME")" = "$PORT" ] \
   || fail "container is not publishing the expected host port"
-"$DOCKER_BIN" exec "$NAME" node -e \
-  "fetch('http://127.0.0.1:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
-  || fail "health endpoint is not OK"
+wait_for_health || fail "health endpoint is not OK"
 pass "clean-install-healthy"
 
 sh "$INSTALLER" --check --name "$NAME" > "$SANDBOX/check-after.txt" 2>&1 \
@@ -184,9 +200,7 @@ fi
 grep -q 'Rolled back' "$SANDBOX/rollback.txt" || fail "unhealthy upgrade did not roll back"
 [ "$("$DOCKER_BIN" inspect -f '{{.State.Status}}' "$NAME")" = "running" ] \
   || fail "rollback left the previous container stopped"
-"$DOCKER_BIN" exec "$NAME" node -e \
-  "fetch('http://127.0.0.1:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
-  || fail "rollback container is not healthy"
+wait_for_health || fail "rollback container is not healthy"
 "$DOCKER_BIN" exec "$NAME" test -f /app/data/acceptance-marker \
   || fail "rollback lost the data volume contents"
 pass "unhealthy-upgrade-rolls-back"
@@ -204,9 +218,7 @@ grep -q 'previous container was restored' "$SANDBOX/run-failure.txt" \
 "$DOCKER_BIN" rm -f "$BLOCKER_NAME" >/dev/null 2>&1 || true
 [ "$("$DOCKER_BIN" inspect -f '{{.State.Status}}' "$NAME")" = "running" ] \
   || fail "start failure left the previous container stopped"
-"$DOCKER_BIN" exec "$NAME" node -e \
-  "fetch('http://127.0.0.1:3080/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
-  || fail "restored container is not healthy"
+wait_for_health || fail "restored container is not healthy"
 pass "start-failure-restores-previous"
 
 if sh "$INSTALLER" --uninstall --name "$NAME" </dev/null \

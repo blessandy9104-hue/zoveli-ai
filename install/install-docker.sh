@@ -324,8 +324,13 @@ rollback() {
   "$DOCKER_BIN" rm -f "$NAME" >/dev/null 2>&1 || true
   if container_exists "${NAME}-previous"; then
     "$DOCKER_BIN" rename "${NAME}-previous" "$NAME" || die "Upgrade failed and the previous container could not be restored."
-    "$DOCKER_BIN" start "$NAME" >/dev/null 2>&1 || true
-    warn "Rolled back to the previous container."
+    "$DOCKER_BIN" start "$NAME" >/dev/null 2>&1 \
+      || die "Upgrade failed and the previous container could not be restarted."
+    if wait_healthy; then
+      warn "Rolled back to the previous container."
+    else
+      warn "Rolled back to the previous container, but it is not healthy yet."
+    fi
   fi
   die "Upgrade failed."
 }
