@@ -19,7 +19,7 @@ packaging and troubleshooting: [desktop.md](guides/desktop.md).
 
 Packaged Electron installers are not shipped yet, so the currently shipped
 one-command installs are the portable CLI runtime
-([install.sh](../install/install.sh)) and the Docker browser UI
+([install.sh](../install/install.sh), Linux and macOS) and the Docker browser UI
 ([install-docker.sh](../install/install-docker.sh)). Desktop remains the primary
 surface in the source tree and the place where new user-facing work lands
 first.

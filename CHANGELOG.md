@@ -11,6 +11,11 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- **One-command macOS install:** `install/install.sh` now installs and upgrades
+  the portable runtime on Apple Silicon and Intel Macs with the same command as
+  Linux, selecting the `macos-arm64` or `macos-x64` archive. `--add-to-path`
+  writes to the macOS shell profile (`~/.zprofile` for zsh), and CI runs the
+  primary installer acceptance on both macOS runners.
 - **Native Intel macOS builds:** the runtime workflow now builds on
   `macos-15-intel` as well as Apple Silicon, producing a `macos-x64` archive and
   `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
@@ -33,6 +38,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- **Portable archive lookup:** the runtime installer now finds the extracted
+  runtime directory with a shell glob instead of GNU-style `find -mindepth` and
+  `-maxdepth`, keeping it portable on macOS.
 - **Compose pins and credentials:** optional Ollama, Prometheus, and Grafana
   images now use verified exact tags (`0.40.15`, `v3.16.0`, `13.2.5`); every
   published port binds to `127.0.0.1`; and PostgreSQL and Grafana passwords come

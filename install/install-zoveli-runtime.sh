@@ -273,7 +273,12 @@ fi
 
 mkdir -p "$TMP_DIR/extract"
 tar -xzf "$ARCHIVE" -C "$TMP_DIR/extract"
-SRC=$(find "$TMP_DIR/extract" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+SRC=""
+for candidate in "$TMP_DIR"/extract/*/; do
+  [ -d "$candidate" ] || continue
+  SRC=${candidate%/}
+  break
+done
 if [ -z "$SRC" ] || [ ! -f "$SRC/runtime.json" ] || [ ! -x "$SRC/zoveli" ]; then
   error "Archive does not contain a valid Zoveli runtime."
   exit 1

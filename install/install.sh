@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Zoveli AI - primary Linux installer.
+# Zoveli AI - primary Linux and macOS installer.
 #
 #   curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
 #
@@ -50,7 +50,7 @@ die() { error "$*"; exit 1; }
 
 usage() {
   cat <<EOF
-Zoveli AI installer (Linux)
+Zoveli AI installer (Linux and macOS)
 Usage: install.sh [options]
 
 Install or upgrade Zoveli from the latest published release:
@@ -64,7 +64,7 @@ Install or upgrade Zoveli from the latest published release:
   --uninstall        Remove the runtime and PATH link (keeps \$HOME/.zoveli)
   --purge            With --uninstall, also delete the vault and backups
   --source           Use the legacy source-build installer instead
-  --add-to-path      Append the bin directory to \$HOME/.profile (opt-in)
+  --add-to-path      Append the bin directory to your shell profile (opt-in)
   --no-verify        Skip SHA-256 verification (not recommended)
   -h, --help         Show this help
 
@@ -169,9 +169,7 @@ detect_platform() {
   arch=$(uname -m 2>/dev/null || printf 'unknown')
   case "$os" in
     Linux) PLATFORM=linux ;;
-    Darwin)
-      die "macOS installation is planned for Phase 3. For now use: https://github.com/$REPO/blob/main/install/install-zoveli-runtime.sh"
-      ;;
+    Darwin) PLATFORM=macos ;;
     *)
       die "Unsupported operating system: $os. Windows users: use install/install-zoveli-runtime.ps1."
       ;;
@@ -244,8 +242,22 @@ write_metadata() {
   mv "$tmp" "$TARGET_DIR/install.json"
 }
 
+path_profile() {
+  if [ "$PLATFORM" = macos ]; then
+    shell_name=${SHELL:-}
+    shell_name=${shell_name##*/}
+    case "$shell_name" in
+      zsh) printf '%s\n' "$HOME/.zprofile" ;;
+      bash) printf '%s\n' "$HOME/.bash_profile" ;;
+      *) printf '%s\n' "$HOME/.profile" ;;
+    esac
+  else
+    printf '%s\n' "$HOME/.profile"
+  fi
+}
+
 add_to_path_profile() {
-  profile="$HOME/.profile"
+  profile=$(path_profile)
   marker="# >>> zoveli installer >>>"
   if [ -f "$profile" ] && grep -F "$marker" "$profile" >/dev/null 2>&1; then
     info "PATH block already present in $profile"
@@ -293,9 +305,10 @@ ensure_link() {
       if [ "$ADD_TO_PATH" = true ]; then
         add_to_path_profile
       else
+        profile=$(path_profile)
         warn "Add $BIN_DIR to PATH to run 'zoveli' from a new shell:"
         warn "  export PATH=\"$BIN_DIR:\$PATH\""
-        warn "Or re-run with --add-to-path to append it to $HOME/.profile."
+        warn "Or re-run with --add-to-path to append it to $profile."
       fi
       ;;
   esac
@@ -334,7 +347,9 @@ print_done() {
     printf 'Diagnose:\n  zoveli doctor\n'
   fi
   printf 'Upgrade:\n  re-run this installer (or: zoveli update)\n'
-  printf 'Uninstall:\n  sh install.sh --uninstall\n'
+  printf 'Uninstall (keeps ~/.zoveli):\n'
+  printf '  curl -fsSL https://raw.githubusercontent.com/%s/%s/install/install.sh | sh -s -- --uninstall --yes\n' "$REPO" "$BRANCH"
+  printf 'Add --purge to delete the vault and backups as well.\n'
 }
 
 check_release_asset() {
@@ -564,7 +579,9 @@ main() {
 
   preflight_runtime
   resolve_target_version
-  if [ "$NO_VERIFY" != true ] && [ -z "$ARCHIVE" ] && [ "$ARCH" = arm64 ]; then
+  # Older releases may lack an architecture asset (v0.1.3 has no linux-arm64),
+  # and macOS support is new; fail with a clear message before downloading.
+  if [ "$NO_VERIFY" != true ] && [ -z "$ARCHIVE" ] && { [ "$ARCH" = arm64 ] || [ "$PLATFORM" = macos ]; }; then
     check_release_asset
   fi
 

@@ -6,8 +6,9 @@ page as the command reference.
 ## Install
 
 Portable install (no Node/Python/pnpm toolchain): see
-[`install/install.sh`](../../install/install.sh) for the Linux one-command path,
-or [`install/install-zoveli-runtime.sh`](../../install/install-zoveli-runtime.sh)
+[`install/install.sh`](../../install/install.sh) for the Linux and macOS
+one-command path, or
+[`install/install-zoveli-runtime.sh`](../../install/install-zoveli-runtime.sh)
 and [`install/install-zoveli-runtime.ps1`](../../install/install-zoveli-runtime.ps1)
 for direct runtime installs. Run `zoveli` (Linux/macOS) or `zoveli.cmd`
 (Windows) from the printed install directory.
