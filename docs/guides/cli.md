@@ -125,6 +125,14 @@ Ollama uses CPU by default; uncomment the `deploy` block in
 audit data live in the `zoveli-data` volume; `docker compose down` keeps it and
 `docker compose down -v` deletes it.
 
+The Compose stack above runs the CLI. For the browser UI in a single
+container, use the one-command Docker fallback instead:
+`curl -fsSL .../install/install-docker.sh | sh`, then open
+`http://127.0.0.1:8080`. It pulls the multi-arch `zoveli-ai-web` image and keeps
+data in its own `zoveli-data` named volume (separate from the Compose volume
+above). See the
+[Sovereign Install Guide](../INSTALL_GUIDE.md#docker-fallback-browser-ui).
+
 The optional `postgres` and `monitoring` profiles read passwords from the host
 environment and mount them as Compose secrets. Set the corresponding variable
 before starting each profile; the services do not fall back to default

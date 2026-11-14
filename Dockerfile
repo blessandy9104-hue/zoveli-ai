@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# Trixie (glibc 2.41) is required on arm64: z3-solver 5.4.1.0 publishes a
+# manylinux_2_38_aarch64 wheel, which bookworm's glibc 2.36 cannot install.
+# On amd64 the same pip resolution picks the manylinux_2_27_x86_64 wheel.
 # Build the TypeScript web application and install Python mathcore dependencies.
-FROM node:22-bookworm-slim AS builder
+FROM node:22-trixie-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -24,7 +27,8 @@ RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir ./mathcore
 
 # Keep the runtime lean: only runtime OS packages and compiled app artifacts.
-FROM node:22-bookworm-slim AS runtime
+# Keep this base in sync with the builder stage (see the z3 arm64 note above).
+FROM node:22-trixie-slim AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3080 \

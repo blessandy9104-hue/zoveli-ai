@@ -118,14 +118,50 @@ version is a no-op, an older install is upgraded, and a failed upgrade rolls
 back to the previous runtime.
 
 **Platform status:** the Linux one-command path is tested on the Ubuntu 22.04
-x64 GitHub runner (install, doctor, idempotent rerun, uninstall, and vault
-preservation) and built for Ubuntu 22.04 arm64 in CI. A true fresh VM, arm64
-hardware, and non-Ubuntu distributions remain **untested**. Release `v0.1.3`
-does not include a `linux-arm64` archive; arm64 installs work once a release
-containing the CI-built archive is published. Release `v0.1.3` also predates
-`zoveli doctor`; the installer reports that as a warning and continues, and the
-doctor check activates with the next published runtime. macOS and Windows
-one-command installers are Phase 3 and Phase 4.
+x64 and arm64 GitHub runners (install, doctor, idempotent rerun, uninstall, and
+vault preservation). A true fresh VM, non-CI arm64 hardware, and non-Ubuntu
+distributions remain **untested**. Release `v0.1.3` does not include a
+`linux-arm64` archive; arm64 installs work once a release containing the
+CI-built archive is published. Release `v0.1.3` also predates `zoveli doctor`;
+the installer reports that as a warning and continues, and the doctor check
+activates with the next published runtime. macOS and Windows one-command
+installers are Phase 3 and Phase 4.
+
+### Docker fallback (browser UI)
+
+If you cannot or do not want to install the native runtime, run the same
+browser UI in a local container:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-docker.sh | sh
+# then open http://127.0.0.1:8080
+```
+
+Requirements: Docker Engine or Docker Desktop 20.10+ on `linux/amd64` or
+`linux/arm64`. No Node, Python, Git, or Compose is needed. The UI binds to
+`127.0.0.1` only. The vault, sessions, and audit log live in the `zoveli-data`
+Docker volume and survive upgrades and normal uninstalls; `--purge` deletes
+them.
+
+```bash
+# Read-only status; upgrade by re-running the installer
+curl -fsSL .../install-docker.sh | sh -s -- --check
+
+# Uninstall: keeps the data volume unless --purge is added
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --yes
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --purge --yes
+```
+
+Provider keys are forwarded from the current environment (for example
+`OPENAI_API_KEY`) and are never written to disk or printed. Local Ollama is
+reached through `host.docker.internal`.
+
+**Docker status:** the browser-UI image is
+`ghcr.io/blessandy9104-hue/zoveli-ai-web`, built natively for amd64 and arm64 in
+CI. Until the next release publishes it, build locally with
+`docker build -t zoveli-web:local .` and run
+`sh install/install-docker.sh --image zoveli-web:local`. Docker Desktop on
+macOS/Windows, rootless Docker, and Podman are **untested**.
 
 ### Legacy source installer
 
@@ -181,7 +217,7 @@ upgrades. Later, `zoveli update --check` reports new releases and
 also publish unsigned macOS `.dmg` and Windows `.exe` installers; see the
 [Sovereign Install Guide](docs/INSTALL_GUIDE.md) for first-launch steps.
 
-### Docker Compose
+### Docker Compose (local development)
 
 ```bash
 docker compose up --build
