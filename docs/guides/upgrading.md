@@ -47,8 +47,8 @@ install/install-zoveli-runtime.sh --check
 install/install-zoveli-runtime.ps1 -Check
 ```
 
-`install/install.sh` is the primary Linux entry point. It resolves the latest
-published release, delegates the checksum/backup/rollback work to
+`install/install.sh` is the primary Linux and macOS entry point. It resolves the
+latest published release, delegates the checksum/backup/rollback work to
 `install-zoveli-runtime.sh`, records install metadata, and runs `zoveli doctor`.
 Re-running it is idempotent: the same version is a no-op, an older version is
 upgraded, and a failed upgrade restores the previous runtime. Use `--version` to
@@ -169,8 +169,9 @@ rewritten automatically.
 
 ## Uninstall
 
-The primary Linux installer removes the runtime and the `~/.local/bin/zoveli`
-link while preserving the vault and state under `~/.zoveli`:
+The primary installer on Linux and macOS removes the runtime and the
+`~/.local/bin/zoveli` link while preserving the vault and state under
+`~/.zoveli`:
 
 ```bash
 sh install/install.sh --uninstall

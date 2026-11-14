@@ -22,23 +22,24 @@ platform-issued identity. See [Why unsigned?](#why-unsigned) below.
    AppLocker, WDAC, and Gatekeeper can be enforced centrally, and bypassing them
    may violate policy.
 
-## Linux (one command)
+## Linux and macOS (one command)
 
-The primary Linux install is the portable runtime. It needs no Git, Node,
-Python, pnpm, or compiler toolchain:
+The primary install is the portable runtime. It needs no Git, Node, Python,
+pnpm, or compiler toolchain:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
 ```
 
-Requirements: Linux `x86_64` or `aarch64`, glibc 2.35+ (Ubuntu 22.04 or newer),
-`curl`, `tar`, `bash`, and `sha256sum` or `shasum`.
+Requirements: Linux `x86_64` or `aarch64` (glibc 2.35+, Ubuntu 22.04 or newer)
+or macOS on Apple Silicon or Intel, plus `curl`, `tar`, `bash`, and `sha256sum`
+or `shasum`.
 
 The installer:
 
 1. resolves the latest published release (pass `--version` to pin one);
-2. downloads the matching `linux-x64` or `linux-arm64` archive and verifies its
-   published SHA-256;
+2. downloads the matching `linux-x64`, `linux-arm64`, `macos-arm64`, or
+   `macos-x64` archive and verifies its published SHA-256;
 3. backs up and verifies an existing vault before an upgrade, then swaps in the
    new runtime with automatic rollback on failure;
 4. links `~/.local/bin/zoveli` and prints the `PATH` instructions;
@@ -53,7 +54,7 @@ curl -fsSL .../install.sh | sh -s -- --check
 # Non-interactive install
 curl -fsSL .../install.sh | sh -s -- --yes
 
-# Append the bin directory to ~/.profile (opt-in)
+# Append the bin directory to your shell profile (opt-in)
 curl -fsSL .../install.sh | sh -s -- --add-to-path
 
 # Install a local, already-verified archive
@@ -64,6 +65,12 @@ sh install.sh --uninstall
 sh install.sh --uninstall --purge   # also delete the vault and backups
 ```
 
+On macOS, `--add-to-path` writes to `~/.zprofile` for zsh, `~/.bash_profile`
+for bash, and `~/.profile` for other shells. The one-command path downloads and
+extracts a `.tar.gz`, which Gatekeeper does not quarantine, so it does not show
+the first-launch dialog; use the `.dmg` section below if you prefer a disk
+image.
+
 `zoveli doctor` checks the installed runtime, configuration drift, vault schema,
 the mathcore command, and a live MCP handshake. Add `--json` for scripts or
 `--offline` to skip the live spawn.
@@ -72,12 +79,14 @@ The install directory defaults to `~/.local/share/zoveli`; set `ZOVELI_HOME` or
 pass `--dir` to change it. State always stays in `~/.zoveli` until `--purge`.
 
 **Platform status:** tested on the Ubuntu 22.04 x64 and arm64 GitHub runners
-(install, doctor, idempotent rerun, uninstall, vault preservation). A true fresh
-VM, non-CI arm64 hardware, and non-Ubuntu distributions are **untested**.
-Release `v0.1.3` has no `linux-arm64` archive; arm64 installs work once a
+and on the macOS arm64 and Intel GitHub runners (install, doctor, idempotent
+rerun, uninstall, vault preservation). A true fresh VM or Mac, non-CI arm64
+hardware, older macOS releases, and non-Ubuntu distributions are **untested**.
+Release `v0.1.3` has no `linux-arm64` archive; arm64 Linux installs work once a
 release containing the CI-built archive is published. Release `v0.1.3` also
 predates `zoveli doctor`; the installer warns once and continues, and the doctor
-check activates with the next published runtime.
+check activates with the next published runtime. The Windows one-command
+installer is Phase 4.
 
 ## Docker fallback (browser UI)
 
@@ -161,7 +170,8 @@ The Windows installer is
 
 ## macOS (Gatekeeper)
 
-The official macOS installers are:
+The disk image is an alternative to the one-command install above. The official
+macOS installers are:
 
 - `zoveli-0.1.3-macos-arm64-setup.dmg` for Apple Silicon (M-series) Macs.
 - `zoveli-0.1.3-macos-x64-setup.dmg` for Intel Macs.

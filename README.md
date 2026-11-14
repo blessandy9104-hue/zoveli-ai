@@ -84,16 +84,17 @@ open source, local-first, publicly built, and yours to inspect.
 
 ## Install
 
-### Linux (one command)
+### Linux and macOS (one command)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
 ```
 
 The installer resolves the latest published release, downloads the matching
-`linux-x64` or `linux-arm64` runtime, verifies its SHA-256, backs up an existing
-vault before an upgrade, links `~/.local/bin/zoveli`, and runs `zoveli doctor`.
-It needs `curl`, `tar`, `bash`, and `sha256sum` (or `shasum`).
+`linux-x64`, `linux-arm64`, `macos-arm64`, or `macos-x64` runtime, verifies its
+SHA-256, backs up an existing vault before an upgrade, links
+`~/.local/bin/zoveli`, and runs `zoveli doctor`. It needs `curl`, `tar`, `bash`,
+and `sha256sum` or `shasum`.
 
 ```bash
 # Read-only status (installed vs. latest)
@@ -102,12 +103,12 @@ curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/in
 # Non-interactive install
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --yes
 
-# Opt in to a PATH block in ~/.profile
+# Opt in to a PATH block in your shell profile
 curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --add-to-path
 
 # Upgrade later by re-running the installer; uninstall keeps ~/.zoveli
-curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall
-curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --purge
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --yes
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --purge --yes
 ```
 
 `zoveli doctor` checks the installed runtime, configuration drift, vault schema,
@@ -117,15 +118,21 @@ and state stay in `~/.zoveli`. Re-running the installer is idempotent: the same
 version is a no-op, an older install is upgraded, and a failed upgrade rolls
 back to the previous runtime.
 
-**Platform status:** the Linux one-command path is tested on the Ubuntu 22.04
-x64 and arm64 GitHub runners (install, doctor, idempotent rerun, uninstall, and
-vault preservation). A true fresh VM, non-CI arm64 hardware, and non-Ubuntu
-distributions remain **untested**. Release `v0.1.3` does not include a
-`linux-arm64` archive; arm64 installs work once a release containing the
-CI-built archive is published. Release `v0.1.3` also predates `zoveli doctor`;
-the installer reports that as a warning and continues, and the doctor check
-activates with the next published runtime. macOS and Windows one-command
-installers are Phase 3 and Phase 4.
+On macOS, `--add-to-path` writes to `~/.zprofile` for zsh, `~/.bash_profile`
+for bash, and `~/.profile` for other shells. The one-command path downloads a
+`.tar.gz`, which Gatekeeper does not quarantine; the `.dmg` path may still
+require **Open Anyway** (see the
+[Sovereign Install Guide](docs/INSTALL_GUIDE.md#macos-gatekeeper)).
+
+**Platform status:** the one-command path is tested on the Ubuntu 22.04 x64 and
+arm64 GitHub runners and on the macOS arm64 and Intel GitHub runners (install,
+doctor, idempotent rerun, uninstall, and vault preservation). A true fresh VM or
+Mac, non-CI arm64 hardware, older macOS releases, and non-Ubuntu distributions
+remain **untested**. Release `v0.1.3` does not include a `linux-arm64` archive;
+arm64 Linux installs work once a release containing the CI-built archive is
+published. Release `v0.1.3` also predates `zoveli doctor`; the installer reports
+that as a warning and continues, and the doctor check activates with the next
+published runtime. The Windows one-command installer is Phase 4.
 
 ### Docker fallback (browser UI)
 
@@ -195,8 +202,8 @@ is sent; the scripts clone only from the official repository.
 ### Portable runtime (no toolchain)
 
 If you do not want Git, Node, Python, or pnpm installed, use the self-contained
-runtime. Linux users should normally use the one-command `install.sh` above;
-this lower-level script is useful for direct control, macOS, and Windows. It
+runtime. Linux and macOS users should normally use the one-command `install.sh`
+above; this lower-level script is useful for direct control and Windows. It
 verifies SHA-256 before extracting and supports rollback:
 
 ```bash

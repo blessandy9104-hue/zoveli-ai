@@ -32,6 +32,7 @@ on:
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
+      - 'scripts/install-acceptance.sh'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -49,6 +50,7 @@ on:
       - 'scripts/build-runtime.mjs'
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
+      - 'scripts/install-acceptance.sh'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -169,17 +171,28 @@ jobs:
         run: node scripts/smoke-runtime.mjs
         shell: bash
 
-      - name: Primary installer acceptance (Linux)
-        if: runner.os == 'Linux'
+      - name: Primary installer acceptance (Unix)
+        if: runner.os != 'Windows'
         run: |
-          ARCHIVE=$(find release -maxdepth 1 -name 'zoveli-*.tar.gz' | head -n 1)
+          ARCHIVE=
+          for candidate in release/zoveli-*.tar.gz; do
+            if [ -f "$candidate" ]; then
+              ARCHIVE=$candidate
+            fi
+          done
           test -n "$ARCHIVE"
           sh scripts/install-acceptance.sh --archive "$ARCHIVE"
 
       - name: Clean-install acceptance (Unix)
         if: runner.os != 'Windows'
         run: |
-          ARCHIVE=$(find release -maxdepth 1 -name 'zoveli-*.tar.gz' | head -n 1)
+          ARCHIVE=
+          for candidate in release/zoveli-*.tar.gz; do
+            if [ -f "$candidate" ]; then
+              ARCHIVE=$candidate
+            fi
+          done
+          test -n "$ARCHIVE"
           node scripts/product-acceptance.mjs --archive "$ARCHIVE" --report "acceptance-${{ matrix.platform }}.json"
 
       - name: Clean-install acceptance (Windows)
