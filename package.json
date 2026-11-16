@@ -47,7 +47,7 @@
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
     "oxlint": "^0.18.1",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "typescript": "^5.3.0",
     "vitest": "^4.1.12"
   },
