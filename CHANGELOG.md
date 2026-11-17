@@ -11,6 +11,18 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- **Optional intelligence subsystem:** `@zoveli/intelligence-plugin` mounts the
+  standalone
+  [`zoveli-intelligence`](https://github.com/blessandy9104-hue/zoveli-intelligence)
+  subsystem behind `ZOVELI_PLUGINS=zoveli-intelligence`. One governor routes
+  deterministic document, market, planning, and preference domains, returns
+  evidence and verification levels, and writes hash-chained receipts to
+  `ZOVELI_INTEL_DATA_DIR` (default `~/.zoveli/intelligence`). It adds 16
+  `intel_*` tools and an `intelligence` service without changing the default
+  26-plugin surface. The v0.1.1 release tarball is vendored under `vendor/` so
+  `--frozen-lockfile` installs stay reproducible and offline; the governor is
+  created on first use, so a corrupt store cannot block startup. See
+  [packages/intelligence-plugin](packages/intelligence-plugin/README.md).
 - **Native Intel macOS builds:** the runtime workflow now builds on
   `macos-15-intel` as well as Apple Silicon, producing a `macos-x64` archive and
   `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
