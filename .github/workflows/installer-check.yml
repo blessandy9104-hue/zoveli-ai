@@ -215,6 +215,11 @@ jobs:
           }
           Write-Output 'Inno Setup migration refusal OK'
 
+          # Both child processes above are expected to fail, so $LASTEXITCODE
+          # is still 1. PowerShell would exit the step with that code even
+          # though every assertion passed; clear it explicitly.
+          exit 0
+
       - name: Runtime installer version check
         shell: pwsh
         run: |
