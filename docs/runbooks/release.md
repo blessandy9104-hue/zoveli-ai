@@ -48,8 +48,26 @@ invalidates them.
 The `Runtime Artifacts` workflow builds the portable archives on Linux, macOS,
 and Windows, then runs the clean-install acceptance gate against each archive.
 On Linux and macOS it also runs the primary installer acceptance
-(`scripts/install-acceptance.sh`) against the same archive. Locally, after
-building mathcore:
+(`scripts/install-acceptance.sh`) against the same archive. On Windows it runs
+`scripts/install-acceptance.ps1` twice: once with Windows PowerShell 5.1 and
+once with PowerShell 7, with the child process pinned to the **Restricted**
+execution policy. The Windows acceptance uses a path containing spaces and a
+non-ASCII user profile, and covers install, doctor, idempotent rerun, PATH
+opt-in, uninstall with vault preservation, purge, protected-directory refusal,
+and Mark-of-the-Web unblocking.
+
+The matrix also attempts a native `windows-arm64` build on the
+`windows-11-arm` runner. That leg is non-blocking while the PyInstaller and
+`z3-solver` ARM64 toolchain is unproven: if it fails, no `windows-arm64` asset
+is published, and the installer stops with a clear message instead of falling
+back to the x64 archive. Do not treat a red ARM64 leg as a release blocker
+unless the plan is to announce ARM64 support for that release. The unsigned
+Inno Setup `.exe` remains x64-only and is skipped on the ARM64 runner. The
+publish job still runs after an experimental-leg failure, but it refuses to
+attach anything unless every required platform archive, checksum, `.dmg`, and
+the x64 `.exe` is present.
+
+Locally, after building mathcore:
 
 ```bash
 python -m pip install pyinstaller -e ./mathcore
@@ -57,6 +75,15 @@ node scripts/build-mathcore-runtime.mjs
 node scripts/build-runtime.mjs
 node scripts/smoke-runtime.mjs
 pnpm run acceptance:runtime -- --archive release/zoveli-X.Y.Z-<platform>-<arch>.tar.gz
+```
+
+On Windows, after `node scripts/build-runtime.mjs`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-acceptance.ps1 `
+  -Archive release\zoveli-X.Y.Z-windows-x64.tar.gz -PowerShellPath powershell.exe
+pwsh -NoProfile -File scripts/install-acceptance.ps1 `
+  -Archive release\zoveli-X.Y.Z-windows-x64.tar.gz -PowerShellPath (Join-Path $PSHOME 'pwsh.exe')
 ```
 
 Do not publish unless the archive smoke and clean-install acceptance checks are
@@ -103,14 +130,19 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
 - Installer smoke (`Installer Check` workflow) passes, including the Docker
   fallback acceptance on amd64 and arm64.
 - `Runtime Artifacts` passes on Linux, macOS (arm64 and x64), and Windows,
-  including clean-install acceptance and, on Linux and macOS, the primary
-  installer acceptance.
+  including clean-install acceptance and the primary installer acceptance
+  (`scripts/install-acceptance.ps1` under Windows PowerShell 5.1 and PowerShell
+  7 with Restricted execution policy).
+- The Windows ARM64 build is either green and publishes
+  `zoveli-X.Y.Z-windows-arm64.tar.gz`, or is documented as unavailable for this
+  release; the installer must fail clearly on ARM64 when that asset is absent.
 - The release has `zoveli-X.Y.Z-linux-x64.tar.gz`,
   `zoveli-X.Y.Z-windows-x64.tar.gz`, `zoveli-X.Y.Z-macos-arm64.tar.gz`, and
   `zoveli-X.Y.Z-macos-x64.tar.gz` with matching `.sha256` files, plus
   `zoveli-X.Y.Z-macos-arm64-setup.dmg`,
   `zoveli-X.Y.Z-macos-x64-setup.dmg`, and
-  `zoveli-X.Y.Z-windows-x64-setup.exe`.
+  `zoveli-X.Y.Z-windows-x64-setup.exe`. If the ARM64 leg was green, add
+  `zoveli-X.Y.Z-windows-arm64.tar.gz` and its `.sha256`.
 - `gh attestation verify <archive> --repo blessandy9104-hue/zoveli-ai
   --signer-workflow blessandy9104-hue/zoveli-ai/.github/workflows/runtime-artifacts.yml`
   finds a build-provenance attestation for each published archive and
@@ -122,6 +154,25 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
   `zoveli update --yes` upgrades it while preserving the vault.
 - The acceptance reports show every core workflow green and a first-task time
   under ten minutes.
+- After publishing and attaching assets, the `public-install-smoke` job in
+  `Runtime Artifacts` automatically runs the public one-liner on a clean
+  `windows-latest` runner under Windows PowerShell 5.1: install, `zoveli
+  --version`, `zoveli doctor --json`, an idempotent rerun, uninstall with vault
+  preservation, and purge. Treat that job as the automated release gate.
+- Also run the public Windows one-liner manually on a clean Windows 10 and
+  Windows 11 x64 VM (and Windows 11 ARM64 if the release published an ARM64
+  asset) under the default execution policy, without administrator rights:
+  ```powershell
+  irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1 | iex
+  ```
+  Confirm `zoveli doctor` and `zoveli --version`, rerun the one-liner to confirm
+  the same-version no-op, then `-Uninstall -Yes` and confirm the vault survives.
+  This public-path check is a release gate, not just a locally built archive.
+- Windows items that remain **untested** until hardware is available: real
+  Windows 10/11 x64 client machines, Windows on ARM64 hardware, Windows builds
+  older than 1809, corporate-managed devices with AppLocker/WDAC, and real
+  SmartScreen/antivirus blocks. Record these in the release notes or README
+  rather than implying they passed.
 - Download one archive on a clean machine (or clean container), run the
   portable installer, and verify `zoveli --version`, `zoveli health`, `/math`,
   `/remember` and `/recall`.

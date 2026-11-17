@@ -85,8 +85,18 @@ hardware, older macOS releases, and non-Ubuntu distributions are **untested**.
 Release `v0.1.3` has no `linux-arm64` archive; arm64 Linux installs work once a
 release containing the CI-built archive is published. Release `v0.1.3` also
 predates `zoveli doctor`; the installer warns once and continues, and the doctor
-check activates with the next published runtime. The Windows one-command
-installer is Phase 4.
+check activates with the next published runtime.
+
+The Windows one-command installer is tested on the `windows-latest` x64 runner
+(Windows Server 2025) under Windows PowerShell 5.1 and PowerShell 7 with the
+child process pinned to **Restricted**, using a path with spaces and a non-ASCII
+user profile. Install, doctor, idempotent rerun, PATH opt-in, uninstall, vault
+preservation, purge, protected-directory refusal, and Mark-of-the-Web
+unblocking are covered. Real Windows 10/11 x64 client hardware, Windows on
+ARM64 hardware, older Windows builds, corporate-managed machines, and real
+SmartScreen/antivirus blocks remain **untested**. CI attempts a native
+`windows-arm64` build on the `windows-11-arm` runner; if that toolchain build
+fails, no ARM64 asset is published and the installer stops with a clear message.
 
 ## Docker fallback (browser UI)
 
@@ -146,10 +156,99 @@ build it locally with `docker build -t zoveli-web:local .` and pass
 `--image zoveli-web:local`. Public anonymous pulls require the GHCR package to
 be public; use `docker login ghcr.io` if it is still private.
 
-## Windows 10 and 11 (SmartScreen)
+## Windows 10 and 11
 
-The Windows installer is
-`zoveli-0.1.3-windows-x64-setup.exe` (the version changes with each release).
+### One-command install (recommended)
+
+The primary Windows install is the portable runtime. It needs Windows 10 version
+1809 (build 17763) or later, or Windows 11, on x64 or ARM64; Windows PowerShell
+5.1 or PowerShell 7; and the `tar.exe` included with Windows. No administrator
+rights, Git, Node, Python, or pnpm are required.
+
+```powershell
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1 | iex
+```
+
+The installer:
+
+1. resolves the latest published release (`-Version` pins one);
+2. checks that the matching `windows-x64` or `windows-arm64` archive and its
+   `.sha256` exist before downloading;
+3. installs per user under `%LOCALAPPDATA%\Zoveli` and verifies the SHA-256;
+4. backs up and verifies the vault before an upgrade, with automatic rollback
+   if the new runtime fails its preflight;
+5. leaves the user `PATH` unchanged unless `-AddToPath` is passed;
+6. runs `zoveli doctor --offline` when the installed runtime provides it.
+
+The vault, configuration, backups, and audit history stay in
+`%USERPROFILE%\.zoveli` and survive upgrades and normal uninstalls. Re-running
+the same version is a no-op.
+
+Because `irm ... | iex` runs in memory, it works under the default execution
+policy, including **Restricted**. You do not need `Set-ExecutionPolicy`. If you
+save the script to disk and run it with `-File`, the policy may block it; use
+the one-line form instead.
+
+Useful forms:
+
+```powershell
+# Read-only status (installed vs. latest)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Check
+
+# Opt in to the per-user PATH
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -AddToPath
+
+# Install a specific release, or a local archive you already verified
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Version 0.1.3
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Archive .\zoveli-0.1.3-windows-x64.tar.gz -Unblock
+
+# Uninstall: keeps %USERPROFILE%\.zoveli unless -Purge is added
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Purge -Yes
+```
+
+`-Force` is required to downgrade or to reinstall the same version. `-Unblock`
+removes Mark-of-the-Web from an archive downloaded through a browser (and from
+the installed executables) so SmartScreen or antivirus heuristics are less
+likely to block the bundled `node.exe`.
+
+### Windows on ARM64
+
+Windows 11 on ARM64 is supported when the release publishes a native
+`windows-arm64` archive. The installer checks the release assets first and uses
+the native build. If the release has no `windows-arm64` asset, it stops with a
+clear message; it does **not** silently install the x64 archive under emulation.
+To accept emulation deliberately, pass the x64 `-Archive` together with
+`-Force`.
+
+### SmartScreen, antivirus, and Mark-of-the-Web
+
+Official Windows binaries are unsigned. SmartScreen and antivirus products may
+warn about or block `node.exe` or the bundled `mathcore-mcp.exe` on first use.
+The installer reports Mark-of-the-Web on a supplied archive and warns if
+`mathcore-mcp.exe` is missing after extraction, which usually means antivirus
+quarantined it.
+
+1. Open **Windows Security > Protection history** and check for a blocked or
+   quarantined Zoveli file.
+2. If you trust the release (verify the SHA-256 and, optionally, the build
+   provenance attestation), choose **Allow** or **Restore** for that file.
+3. For a browser-downloaded archive, open its **Properties**, tick
+   **Unblock**, then retry. Or pass `-Unblock`.
+4. Retry the installer.
+
+Do not disable SmartScreen, Defender, AppLocker, or WDAC. On a managed device,
+ask IT first; central policy may prohibit the install entirely.
+
+> **No "Run anyway" button?** The device is probably managed by SmartScreen,
+> AppLocker, or WDAC policy. Use the one-command install above, which executes
+> in memory and does not require launching the unsigned `.exe` installer. If
+> policy still blocks the bundled executables, ask your IT administrator.
+
+### Unsigned `.exe` installer (alternative)
+
+The Windows `.exe` is `zoveli-0.1.3-windows-x64-setup.exe` (the version changes
+with each release). It is x64-only and installs the same runtime per user.
 
 1. Download the `.exe` from the official Releases page.
 2. Double-click the installer.
@@ -164,9 +263,10 @@ The Windows installer is
 
 ![Windows SmartScreen warning for the unsigned Zoveli installer](./assets/windows-smartscreen.png)
 
-> **No "Run anyway" button?** The device is probably managed by SmartScreen,
-> AppLocker, or WDAC policy. Use the portable `.tar.gz` archive instead: extract
-> it and run `zoveli.cmd`, or ask your IT administrator.
+To move from the `.exe` to the one-command installer, uninstall Zoveli from
+**Settings > Apps** first. The one-command installer refuses to overwrite an
+existing `.exe` installation so the two upgrade paths cannot corrupt each
+other. The vault is preserved.
 
 ## macOS (Gatekeeper)
 

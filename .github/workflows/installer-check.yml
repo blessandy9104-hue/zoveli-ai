@@ -7,6 +7,11 @@ name: Installer Check
 # are proven on PRs, because the main CI `build-docker` jobs are gated with
 # `if: github.event_name != 'pull_request'` and therefore never run on pull
 # requests.
+#
+# The PowerShell job also enforces ASCII-only .ps1 files for Windows PowerShell
+# 5.1, checks comment-based help, and proves the installers refuse protected
+# directories and existing Inno Setup .exe installs before doing any network
+# work.
 
 on:
   pull_request:
@@ -147,21 +152,78 @@ jobs:
       - name: Parse installer scripts
         shell: pwsh
         run: |
-          foreach ($file in @('install/install-zoveli.ps1', 'install/install-zoveli-runtime.ps1')) {
+          $files = @(
+            'install/install.ps1',
+            'install/install-zoveli.ps1',
+            'install/install-zoveli-runtime.ps1',
+            'scripts/install-acceptance.ps1'
+          )
+          foreach ($file in $files) {
+            $path = (Resolve-Path -LiteralPath $file).Path
+            $bytes = [System.IO.File]::ReadAllBytes($path)
+            if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+              throw "$file starts with a UTF-8 BOM; Windows PowerShell 5.1 would misread it"
+            }
+            for ($i = 0; $i -lt $bytes.Length; $i++) {
+              if ($bytes[$i] -gt 0x7F) {
+                throw "$file has a non-ASCII byte at offset $i; Windows PowerShell 5.1 reads .ps1 files as ANSI"
+              }
+            }
             $errors = $null
-            [void][System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$null, [ref]$errors)
+            [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$null, [ref]$errors)
             if ($errors.Count -gt 0) {
               $errors | ForEach-Object { Write-Error $_.Message }
               exit 1
             }
-            Write-Output "$file parses clean"
+            Write-Output "$file parses clean and is ASCII-only"
           }
+
+      - name: Installer help and fail-early checks
+        shell: pwsh
+        run: |
+          foreach ($file in @('install/install.ps1', 'install/install-zoveli-runtime.ps1', 'scripts/install-acceptance.ps1')) {
+            $help = Get-Help $file
+            if ([string]::IsNullOrWhiteSpace([string]$help.Synopsis)) {
+              throw "$file is missing comment-based help"
+            }
+            Write-Output "$file help: $($help.Synopsis.Trim())"
+          }
+
+          # The filesystem root is a protected directory; the installer must
+          # refuse it before doing any network work.
+          $output = powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install.ps1 -Yes -Dir "$env:SystemDrive\" 2>&1 | Out-String
+          Write-Output $output
+          if ($LASTEXITCODE -eq 0) { throw 'installer accepted the filesystem root as the install directory' }
+          if ($output -notmatch 'Refusing to use protected directory') {
+            throw 'protected-directory refusal was unclear'
+          }
+          Write-Output 'protected-directory refusal OK'
+
+          # An existing Inno Setup .exe install must be migrated through
+          # Settings > Apps, not overwritten by the portable installer.
+          $fakeInno = Join-Path $env:RUNNER_TEMP 'zoveli-inno-refusal'
+          if (Test-Path -LiteralPath $fakeInno) { Remove-Item -LiteralPath $fakeInno -Recurse -Force }
+          New-Item -ItemType Directory -Path $fakeInno -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $fakeInno 'unins000.exe') -Value '' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $fakeInno 'runtime.json') -Value '{"version":"0.1.3"}' -Encoding ASCII
+          $url = 'https://github.com/blessandy9104-hue/zoveli-ai/releases/download/v0.1.3/zoveli-0.1.3-windows-x64.tar.gz'
+          $innoOutput = powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install.ps1 -Yes -Dir "$fakeInno" -Url $url 2>&1 | Out-String
+          Write-Output $innoOutput
+          if ($LASTEXITCODE -eq 0) { throw 'installer overwrote an Inno Setup .exe install' }
+          if ($innoOutput -notmatch 'unsigned \.exe installer') {
+            throw 'Inno Setup migration refusal was unclear'
+          }
+          Write-Output 'Inno Setup migration refusal OK'
 
       - name: Runtime installer version check
         shell: pwsh
         run: |
           powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install-zoveli-runtime.ps1 -Check -Version 0.1.3 -Dir "$env:GITHUB_WORKSPACE"
           if ($LASTEXITCODE -ne 0) { throw "runtime installer check exited with $LASTEXITCODE" }
+          $checkDir = Join-Path $env:RUNNER_TEMP 'zoveli-check-none'
+          if (Test-Path -LiteralPath $checkDir) { Remove-Item -LiteralPath $checkDir -Recurse -Force }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install\install.ps1 -Check -Version 0.1.3 -Dir "$checkDir"
+          if ($LASTEXITCODE -ne 0) { throw "primary installer check exited with $LASTEXITCODE" }
 
       - name: Run installer (Windows PowerShell 5.1, reuses checkout)
         shell: pwsh
