@@ -57,6 +57,10 @@ the new section **before** running `pnpm release:check --release`.
   `scripts/installer-download-test.ps1` covers the retry classification in CI
   under Windows PowerShell 5.1 and PowerShell 7.
 
+- **Docker builds with vendored dependencies:** both images now copy `vendor/`
+  before `pnpm fetch`, so the vendored intelligence tarball resolves during the
+  dependency-fetch layer instead of failing with `ENOENT`.
+
 ### Platform verification
 
 - The clean-VM checklist has not been completed for any platform in this

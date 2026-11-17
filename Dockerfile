@@ -16,6 +16,9 @@ RUN apt-get update \
 
 RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# `pnpm fetch` resolves every lockfile entry, including the vendored
+# intelligence tarball, so vendor/ must be present before it runs.
+COPY vendor ./vendor
 RUN pnpm fetch
 
 COPY . .
