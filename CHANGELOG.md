@@ -50,6 +50,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- **Docker builds with vendored dependencies:** both images now copy
+  `vendor/` before `pnpm fetch`, so the vendored intelligence tarball resolves
+  during the dependency-fetch layer instead of failing with `ENOENT`.
 - **Portable archive lookup:** the runtime installer now finds the extracted
   runtime directory with a shell glob instead of GNU-style `find -mindepth` and
   `-maxdepth`, keeping it portable on macOS.

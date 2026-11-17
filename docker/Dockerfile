@@ -7,7 +7,10 @@ RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 
 # Fetch dependencies from the lockfile into the store. Source changes do not
 # invalidate this layer; only a lockfile/workspace-policy change does.
+# `pnpm fetch` resolves every lockfile entry, including the vendored
+# intelligence tarball, so vendor/ must be present before it runs.
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY vendor ./vendor
 RUN pnpm fetch
 
 COPY . .
