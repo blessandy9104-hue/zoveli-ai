@@ -11,6 +11,18 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Added
 
+- **Optional intelligence subsystem:** `@zoveli/intelligence-plugin` mounts the
+  standalone
+  [`zoveli-intelligence`](https://github.com/blessandy9104-hue/zoveli-intelligence)
+  subsystem behind `ZOVELI_PLUGINS=zoveli-intelligence`. One governor routes
+  deterministic document, market, planning, and preference domains, returns
+  evidence and verification levels, and writes hash-chained receipts to
+  `ZOVELI_INTEL_DATA_DIR` (default `~/.zoveli/intelligence`). It adds 16
+  `intel_*` tools and an `intelligence` service without changing the default
+  26-plugin surface. The v0.1.1 release tarball is vendored under `vendor/` so
+  `--frozen-lockfile` installs stay reproducible and offline; the governor is
+  created on first use, so a corrupt store cannot block startup. See
+  [packages/intelligence-plugin](packages/intelligence-plugin/README.md).
 - **One-command macOS install:** `install/install.sh` now installs and upgrades
   the portable runtime on Apple Silicon and Intel Macs with the same command as
   Linux, selecting the `macos-arm64` or `macos-x64` archive. `--add-to-path`
@@ -38,6 +50,9 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- **Docker builds with vendored dependencies:** both images now copy
+  `vendor/` before `pnpm fetch`, so the vendored intelligence tarball resolves
+  during the dependency-fetch layer instead of failing with `ENOENT`.
 - **Portable archive lookup:** the runtime installer now finds the extracted
   runtime directory with a shell glob instead of GNU-style `find -mindepth` and
   `-maxdepth`, keeping it portable on macOS.

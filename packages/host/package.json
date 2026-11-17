@@ -57,7 +57,8 @@
     "@zoveli/persona": "workspace:*",
     "@zoveli/webresearch": "workspace:*",
     "@zoveli/diagnostics": "workspace:*",
-    "@zoveli/daily-brief": "workspace:*"
+    "@zoveli/daily-brief": "workspace:*",
+    "@zoveli/intelligence-plugin": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "^0.23.5",

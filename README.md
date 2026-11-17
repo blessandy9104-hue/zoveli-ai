@@ -356,6 +356,7 @@ shorthand is available after installing the portable launcher.
 - [Models and Cloud Brain](docs/guides/models.md) · [Interfaces](docs/interfaces.md)
 - [Architecture](docs/architecture.md)
 - [Math intelligence subsystem](docs/math-subsystem.md) · [Memory store](docs/memory-store.md)
+- [Optional intelligence plugin](packages/intelligence-plugin/README.md) · [Standalone subsystem](https://github.com/blessandy9104-hue/zoveli-intelligence)
 - [API Reference](docs/api/) · [Plugin SDK](docs/plugin-sdk/README.md)
 - [Runbooks](docs/runbooks/) · [Release runbook](docs/runbooks/release.md) · [Clean-install acceptance](docs/runbooks/product-acceptance.md)
 - [Upgrading](docs/guides/upgrading.md) · [Changelog](CHANGELOG.md)
