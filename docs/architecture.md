@@ -3,6 +3,8 @@
 > See ADRs 001–005 for decisions. This is the map; ADRs are the reasons.
 > Math and memory subsystems have their own maps:
 > [math-subsystem.md](math-subsystem.md), [memory-store.md](memory-store.md).
+> The optional intelligence subsystem is documented in
+> [packages/intelligence-plugin](../packages/intelligence-plugin/README.md).
 
 ## Product scope (MVP)
 
@@ -17,7 +19,7 @@ are core (stable, semver-minded) vs experimental (opt-in, may change).
 ```
 User (CLI / Desktop)
   → zoveli host (minimal plugin context)
-    → zoveli plugins (22 packages; 26 mounted by default)
+    → zoveli plugins (23 packages; 26 mounted by default, 3 opt-in)
       → capabilities (live tool inventory → registry → adaptation)
       → tools (58 live by default; desktop adds 2 auth tools)
       → chat history (in-memory, bounded per session)
@@ -35,20 +37,25 @@ User (CLI / Desktop)
 | Safety | `secscan` by default; `guard` is opt-in for custom shell tools; `auth` is desktop-only and optional |
 | Interaction | `persona` (switchable friend/tutor/engineer/coach), `webresearch` (guarded fetch + search), `diagnostics` |
 | Daily brief | `daily-brief` is opt-in (`ZOVELI_PLUGINS=zoveli-daily-brief`); local date/time/greeting tool, no network |
+| Intelligence | `intelligence-plugin` is opt-in (`ZOVELI_PLUGINS=zoveli-intelligence`); governed documents, market interpretation, planning, preferences, and a local audit chain |
 
 The host's `defaultPlugins` (26) are: math-intelligence, the 12 math
 specialists, memory-store, languages, sysinfo, scheduler, secscan, health,
 graph, docgen, code-analysis, capability, persona, webresearch and
 diagnostics. `core` remains a prompt/version library and is not mounted;
 `guard` is available through
-`ZOVELI_PLUGINS=zoveli-guard` for custom shell tools, and `daily-brief` through
-`ZOVELI_PLUGINS=zoveli-daily-brief` for local briefings.
+`ZOVELI_PLUGINS=zoveli-guard` for custom shell tools, `daily-brief` through
+`ZOVELI_PLUGINS=zoveli-daily-brief` for local briefings, and `intelligence`
+through `ZOVELI_PLUGINS=zoveli-intelligence` for grounded local documents and
+deterministic planning. Opt-in plugins add no tools or services until mounted
+and never change the default surface.
 
 ## Data flows
 
 - **Chat turn (zoveli-host):** user text → optional math fast-path → OpenAI-compatible `chat/completions` with function tools → tool execution → follow-up turn, up to `maxSteps`. History is in-memory per session (40-message cap, 200-session LRU); durable session log is future work.
 - **Verified math:** agent proposes → `math_route` (classify) → specialist solve (`math_algebra_solve`, …) or `mathcore_compute` → MCP stdio → sealed certificate → auto-memorized proof note → `OutputGuard` renders only releasable values → hash-chained audit log.
 - **Memory:** agent tools → SQLite store (`~/.zoveli/memory.db`, FTS5-ranked) → Markdown export mirror (`knowledge-vault/`) → wiki-link graph (`graph`). Legacy `.md` files import once on first boot.
+- **Intelligence (opt-in):** agent tools → one governor → deterministic domain (`documents`, `market`, `planning`, `preferences`) → evidence and verification level → hash-chained receipt. Document roots are allowlisted via `ZOVELI_INTEL_ROOTS`; state lives under `ZOVELI_INTEL_DATA_DIR` (default `~/.zoveli/intelligence`). The governor is created on first use, so a broken store cannot block host startup.
 - **Languages:** `language_detect` → `language_analyze`/`lint` → `language_format` → `language_run_tests`; tooling guide via `language_get_tooling`.
 
 ## Profiles and runtime

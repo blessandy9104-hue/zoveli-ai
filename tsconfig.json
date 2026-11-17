@@ -39,6 +39,7 @@
     { "path": "./packages/auth" },
     { "path": "./packages/config-audit" },
     { "path": "./packages/diagnostics" },
-    { "path": "./packages/daily-brief" }
+    { "path": "./packages/daily-brief" },
+    { "path": "./packages/intelligence-plugin" }
   ]
 }
