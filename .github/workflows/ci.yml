@@ -44,6 +44,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # A mismatch here otherwise fails much later in E2E with a confusing
+      # "Executable doesn't exist" error for the missing browser build.
+      - name: Verify Playwright image matches dependency
+        run: |
+          installed="$(node -e "console.log(require('@playwright/test/package.json').version)")"
+          image="$(sed -n 's|.*mcr\.microsoft\.com/playwright:v\([0-9][0-9.]*\)-noble.*|\1|p' .github/workflows/ci.yml | head -n1)"
+          echo "Installed @playwright/test: $installed"
+          echo "Pinned container image: $image"
+          if [ -z "$image" ] || [ "$installed" != "$image" ]; then
+            echo "::error::ci.yml pins Playwright '$image' but the workspace installs '$installed'; update the container tag to v${installed}-noble"
+            exit 1
+          fi
+
       - name: Verify release metadata
         run: pnpm run release:check
 
@@ -200,7 +213,7 @@ jobs:
     # the pinned @playwright/test version, so no browser or apt install runs.
     # Keep the tag in sync with the @playwright/test version in package.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --user 1001
     steps:
       - name: Checkout
@@ -269,8 +282,6 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    env:
-      SNYK_TOKEN_CONFIGURED: ${{ secrets.SNYK_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -294,16 +305,6 @@ jobs:
       - name: Run npm audit
         run: pnpm audit --prod --audit-level=high
 
-      - name: Run Snyk
-        # v1.0.0: 9adf32b1121593767fc3c057af55b55db032dc04. Pin the commit
-        # because the action's master branch is mutable.
-        uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04
-        if: env.SNYK_TOKEN_CONFIGURED == 'true'
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -323,7 +324,7 @@ jobs:
         # Filesystem mode: base/head diff scanning fails on push-to-main
         # ("BASE and HEAD commits are the same"). --only-verified fails
         # the build only on live, verifiable secrets.
-        uses: trufflesecurity/trufflehog@v3.99.8
+        uses: trufflesecurity/trufflehog@v3.99.9
         with:
           path: ./
           # Pin the scanner image tag instead of the action's "latest" default.
@@ -408,6 +409,134 @@ jobs:
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
 
+  build-docker-web:
+    name: Build Web Image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            platform: linux/amd64
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    needs: [unit-tests, integration-tests, security-scan]
+    if: github.event_name == 'release'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-web
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=ghcr.io/${{ github.repository }}-web,push-by-digest=true,name-canonical=true,push=true
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=docker-web-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=docker-web-${{ matrix.arch }}
+
+      - name: Export digest
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-web-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-docker-web:
+    name: Publish Web Image
+    runs-on: ubuntu-latest
+    needs: [build-docker-web]
+    if: github.event_name == 'release'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: docker-web-digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-web
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Create multi-arch manifest
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          args=()
+          while IFS= read -r tag; do
+            args+=(-t "$tag")
+          done < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          for digest in *; do
+            args+=("ghcr.io/${GITHUB_REPOSITORY}-web@sha256:${digest}")
+          done
+          docker buildx imagetools create "${args[@]}"
+
+      - name: Inspect published manifest
+        env:
+          DOCKER_METADATA_OUTPUT_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          image="$(jq -r '.tags[0]' <<< "$DOCKER_METADATA_OUTPUT_JSON")"
+          echo "Published $image"
+          docker buildx imagetools inspect "$image"
+
   sbom:
     name: SBOM
     runs-on: ubuntu-latest
@@ -440,7 +569,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [build-docker]
+    needs: [build-docker, merge-docker-web]
     if: github.event_name == 'release'
     permissions:
       contents: write

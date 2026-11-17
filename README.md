@@ -4,10 +4,12 @@
 
 > The assistant that proves its math, runs on your hardware, and never trains on your data.
 
-> **Product scope:** the **Desktop app** is the primary interface. The CLI remains
-> supported for automation and headless use; the browser/web UI is experimental and
-> other surfaces are community-supported. Every surface shares the same local
-> runtime: verified math, local memory, and local tools. See
+> **Product scope:** the **Desktop app** is the primary interface in the source
+> tree. Packaged Electron installers are not shipped yet, so the currently
+> shipped one-command install is the **portable CLI runtime**. The CLI remains
+> supported for automation and headless use; the browser/web UI is experimental
+> and other surfaces are community-supported. Every surface shares the same
+> local runtime: verified math, local memory, and local tools. See
 > [docs/interfaces.md](docs/interfaces.md) for the support tiers and
 > [docs/core-plugins.md](docs/core-plugins.md) for what counts as core vs experimental.
 
@@ -82,7 +84,93 @@ open source, local-first, publicly built, and yours to inspect.
 
 ## Install
 
-### One command (source installer)
+### Linux and macOS (one command)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
+```
+
+The installer resolves the latest published release, downloads the matching
+`linux-x64`, `linux-arm64`, `macos-arm64`, or `macos-x64` runtime, verifies its
+SHA-256, backs up an existing vault before an upgrade, links
+`~/.local/bin/zoveli`, and runs `zoveli doctor`. It needs `curl`, `tar`, `bash`,
+and `sha256sum` or `shasum`.
+
+```bash
+# Read-only status (installed vs. latest)
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --yes
+
+# Opt in to a PATH block in your shell profile
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --add-to-path
+
+# Upgrade later by re-running the installer; uninstall keeps ~/.zoveli
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --yes
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh -s -- --uninstall --purge --yes
+```
+
+`zoveli doctor` checks the installed runtime, configuration drift, vault schema,
+the mathcore command, and a live MCP handshake; `zoveli doctor --offline` skips
+the spawn. The default install directory is `~/.local/share/zoveli`; the vault
+and state stay in `~/.zoveli`. Re-running the installer is idempotent: the same
+version is a no-op, an older install is upgraded, and a failed upgrade rolls
+back to the previous runtime.
+
+On macOS, `--add-to-path` writes to `~/.zprofile` for zsh, `~/.bash_profile`
+for bash, and `~/.profile` for other shells. The one-command path downloads a
+`.tar.gz`, which Gatekeeper does not quarantine; the `.dmg` path may still
+require **Open Anyway** (see the
+[Sovereign Install Guide](docs/INSTALL_GUIDE.md#macos-gatekeeper)).
+
+**Platform status:** the one-command path is tested on the Ubuntu 22.04 x64 and
+arm64 GitHub runners and on the macOS arm64 and Intel GitHub runners (install,
+doctor, idempotent rerun, uninstall, and vault preservation). A true fresh VM or
+Mac, non-CI arm64 hardware, older macOS releases, and non-Ubuntu distributions
+remain **untested**. Release `v0.1.3` does not include a `linux-arm64` archive;
+arm64 Linux installs work once a release containing the CI-built archive is
+published. Release `v0.1.3` also predates `zoveli doctor`; the installer reports
+that as a warning and continues, and the doctor check activates with the next
+published runtime. The Windows one-command installer is Phase 4.
+
+### Docker fallback (browser UI)
+
+If you cannot or do not want to install the native runtime, run the same
+browser UI in a local container:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-docker.sh | sh
+# then open http://127.0.0.1:8080
+```
+
+Requirements: Docker Engine or Docker Desktop 20.10+ on `linux/amd64` or
+`linux/arm64`. No Node, Python, Git, or Compose is needed. The UI binds to
+`127.0.0.1` only. The vault, sessions, and audit log live in the `zoveli-data`
+Docker volume and survive upgrades and normal uninstalls; `--purge` deletes
+them.
+
+```bash
+# Read-only status; upgrade by re-running the installer
+curl -fsSL .../install-docker.sh | sh -s -- --check
+
+# Uninstall: keeps the data volume unless --purge is added
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --yes
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --purge --yes
+```
+
+Provider keys are forwarded from the current environment (for example
+`OPENAI_API_KEY`) and are never written to disk or printed. Local Ollama is
+reached through `host.docker.internal`.
+
+**Docker status:** the browser-UI image is
+`ghcr.io/blessandy9104-hue/zoveli-ai-web`, built natively for amd64 and arm64 in
+CI. Until the next release publishes it, build locally with
+`docker build -t zoveli-web:local .` and run
+`sh install/install-docker.sh --image zoveli-web:local`. Docker Desktop on
+macOS/Windows, rootless Docker, and Podman are **untested**.
+
+### Legacy source installer
 
 The installer clones the repo, creates a Python venv, installs vendored
 `mathcore`, ensures Node 22 + pnpm 11.7.0, builds, and prints exact run steps.
@@ -108,13 +196,15 @@ From a checkout, the Windows installer accepts the model directly:
 ```
 
 Use `--model` / `-Model` to pick a local Ollama preset (default `qwen3:4b`).
-The install finishes with the Desktop-first run instructions. No telemetry is
-sent; the scripts clone only from the official repository.
+The install finishes with run instructions for the source checkout. No telemetry
+is sent; the scripts clone only from the official repository.
 
 ### Portable runtime (no toolchain)
 
 If you do not want Git, Node, Python, or pnpm installed, use the self-contained
-runtime. It verifies SHA-256 before extracting and supports rollback:
+runtime. Linux and macOS users should normally use the one-command `install.sh`
+above; this lower-level script is useful for direct control and Windows. It
+verifies SHA-256 before extracting and supports rollback:
 
 ```bash
 # Linux / macOS
@@ -134,7 +224,7 @@ upgrades. Later, `zoveli update --check` reports new releases and
 also publish unsigned macOS `.dmg` and Windows `.exe` installers; see the
 [Sovereign Install Guide](docs/INSTALL_GUIDE.md) for first-launch steps.
 
-### Docker Compose
+### Docker Compose (local development)
 
 ```bash
 docker compose up --build
@@ -197,15 +287,15 @@ your machine. A cloud provider sees only the chat text you send. See
 
 ## Interfaces
 
-| Tier | Surface                                                | Status              |
-| ---- | ------------------------------------------------------ | ------------------- |
-| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary, stable** |
-| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported**       |
-| 3    | Browser/web UI served over HTTP                        | Experimental        |
-| —    | TUI wrappers, editor/messaging integrations            | Community-supported |
+| Tier | Surface                                                | Status                                      |
+| ---- | ------------------------------------------------------ | ------------------------------------------- |
+| 1    | **Desktop (Electron)** — onboarding, chat, local tools | **Primary in source; installers not shipped** |
+| 2    | **CLI** — scripts, servers, CI, headless machines      | **Supported; shipped portable runtime**     |
+| 3    | Browser/web UI served over HTTP                        | Experimental                                |
+| —    | TUI wrappers, editor/messaging integrations            | Community-supported                         |
 
 ```bash
-pnpm run desktop   # primary app
+pnpm run desktop   # primary app from a source checkout
 pnpm start         # CLI automation surface
 ```
 

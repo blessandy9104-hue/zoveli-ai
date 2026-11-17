@@ -29,6 +29,18 @@ describe.skipIf(!READY)('CLI fast paths', () => {
     expect(run.status).toBe(0);
     expect(run.stdout).toContain('Usage:');
     expect(run.stdout).toContain('zoveli config-check');
+    expect(run.stdout).toContain('zoveli doctor');
+    expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
+  });
+
+  it('runs doctor without loading the host', () => {
+    const run = runCli('doctor', '--json', '--offline');
+    expect([0, 1]).toContain(run.status);
+    const report = JSON.parse(run.stdout);
+    expect(report.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(['runtime', 'source']).toContain(report.install.mode);
+    expect(Array.isArray(report.checks)).toBe(true);
+    expect(report.checks.some((check: { id: string }) => check.id === 'install')).toBe(true);
     expect(run.stderr).not.toContain('fast-path loaded @zoveli/host');
   });
 

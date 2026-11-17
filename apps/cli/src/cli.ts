@@ -8,6 +8,7 @@ function printHelp(): void {
 Usage:
   zoveli                          start the interactive assistant
   zoveli config-check [--json]    validate environment configuration
+  zoveli doctor [--json]          installation and dependency diagnostics
   zoveli health [--offline]       runtime/config/vault/MCP health rollup
   zoveli plugins [--json]         list plugin inventory and mount status
   zoveli eval [--json]            run trust benchmarks and publish the score
@@ -35,6 +36,11 @@ async function main() {
   if (argv[0] === 'config-check') {
     const { runConfigCheck } = await import('./config-check.js');
     process.exitCode = await runConfigCheck(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'doctor') {
+    const { runDoctor } = await import('./doctor.js');
+    process.exitCode = await runDoctor(argv.slice(1));
     return;
   }
   if (argv[0] === 'health') {

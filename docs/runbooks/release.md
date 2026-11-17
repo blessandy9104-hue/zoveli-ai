@@ -47,7 +47,9 @@ invalidates them.
 
 The `Runtime Artifacts` workflow builds the portable archives on Linux, macOS,
 and Windows, then runs the clean-install acceptance gate against each archive.
-Locally, after building mathcore:
+On Linux and macOS it also runs the primary installer acceptance
+(`scripts/install-acceptance.sh`) against the same archive. Locally, after
+building mathcore:
 
 ```bash
 python -m pip install pyinstaller -e ./mathcore
@@ -95,9 +97,14 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
 
 - CI/release workflow is green.
 - `docker pull ghcr.io/blessandy9104-hue/zoveli-ai:X.Y.Z` works.
-- Installer smoke (`Installer Check` workflow) passes.
+- `docker buildx imagetools inspect ghcr.io/blessandy9104-hue/zoveli-ai-web:X.Y.Z`
+  lists both `linux/amd64` and `linux/arm64`, and an anonymous pull works after
+  the package visibility is set to public.
+- Installer smoke (`Installer Check` workflow) passes, including the Docker
+  fallback acceptance on amd64 and arm64.
 - `Runtime Artifacts` passes on Linux, macOS (arm64 and x64), and Windows,
-  including clean-install acceptance.
+  including clean-install acceptance and, on Linux and macOS, the primary
+  installer acceptance.
 - The release has `zoveli-X.Y.Z-linux-x64.tar.gz`,
   `zoveli-X.Y.Z-windows-x64.tar.gz`, `zoveli-X.Y.Z-macos-arm64.tar.gz`, and
   `zoveli-X.Y.Z-macos-x64.tar.gz` with matching `.sha256` files, plus

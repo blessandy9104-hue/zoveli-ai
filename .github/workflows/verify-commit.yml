@@ -1,0 +1,166 @@
+name: Verify Commit
+
+# On-demand verification for a specific commit. This covers commits that never
+# received a push or pull_request run, such as commits merged through native
+# auto-merge with the repository GITHUB_TOKEN.
+#
+# Only repository writers can dispatch this workflow, and the requested
+# revision must already be an ancestor of main, so the checked-out tree has
+# passed review before it executes here.
+run-name: Verify revision ${{ inputs.revision }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Full 40-character SHA of a commit on main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  # Keep these aligned with ci.yml.
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.11'
+  PNPM_VERSION: '11.7.0'
+
+jobs:
+  core-checks:
+    name: Core Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate revision input
+        env:
+          REVISION: ${{ inputs.revision }}
+        run: |
+          if ! printf '%s' "$REVISION" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::revision must be a full 40-character lowercase SHA"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Confirm revision is on main
+        env:
+          REVISION: ${{ inputs.revision }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          echo "Verified revision: $actual"
+          test "$actual" = "$REVISION"
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$REVISION" origin/main; then
+            echo "::error::$REVISION is not an ancestor of origin/main"
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release metadata
+        run: pnpm run release:check
+
+      - name: Run oxlint
+        run: pnpm run lint
+
+      # Type declarations resolve through built dist/ output, so the workspace
+      # must be built before typechecking on a fresh clone.
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Run TypeScript type check
+        run: pnpm run typecheck
+
+      - name: Validate plugin contract
+        run: pnpm run plugin:check
+
+      - name: Performance budgets
+        run: node scripts/perf-check.mjs
+
+      - name: Run unit tests
+        run: pnpm test -- --coverage
+
+      - name: Run integration tests
+        run: pnpm test -- tests/integration
+
+      - name: Run production dependency audit
+        run: pnpm audit --prod --audit-level=high
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: core-checks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install mathcore (vendored in ./mathcore)
+        run: python -m pip install -e ./mathcore
+
+      - name: Run mathcore fast tests (known answers + CLI)
+        run: |
+          python -m pip install -e "./mathcore[test]"
+          python -m pytest mathcore/tests/test_known_answers.py mathcore/tests/test_cli.py -q
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The regular CI job uses the matching Playwright container. This
+      # workflow can verify older commits, so install the browsers for whichever
+      # @playwright/test version the checked-out commit declares.
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Run E2E tests
+        run: pnpm exec playwright test
+        env:
+          NODE_ENV: test
+          ZOVELI_DEBUG: '1'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.revision }}
+          path: playwright-report/
+          retention-days: 7

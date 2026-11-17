@@ -6,10 +6,18 @@ page as the command reference.
 ## Install
 
 Portable install (no Node/Python/pnpm toolchain): see
+[`install/install.sh`](../../install/install.sh) for the Linux and macOS
+one-command path, or
 [`install/install-zoveli-runtime.sh`](../../install/install-zoveli-runtime.sh)
-or [`install/install-zoveli-runtime.ps1`](../../install/install-zoveli-runtime.ps1).
-Run `zoveli` (Linux/macOS) or `zoveli.cmd` (Windows) from the printed install
-directory.
+and [`install/install-zoveli-runtime.ps1`](../../install/install-zoveli-runtime.ps1)
+for direct runtime installs. Run `zoveli` (Linux/macOS) or `zoveli.cmd`
+(Windows) from the printed install directory.
+
+```bash
+zoveli doctor            # install/runtime/PATH, config, vault and mathcore
+zoveli doctor --json     # machine-readable report
+zoveli doctor --offline  # skip the live mathcore handshake
+```
 
 Source checkout:
 
@@ -117,6 +125,14 @@ Ollama uses CPU by default; uncomment the `deploy` block in
 `docker/docker-compose.yml` for NVIDIA GPU acceleration. Vault, sessions and
 audit data live in the `zoveli-data` volume; `docker compose down` keeps it and
 `docker compose down -v` deletes it.
+
+The Compose stack above runs the CLI. For the browser UI in a single
+container, use the one-command Docker fallback instead:
+`curl -fsSL .../install/install-docker.sh | sh`, then open
+`http://127.0.0.1:8080`. It pulls the multi-arch `zoveli-ai-web` image and keeps
+data in its own `zoveli-data` named volume (separate from the Compose volume
+above). See the
+[Sovereign Install Guide](../INSTALL_GUIDE.md#docker-fallback-browser-ui).
 
 The optional `postgres` and `monitoring` profiles read passwords from the host
 environment and mount them as Compose secrets. Set the corresponding variable
@@ -313,8 +329,9 @@ variables — the old telemetry vars (`TELEMETRY_ENABLED`, `OTLP_ENDPOINT`,
 
 ## Troubleshooting
 
-- Run `pnpm run doctor` first: it reports Node/pnpm, Python, the importable
-  mathcore version, the resolved `mathcore-mcp` path and Ollama. Then
+- Run `zoveli doctor` (portable) or `pnpm run doctor` (source checkout) first:
+  it reports Node/pnpm, Python, the importable mathcore version, the resolved
+  `mathcore-mcp` path, and Ollama. Then `zoveli config-check` or
   `pnpm config:check` for env/vault drift with actionable fixes.
 - `mathcore-mcp not found` → activate your `.venv` (or `python -m pip install
   -e ./mathcore`), then re-run doctor; alternatively set

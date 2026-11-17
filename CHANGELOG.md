@@ -23,29 +23,46 @@ the new section **before** running `pnpm release:check --release`.
   `--frozen-lockfile` installs stay reproducible and offline; the governor is
   created on first use, so a corrupt store cannot block startup. See
   [packages/intelligence-plugin](packages/intelligence-plugin/README.md).
+- **One-command macOS install:** `install/install.sh` now installs and upgrades
+  the portable runtime on Apple Silicon and Intel Macs with the same command as
+  Linux, selecting the `macos-arm64` or `macos-x64` archive. `--add-to-path`
+  writes to the macOS shell profile (`~/.zprofile` for zsh), and CI runs the
+  primary installer acceptance on both macOS runners.
 - **Native Intel macOS builds:** the runtime workflow now builds on
   `macos-15-intel` as well as Apple Silicon, producing a `macos-x64` archive and
   `.dmg` alongside the `macos-arm64` artifacts. The macOS Gatekeeper guidance
   now covers both architectures.
+- **One-command Docker fallback:** `install/install-docker.sh` runs the browser
+  UI in a local container bound to `127.0.0.1`, keeps vault/session/audit data
+  in a named volume, and supports idempotent upgrades with automatic rollback,
+  `--check`, and uninstall/purge. The release workflow publishes the multi-arch
+  `ghcr.io/blessandy9104-hue/zoveli-ai-web` image for amd64 and arm64, and CI
+  runs the install/upgrade/rollback acceptance on both native runners.
 
 ### Changed
 
 - **Real installer screenshots:** the Sovereign Install Guide now uses a real
   Windows 11 SmartScreen capture and a real macOS 15 Gatekeeper capture from the
   unsigned builds instead of placeholders.
+- **Docker web image base:** the browser-UI image now uses
+  `node:22-trixie-slim` in both stages so arm64 can install the `z3-solver`
+  `manylinux_2_38_aarch64` wheel while amd64 keeps its `manylinux_2_27` wheel.
 
 ### Fixed
 
+- **Portable archive lookup:** the runtime installer now finds the extracted
+  runtime directory with a shell glob instead of GNU-style `find -mindepth` and
+  `-maxdepth`, keeping it portable on macOS.
 - **Compose pins and credentials:** optional Ollama, Prometheus, and Grafana
   images now use verified exact tags (`0.40.15`, `v3.16.0`, `13.2.5`); every
   published port binds to `127.0.0.1`; and PostgreSQL and Grafana passwords come
   from `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` secrets instead of
   hard-coded defaults. The `postgres` and `monitoring` profiles now fail closed
   when those variables are unset.
-- **CI pin correctness:** repaired invalid action references, pinned Snyk to a
-  release commit instead of its mutable `master` branch, pinned TruffleHog's
-  scanner image instead of its `:latest` default, kept `SNYK_TOKEN`
-  step-scoped, excluded the editable `mathcore` install from the nightly
+- **CI pin correctness:** repaired invalid action references, removed the
+  Snyk dependency scan in favor of npm audit, Trivy, CodeQL, and secret
+  scanning, pinned TruffleHog's scanner image instead of its `:latest`
+  default, excluded the editable `mathcore` install from the nightly
   `pip-audit` file, and quoted Windows archive paths. CodeQL now watches only
   branches that exist remotely.
 - **Remote MCP bearer parsing:** the `Authorization` header is parsed with a

@@ -22,6 +22,130 @@ platform-issued identity. See [Why unsigned?](#why-unsigned) below.
    AppLocker, WDAC, and Gatekeeper can be enforced centrally, and bypassing them
    may violate policy.
 
+## Linux and macOS (one command)
+
+The primary install is the portable runtime. It needs no Git, Node, Python,
+pnpm, or compiler toolchain:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.sh | sh
+```
+
+Requirements: Linux `x86_64` or `aarch64` (glibc 2.35+, Ubuntu 22.04 or newer)
+or macOS on Apple Silicon or Intel, plus `curl`, `tar`, `bash`, and `sha256sum`
+or `shasum`.
+
+The installer:
+
+1. resolves the latest published release (pass `--version` to pin one);
+2. downloads the matching `linux-x64`, `linux-arm64`, `macos-arm64`, or
+   `macos-x64` archive and verifies its published SHA-256;
+3. backs up and verifies an existing vault before an upgrade, then swaps in the
+   new runtime with automatic rollback on failure;
+4. links `~/.local/bin/zoveli` and prints the `PATH` instructions;
+5. runs `zoveli doctor --offline` and reports any blocking problem.
+
+Useful forms:
+
+```bash
+# Read-only: installed vs. latest
+curl -fsSL .../install.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL .../install.sh | sh -s -- --yes
+
+# Append the bin directory to your shell profile (opt-in)
+curl -fsSL .../install.sh | sh -s -- --add-to-path
+
+# Install a local, already-verified archive
+sh install.sh --archive ./zoveli-0.1.3-linux-x64.tar.gz
+
+# Upgrade by re-running the installer; uninstall keeps ~/.zoveli
+sh install.sh --uninstall
+sh install.sh --uninstall --purge   # also delete the vault and backups
+```
+
+On macOS, `--add-to-path` writes to `~/.zprofile` for zsh, `~/.bash_profile`
+for bash, and `~/.profile` for other shells. The one-command path downloads and
+extracts a `.tar.gz`, which Gatekeeper does not quarantine, so it does not show
+the first-launch dialog; use the `.dmg` section below if you prefer a disk
+image.
+
+`zoveli doctor` checks the installed runtime, configuration drift, vault schema,
+the mathcore command, and a live MCP handshake. Add `--json` for scripts or
+`--offline` to skip the live spawn.
+
+The install directory defaults to `~/.local/share/zoveli`; set `ZOVELI_HOME` or
+pass `--dir` to change it. State always stays in `~/.zoveli` until `--purge`.
+
+**Platform status:** tested on the Ubuntu 22.04 x64 and arm64 GitHub runners
+and on the macOS arm64 and Intel GitHub runners (install, doctor, idempotent
+rerun, uninstall, vault preservation). A true fresh VM or Mac, non-CI arm64
+hardware, older macOS releases, and non-Ubuntu distributions are **untested**.
+Release `v0.1.3` has no `linux-arm64` archive; arm64 Linux installs work once a
+release containing the CI-built archive is published. Release `v0.1.3` also
+predates `zoveli doctor`; the installer warns once and continues, and the doctor
+check activates with the next published runtime. The Windows one-command
+installer is Phase 4.
+
+## Docker fallback (browser UI)
+
+If the native runtime is not an option, the Docker fallback runs the same
+browser UI in a local container. The host needs no Git, Node, Python, pnpm, or
+Compose — only Docker:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install-docker.sh | sh
+# then open http://127.0.0.1:8080
+```
+
+Requirements: Docker Engine or Docker Desktop 20.10+ on a `linux/amd64` or
+`linux/arm64` container platform. The container is Linux; macOS and Windows
+hosts are **untested** even though Docker Desktop can run Linux containers.
+Rootless Docker and Podman are also **untested**. Compose is not required.
+
+The installer:
+
+1. pulls `ghcr.io/blessandy9104-hue/zoveli-ai-web` (or uses a local `--image`);
+2. starts a container bound to `127.0.0.1` with a health-check wait;
+3. stores the vault, sessions, and audit log in the `<name>-data` Docker volume;
+4. labels the container so uninstall only removes what it created.
+
+Useful forms:
+
+```bash
+# Read-only: container, image, port, volume, and health
+curl -fsSL .../install-docker.sh | sh -s -- --check
+
+# Non-interactive install
+curl -fsSL .../install-docker.sh | sh -s -- --yes
+
+# Custom host port, container name, or data volume
+curl -fsSL .../install-docker.sh | sh -s -- --port 9090 --name zoveli-work
+
+# Upgrade: re-run the installer; a failed upgrade restores the previous container
+curl -fsSL .../install-docker.sh | sh -s -- --yes
+
+# Uninstall: the data volume is kept unless --purge is added
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --yes
+curl -fsSL .../install-docker.sh | sh -s -- --uninstall --purge --yes
+```
+
+Provider keys and runtime settings are read from the current environment (for
+example `OPENAI_API_KEY`, `ZOVELI_PROVIDER`, `ZOVELI_MODEL`,
+`ZOVELI_API_TOKEN`) and passed to the container without being written to disk
+or printed by the installer. Local Ollama is reached through
+`host.docker.internal`. Because the UI is bound to loopback, use an SSH tunnel
+for remote access rather than exposing the port.
+
+**Docker platform status:** the multi-arch image is built natively for amd64
+and arm64 in CI, and the Docker acceptance test covers install, health,
+idempotent rerun, upgrade replacement, rollback, volume persistence, and
+uninstall/purge on both runners. Until the next release publishes the image,
+build it locally with `docker build -t zoveli-web:local .` and pass
+`--image zoveli-web:local`. Public anonymous pulls require the GHCR package to
+be public; use `docker login ghcr.io` if it is still private.
+
 ## Windows 10 and 11 (SmartScreen)
 
 The Windows installer is
@@ -46,7 +170,8 @@ The Windows installer is
 
 ## macOS (Gatekeeper)
 
-The official macOS installers are:
+The disk image is an alternative to the one-command install above. The official
+macOS installers are:
 
 - `zoveli-0.1.3-macos-arm64-setup.dmg` for Apple Silicon (M-series) Macs.
 - `zoveli-0.1.3-macos-x64-setup.dmg` for Intel Macs.
@@ -158,4 +283,4 @@ are refreshed when the installers or the operating-system dialogs change.
 - `docs/assets/windows-smartscreen.png`
 - `docs/assets/macos-gatekeeper.png`
 
-_Last reviewed: 2026-11-06._
+_Last reviewed: 2026-11-13._

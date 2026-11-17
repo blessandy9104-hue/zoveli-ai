@@ -91,7 +91,7 @@ Local prerequisites:
 - Port 3081 free, or set `ZOVELI_E2E_PORT` and `ZOVELI_E2E_BASE_URL`
   consistently.
 
-CI runs the suite in the pinned `mcr.microsoft.com/playwright:v1.64.1-noble`
+CI runs the suite in the pinned `mcr.microsoft.com/playwright:v1.65.0-noble`
 container after unit and integration tests. The container tag must match the
 `@playwright/test` version in `package.json`.
 
