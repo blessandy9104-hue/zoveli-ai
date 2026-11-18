@@ -686,8 +686,20 @@ public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint M
       Write-Info "This runtime predates 'zoveli doctor'; diagnostics arrive in a newer release."
       return
     }
-    & $launcher doctor --offline
-    if ($LASTEXITCODE -ne 0) {
+    # Node writes the SQLite ExperimentalWarning to stderr. Under the default
+    # Stop preference Windows PowerShell 5.1 turns that into a terminating
+    # NativeCommandError, so capture stdout with Continue, discard stderr, and
+    # report the exit code instead of reflecting the internal error record.
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+      $report = & $launcher doctor --offline 2>$null | Out-String
+      $doctorExit = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousPreference
+    }
+    if ($report.Trim()) { Write-Host $report.TrimEnd() }
+    if ($doctorExit -ne 0) {
       Write-Warn "Installed, but 'zoveli doctor' reported problems."
       Write-Warn "Run '$launcher doctor' for the full report."
     }

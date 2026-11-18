@@ -9,6 +9,12 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows installer rerun diagnostics:** `install.ps1` no longer turns Node's
+  SQLite stderr warning into a terminating `NativeCommandError` when it runs
+  `zoveli doctor` after an install or same-version rerun.
+
 ## [0.1.4] - 2026-11-18
 
 ### Added
