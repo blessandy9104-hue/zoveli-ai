@@ -26,9 +26,37 @@ the new section **before** running `pnpm release:check --release`.
   `--check`, and uninstall/purge. The release workflow publishes the multi-arch
   `ghcr.io/blessandy9104-hue/zoveli-ai-web` image for amd64 and arm64, and CI
   runs the install/upgrade/rollback acceptance on both native runners.
+- **One-command Windows install:** `install/install.ps1` resolves the latest
+  published release, verifies the matching `windows-x64` or `windows-arm64`
+  archive, installs per user under `%LOCALAPPDATA%\Zoveli`, records
+  `install.json`, and runs `zoveli doctor`. It supports `-Check`,
+  `-AddToPath`, `-Uninstall`, `-Purge`, `-Force`, and `-Unblock`, works under
+  Windows PowerShell 5.1 and PowerShell 7 with the default Restricted execution
+  policy, keeps the user PATH opt-in, and preserves `%USERPROFILE%\.zoveli`
+  across upgrades and normal uninstalls.
+- **Windows ARM64 asset checks and CI:** the installer checks the release
+  assets before downloading and stops with a clear message when no
+  `windows-arm64` archive exists instead of silently installing x64 under
+  emulation. `Runtime Artifacts` builds a native `windows-arm64` archive on the
+  `windows-11-arm` runner and uploads it with its checksum; the leg is
+  non-blocking and real ARM64 client hardware remains untested.
+- **Windows acceptance harness:** `scripts/install-acceptance.ps1` covers
+  install, doctor, metadata, idempotent rerun, PATH opt-in and deduplication,
+  uninstall with vault preservation, purge, protected-directory refusal, and
+  Mark-of-the-Web unblocking on paths containing spaces and a non-ASCII user
+  profile.
+- **Public release smoke test:** on a published release, `Runtime Artifacts`
+  runs the documented `irm ... | iex` one-liner on a clean `windows-latest`
+  runner under Windows PowerShell 5.1, then checks `zoveli doctor`, an
+  idempotent rerun, uninstall with vault preservation, and purge.
 
 ### Changed
 
+- **Windows runtime engine:** `install-zoveli-runtime.ps1` now resolves
+  `/releases/latest` instead of `main/package.json`, supports in-process
+  invocation from the primary installer, merges `install.json` metadata across
+  upgrades, reports Mark-of-the-Web and possible antivirus quarantine, and
+  treats a same-version rerun as a no-op unless `-Force` is passed.
 - **Real installer screenshots:** the Sovereign Install Guide now uses a real
   Windows 11 SmartScreen capture and a real macOS 15 Gatekeeper capture from the
   unsigned builds instead of placeholders.
@@ -38,6 +66,23 @@ the new section **before** running `pnpm release:check --release`.
 
 ### Fixed
 
+- **Windows forced reinstall:** `install.ps1 -Force` now actually reinstalls
+  the same version instead of returning early, matching the documented behavior
+  and the runtime installer.
+- **Windows renamed local archives:** `-Archive` no longer rejects a copy whose
+  filename does not match `zoveli-<version>-windows-<arch>.tar.gz`. The version
+  and architecture are validated from the archive's `runtime.json` after the
+  checksum passes, so a tampered renamed copy still fails checksum verification
+  rather than failing on its name.
+- **Windows upgrade file locks:** a transient lock during the runtime directory
+  rename (for example from an antivirus scan or a just-exited child process) no
+  longer aborts an upgrade. The installer retries the rename for a few seconds,
+  removes the staging directory on failure, and reports that the existing
+  runtime was left in place instead of claiming no runtime is installed.
+- **Windows uninstall with environment defaults:** `-Uninstall` no longer
+  conflicts with `ZOVELI_VERSION`, `ZOVELI_ARCHIVE`, or `ZOVELI_RUNTIME_URL`
+  when those values come from the environment; only explicitly passed
+  parameters conflict.
 - **Portable archive lookup:** the runtime installer now finds the extracted
   runtime directory with a shell glob instead of GNU-style `find -mindepth` and
   `-maxdepth`, keeping it portable on macOS.

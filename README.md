@@ -125,14 +125,61 @@ require **Open Anyway** (see the
 [Sovereign Install Guide](docs/INSTALL_GUIDE.md#macos-gatekeeper)).
 
 **Platform status:** the one-command path is tested on the Ubuntu 22.04 x64 and
-arm64 GitHub runners and on the macOS arm64 and Intel GitHub runners (install,
-doctor, idempotent rerun, uninstall, and vault preservation). A true fresh VM or
-Mac, non-CI arm64 hardware, older macOS releases, and non-Ubuntu distributions
-remain **untested**. Release `v0.1.3` does not include a `linux-arm64` archive;
-arm64 Linux installs work once a release containing the CI-built archive is
-published. Release `v0.1.3` also predates `zoveli doctor`; the installer reports
-that as a warning and continues, and the doctor check activates with the next
-published runtime. The Windows one-command installer is Phase 4.
+arm64 GitHub runners, the macOS arm64 and Intel GitHub runners, and the
+`windows-latest` x64 GitHub runner (install, doctor, idempotent rerun, PATH
+opt-in, uninstall, and vault preservation). Windows is also tested under both
+Windows PowerShell 5.1 and PowerShell 7 with the child process pinned to the
+**Restricted** execution policy; the PowerShell acceptance uses a path with
+spaces and a non-ASCII user profile. A true fresh VM or Mac, non-CI arm64
+hardware, older macOS releases, and non-Ubuntu distributions remain
+**untested**. Real Windows 10/11 x64 client hardware, Windows on ARM64
+hardware, older Windows builds, corporate-managed machines, and real
+SmartScreen/antivirus blocks also remain **untested**; Windows CI runs on
+Windows Server 2025 rather than a Windows 11 client. CI now builds the native
+`windows-arm64` runtime and publishes its archive and checksum, but that leg is
+still non-blocking and no real ARM64 client hardware has run the installer, so
+treat ARM64 as build-verified but hardware-untested. When a release has no
+ARM64 asset, the installer stops with a clear message instead of using x64.
+Release `v0.1.3` does not include a `linux-arm64` archive; arm64 Linux
+installs work once a release containing the CI-built archive is published.
+Release `v0.1.3` also predates `zoveli doctor`; the installer reports that as a
+warning and continues, and the doctor check activates with the next published
+runtime.
+
+### Windows 10 and 11 (one command)
+
+```powershell
+irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1 | iex
+```
+
+The installer resolves the latest published release, checks that the matching
+`windows-x64` or `windows-arm64` archive and its `.sha256` exist, downloads and
+verifies them, installs per user under `%LOCALAPPDATA%\Zoveli`, and runs
+`zoveli doctor`. It needs Windows 10 version 1809 (build 17763) or later, or
+Windows 11; Windows PowerShell 5.1 or PowerShell 7; and the `tar.exe` included
+with Windows. No administrator rights, Git, Node, Python, or pnpm are required.
+The user `PATH` is unchanged unless you opt in. The vault and configuration
+stay in `%USERPROFILE%\.zoveli` and survive upgrades and normal uninstalls.
+
+```powershell
+# Read-only status (installed vs. latest)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Check
+
+# Opt in to the user PATH
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -AddToPath
+
+# Uninstall; keeps %USERPROFILE%\.zoveli. Add -Purge to delete it too.
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Purge -Yes
+```
+
+Use `-Version`, `-Archive`, or `-Url` to pin a release or install a local
+archive. `-Force` downgrades or reinstalls the same version. On ARM64, the
+installer uses the native `windows-arm64` asset when the release publishes one
+and fails clearly when it does not; it never falls back to x64 silently. For
+SmartScreen, antivirus, Mark-of-the-Web, and `.exe` migration steps, see the
+[Sovereign Install Guide](docs/INSTALL_GUIDE.md#windows-10-and-11). Do not
+disable SmartScreen, Defender, AppLocker, or WDAC.
 
 ### Docker fallback (browser UI)
 
@@ -202,9 +249,9 @@ is sent; the scripts clone only from the official repository.
 ### Portable runtime (no toolchain)
 
 If you do not want Git, Node, Python, or pnpm installed, use the self-contained
-runtime. Linux and macOS users should normally use the one-command `install.sh`
-above; this lower-level script is useful for direct control and Windows. It
-verifies SHA-256 before extracting and supports rollback:
+runtime. Linux, macOS, and Windows users should normally use the one-command
+installers above; these lower-level scripts are useful for direct control. They
+verify SHA-256 before extracting and support rollback:
 
 ```bash
 # Linux / macOS

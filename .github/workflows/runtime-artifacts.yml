@@ -17,6 +17,7 @@ on:
           - linux-x64
           - linux-arm64
           - windows-x64
+          - windows-arm64
           - macos-arm64
           - macos-x64
   release:
@@ -33,6 +34,7 @@ on:
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/install-acceptance.sh'
+      - 'scripts/install-acceptance.ps1'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -51,6 +53,7 @@ on:
       - 'scripts/build-mathcore-runtime.mjs'
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/install-acceptance.sh'
+      - 'scripts/install-acceptance.ps1'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -84,6 +87,10 @@ jobs:
               { runner: "ubuntu-22.04", platform: "linux-x64" },
               { runner: "ubuntu-22.04-arm", platform: "linux-arm64" },
               { runner: "windows-latest", platform: "windows-x64" },
+              // Experimental until the PyInstaller/z3 toolchain is proven on
+              // native Windows ARM64. The build job is continue-on-error, so a
+              // failure simply means no windows-arm64 asset is published.
+              { runner: "windows-11-arm", platform: "windows-arm64" },
               { runner: "macos-latest", platform: "macos-arm64" },
               { runner: "macos-15-intel", platform: "macos-x64" },
             ];
@@ -100,6 +107,9 @@ jobs:
     name: Build (${{ matrix.platform }})
     needs: setup
     runs-on: ${{ matrix.runner }}
+    # Windows ARM64 is an experimental leg: a failed toolchain build leaves the
+    # release without a windows-arm64 asset, and the installer fails clearly.
+    continue-on-error: ${{ matrix.platform == 'windows-arm64' }}
     # The Linux arm64 leg builds z3-solver from source for the glibc 2.35
     # floor, which is the slowest step in the matrix.
     timeout-minutes: 60
@@ -203,20 +213,39 @@ jobs:
           if (-not $archive) { throw 'no runtime archive found under release/' }
           node scripts/product-acceptance.mjs --archive "$archive" --report "acceptance-${{ matrix.platform }}.json"
 
+      - name: Primary installer acceptance (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem release -Filter zoveli-*.tar.gz | Select-Object -First 1).FullName
+          if (-not $archive) { throw 'no runtime archive found under release/' }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-acceptance.ps1 -Archive "$archive" -PowerShellPath powershell.exe
+          if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell 5.1 acceptance exited with $LASTEXITCODE" }
+
+      - name: Primary installer acceptance (PowerShell 7)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem release -Filter zoveli-*.tar.gz | Select-Object -First 1).FullName
+          if (-not $archive) { throw 'no runtime archive found under release/' }
+          $pwsh = Join-Path $PSHOME 'pwsh.exe'
+          & $pwsh -NoProfile -File scripts/install-acceptance.ps1 -Archive "$archive" -PowerShellPath $pwsh
+          if ($LASTEXITCODE -ne 0) { throw "PowerShell 7 acceptance exited with $LASTEXITCODE" }
+
       - name: Package unsigned macOS disk image
         if: runner.os == 'macOS'
         shell: bash
         run: node scripts/package-installers.mjs
 
       - name: Install Inno Setup
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.platform != 'windows-arm64'
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y
           Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files (x86)\Inno Setup 6'
 
       - name: Package unsigned Windows installer
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.platform != 'windows-arm64'
         shell: pwsh
         run: node scripts/package-installers.mjs
 
@@ -249,7 +278,7 @@ jobs:
           retention-days: 14
 
       - name: Upload Windows installer
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.platform != 'windows-arm64'
         uses: actions/upload-artifact@v4
         with:
           name: zoveli-installer-${{ matrix.platform }}
@@ -259,7 +288,12 @@ jobs:
 
   publish:
     name: Attach runtime artifacts
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    # The experimental windows-arm64 leg is allowed to fail. always() lets this
+    # job run when that leg fails, and the artifact check below refuses to
+    # publish if any non-experimental platform is missing.
+    if: |
+      always() && !cancelled() &&
+      (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != ''))
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -277,6 +311,43 @@ jobs:
           path: installer-assets
           merge-multiple: true
 
+      - name: Verify required release artifacts
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for platform in linux-x64 linux-arm64 windows-x64 macos-arm64 macos-x64; do
+            if [ -z "$(find release-assets -name "zoveli-*-${platform}.tar.gz" -print -quit)" ]; then
+              echo "::error::missing runtime archive for ${platform}"
+              missing=1
+            fi
+            if [ -z "$(find release-assets -name "zoveli-*-${platform}.tar.gz.sha256" -print -quit)" ]; then
+              echo "::error::missing checksum for ${platform}"
+              missing=1
+            fi
+          done
+          for platform in macos-arm64 macos-x64; do
+            if [ -z "$(find installer-assets -name "zoveli-*-${platform}-setup.dmg" -print -quit)" ]; then
+              echo "::error::missing macOS installer for ${platform}"
+              missing=1
+            fi
+          done
+          if [ -z "$(find installer-assets -name 'zoveli-*-windows-x64-setup.exe' -print -quit)" ]; then
+            echo "::error::missing Windows x64 installer"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Refusing to publish a partial release."
+            exit 1
+          fi
+          echo "All required release artifacts are present."
+          if [ -n "$(find release-assets -name 'zoveli-*-windows-arm64.tar.gz' -print -quit)" ]; then
+            echo "windows-arm64 asset present; it will be published."
+          else
+            echo "windows-arm64 asset absent; the experimental ARM64 leg did not produce one."
+          fi
+
       - uses: softprops/action-gh-release@v1
         with:
           # download-artifact keeps the artifact's `release/` prefix, so the
@@ -287,3 +358,94 @@ jobs:
             release-assets/**/*.sha256
             installer-assets/**/*.dmg
             installer-assets/**/*.exe
+
+  # Exercises the exact public one-command path a Windows user follows, after
+  # the release assets exist. This runs on a clean windows-latest runner under
+  # Windows PowerShell 5.1, so it covers the default terminal and the real
+  # latest-release resolution instead of a locally built archive.
+  public-install-smoke:
+    name: Public one-command install (Windows)
+    if: github.event_name == 'release'
+    needs: publish
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Install, rerun, uninstall, and purge from the public URL
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = "${{ github.event.release.tag_name }}".Trim().TrimStart('v')
+          $installerUrl = 'https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1'
+          $target = Join-Path $env:LOCALAPPDATA 'Zoveli'
+          $state = Join-Path $env:USERPROFILE '.zoveli'
+          $launcher = Join-Path $target 'zoveli.cmd'
+          $marker = Join-Path $state 'public-smoke-marker.txt'
+
+          if (Test-Path -LiteralPath $target) {
+            throw "expected a clean runner, but $target already exists"
+          }
+
+          Write-Host "Installing the latest published release (expecting $expected)"
+          $installed = $false
+          for ($attempt = 1; $attempt -le 6; $attempt++) {
+            irm $installerUrl | iex
+            if (-not (Test-Path -LiteralPath $launcher)) {
+              throw 'the public installer did not create zoveli.cmd'
+            }
+            $version = (& $launcher --version | Select-Object -Last 1)
+            if ($LASTEXITCODE -ne 0) { throw "zoveli --version exited with $LASTEXITCODE" }
+            Write-Output "zoveli --version: $version"
+            if ("$version" -match ('^zoveli\s+' + [regex]::Escape($expected) + '$')) {
+              $installed = $true
+              break
+            }
+            # /releases/latest can lag a few seconds right after publish.
+            if ($attempt -lt 6) {
+              Write-Warning "latest release is not $expected yet; retrying in 30 seconds"
+              Start-Sleep -Seconds 30
+            }
+          }
+          if (-not $installed) { throw "the public installer never installed $expected" }
+          Write-Output '[pass] public-install'
+
+          $doctorJson = & $launcher doctor --json | Out-String
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host $doctorJson
+            throw "zoveli doctor exited with $LASTEXITCODE"
+          }
+          $report = $doctorJson | ConvertFrom-Json
+          if ([string]$report.install.mode -ne 'runtime') {
+            throw "expected a runtime install, got '$($report.install.mode)'"
+          }
+          if ([string]$report.status -eq 'fail') { throw 'zoveli doctor reported a blocking problem' }
+          $ids = @($report.checks | ForEach-Object { [string]$_.id })
+          foreach ($id in @('runtime', 'install', 'config', 'vault', 'mathcore-command', 'mathcore-probe')) {
+            if ($ids -notcontains $id) { throw "zoveli doctor is missing the $id check" }
+          }
+          Write-Output '[pass] public-doctor'
+
+          New-Item -ItemType Directory -Path $state -Force | Out-Null
+          Set-Content -LiteralPath $marker -Value 'keep me' -Encoding ASCII
+
+          $rerun = irm $installerUrl | iex *>&1 | Out-String
+          Write-Output $rerun
+          if ($rerun -notmatch 'already installed') {
+            throw 'the second public one-command run was not idempotent'
+          }
+          if (-not (Test-Path -LiteralPath $marker)) {
+            throw 'the idempotent rerun deleted the vault'
+          }
+          Write-Output '[pass] public-idempotent-rerun'
+
+          $uninstall = & ([scriptblock]::Create((irm $installerUrl))) -Uninstall -Yes *>&1 | Out-String
+          Write-Output $uninstall
+          if (Test-Path -LiteralPath $target) { throw 'uninstall left the runtime behind' }
+          if (-not (Test-Path -LiteralPath $marker)) { throw 'uninstall deleted the vault' }
+          Write-Output '[pass] public-uninstall-preserves-vault'
+
+          $purge = & ([scriptblock]::Create((irm $installerUrl))) -Uninstall -Purge -Yes *>&1 | Out-String
+          Write-Output $purge
+          if (Test-Path -LiteralPath $state) { throw 'purge left the state directory behind' }
+          Write-Output '[pass] public-purge'

@@ -207,7 +207,12 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    # Pin the host OS to the Playwright container's base (noble / 24.04).
+    # setup-python mounts the host toolcache into the container; a newer host
+    # (ubuntu-latest moved to 26.04) builds Python against libraries the
+    # container does not have, so `import ssl` fails and pip cannot reach PyPI.
+    # Revisit when a Playwright image based on a newer Ubuntu is published.
+    runs-on: ubuntu-24.04
     needs: [unit-tests, integration-tests]
     # The image bundles Chromium/Firefox/WebKit and their OS dependencies for
     # the pinned @playwright/test version, so no browser or apt install runs.

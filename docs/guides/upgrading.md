@@ -47,12 +47,37 @@ install/install-zoveli-runtime.sh --check
 install/install-zoveli-runtime.ps1 -Check
 ```
 
+Windows PowerShell 5.1 and PowerShell 7 use the primary Windows entry point:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Check
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -AddToPath
+```
+
+`install/install.ps1` installs per user under `%LOCALAPPDATA%\Zoveli`, checks
+that the release publishes the matching `windows-x64` or `windows-arm64`
+archive, delegates the checksum/backup/rollback work to
+`install-zoveli-runtime.ps1`, records `install.json`, and runs
+`zoveli doctor`. It leaves the user `PATH` unchanged unless `-AddToPath` is
+passed. Re-running the same version is a no-op; `-Force` reinstalls, downgrades,
+or accepts an explicitly requested architecture mismatch. If the existing
+installation came from the unsigned `.exe`, uninstall it from
+**Settings > Apps** first; the one-command installer refuses to overwrite it.
+
 `install/install.sh` is the primary Linux and macOS entry point. It resolves the
 latest published release, delegates the checksum/backup/rollback work to
 `install-zoveli-runtime.sh`, records install metadata, and runs `zoveli doctor`.
 Re-running it is idempotent: the same version is a no-op, an older version is
 upgraded, and a failed upgrade restores the previous runtime. Use `--version` to
 pin a release, `--archive` for a local archive, or `--force` to reinstall.
+
+On Windows, the user `PATH` is opt-in, the runtime defaults to
+`%LOCALAPPDATA%\Zoveli`, and the vault stays in `%USERPROFILE%\.zoveli`. The
+installer warns when an archive carries Mark-of-the-Web or when antivirus
+appears to have quarantined `mathcore-mcp.exe`; follow the
+[Sovereign Install Guide](../INSTALL_GUIDE.md#smartscreen-antivirus-and-mark-of-the-web)
+instead of disabling protections.
 
 `zoveli update` follows GitHub release redirects manually and refuses anything
 outside HTTPS GitHub hosts on port 443, including localhost and private network
@@ -185,6 +210,19 @@ source checkout:
 sh install/install.sh --uninstall --purge --yes
 ```
 
+Windows removes `%LOCALAPPDATA%\Zoveli` and, only if this installer added it,
+the user `PATH` entry. The vault under `%USERPROFILE%\.zoveli` is preserved
+unless `-Purge` is added:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Yes
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Uninstall -Purge -Yes
+```
+
+If the install came from the unsigned `.exe`, uninstall it from
+**Settings > Apps** first; the one-command installer refuses to delete it
+without `-Force`, and the `.exe` uninstaller preserves the vault.
+
 Docker fallback: uninstall removes only the container created by the installer
 and keeps the data volume for a later reinstall. Add `--purge` to delete the
 volume as well:
@@ -210,6 +248,10 @@ rollback below is for undoing a successful upgrade to an older release.
 2. Install the previous release archive with `--archive <previous.tar.gz>`.
    The installer keeps and verifies your current vault before replacing the
    runtime. Source checkouts can use `git checkout v<previous>` and rebuild.
+   On Windows, pass the previous archive with `-Archive` and `-Force`:
+   ```powershell
+   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/blessandy9104-hue/zoveli-ai/main/install/install.ps1))) -Archive .\zoveli-older-windows-x64.tar.gz -Force
+   ```
 3. Restore the pre-upgrade backup if the older binary cannot read the migrated
    vault:
    ```bash
