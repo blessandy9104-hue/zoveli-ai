@@ -858,17 +858,21 @@ public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint M
     $ArchivePath = (Resolve-Path -LiteralPath $Archive).Path
     $ArchiveInfo = Get-ArchiveInfo $ArchivePath
     if ($null -eq $ArchiveInfo) {
-      Fail "Could not read the version and architecture from archive name: $ArchivePath (expected zoveli-<version>-windows-<arch>.tar.gz)"
-    }
-    $TargetVersion = $ArchiveInfo.Version
-    if ($Version) {
-      $requested = $Version.Trim().TrimStart('v')
-      if ($requested -ne $TargetVersion) {
-        Fail "Archive version $TargetVersion does not match requested version $requested."
+      # A renamed local archive is allowed; runtime.json is authoritative and
+      # the runtime installer verifies it after the checksum passes.
+      Write-Warn "Could not read the version and architecture from the archive name: $ArchivePath. They will be checked after extraction."
+      if ($Version) { $TargetVersion = $Version.Trim().TrimStart('v') }
+    } else {
+      $TargetVersion = $ArchiveInfo.Version
+      if ($Version) {
+        $requested = $Version.Trim().TrimStart('v')
+        if ($requested -ne $TargetVersion) {
+          Fail "Archive version $TargetVersion does not match requested version $requested."
+        }
       }
-    }
-    if ($ArchiveInfo.Arch -ne $HostArch -and -not $Force) {
-      Fail "Archive is for windows-$($ArchiveInfo.Arch), but this machine is windows-$HostArch. Pass -Force only if you accept emulation."
+      if ($ArchiveInfo.Arch -ne $HostArch -and -not $Force) {
+        Fail "Archive is for windows-$($ArchiveInfo.Arch), but this machine is windows-$HostArch. Pass -Force only if you accept emulation."
+      }
     }
     if (-not $NoVerify -and -not (Test-Path -LiteralPath "$ArchivePath.sha256")) {
       Fail "Checksum file not found: $ArchivePath.sha256. Use -NoVerify only for a trusted archive."
@@ -952,13 +956,18 @@ public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint M
       return
     }
   } elseif (-not $installed) {
-    Write-Info "Installing Zoveli $TargetVersion into $TargetDir"
+    if ($TargetVersion) {
+      Write-Info "Installing Zoveli $TargetVersion into $TargetDir"
+    } else {
+      Write-Info "Installing Zoveli into $TargetDir"
+    }
   }
 
-  if (-not $TargetVersion) { Fail 'Could not determine the version to install.' }
+  if (-not $TargetVersion -and -not $ArchivePath) { Fail 'Could not determine the version to install.' }
 
   $runtimeText = Get-RuntimeInstallerText
-  $runtimeArgs = @{ Dir = $TargetDir; Yes = $true; Version = $TargetVersion }
+  $runtimeArgs = @{ Dir = $TargetDir; Yes = $true }
+  if ($TargetVersion) { $runtimeArgs.Version = $TargetVersion }
   if ($ArchivePath) { $runtimeArgs.Archive = $ArchivePath }
   if ($Url) { $runtimeArgs.Url = $Url }
   if ($NoVerify) { $runtimeArgs.NoVerify = $true }

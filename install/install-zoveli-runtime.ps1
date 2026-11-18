@@ -615,14 +615,18 @@ if ($Archive) {
   $ArchivePath = (Resolve-Path -LiteralPath $Archive).Path
   $ArchiveInfo = Get-ArchiveInfo $ArchivePath
   if ($null -eq $ArchiveInfo) {
-    Fail "Could not read the version and architecture from archive name: $ArchivePath (expected zoveli-<version>-windows-<arch>.tar.gz)"
-  }
-  if ($Version -and $Version -ne $ArchiveInfo.Version) {
-    Fail "Archive version $($ArchiveInfo.Version) does not match requested version $Version."
-  }
-  $Version = $ArchiveInfo.Version
-  if ($ArchiveInfo.Arch -ne $HostArch -and -not $Force) {
-    Fail "Archive is for windows-$($ArchiveInfo.Arch), but this machine is windows-$HostArch. Pass -Force only if you accept emulation."
+    # A local archive may be renamed (for example, a copy you verified
+    # yourself). Its version and architecture are checked from runtime.json
+    # after the checksum passes and the archive is extracted.
+    Warn "Could not read the version and architecture from the archive name: $ArchivePath. They will be checked after extraction."
+  } else {
+    if ($Version -and $Version -ne $ArchiveInfo.Version) {
+      Fail "Archive version $($ArchiveInfo.Version) does not match requested version $Version."
+    }
+    $Version = $ArchiveInfo.Version
+    if ($ArchiveInfo.Arch -ne $HostArch -and -not $Force) {
+      Fail "Archive is for windows-$($ArchiveInfo.Arch), but this machine is windows-$HostArch. Pass -Force only if you accept emulation."
+    }
   }
   if (-not $NoVerify -and -not (Test-Path -LiteralPath "$ArchivePath.sha256")) {
     Fail "Checksum file not found: $ArchivePath.sha256. Use -NoVerify only for a trusted archive."
@@ -679,8 +683,13 @@ if (-not $Archive) {
   }
 }
 
+$archiveNameUnknown = [bool]($ArchivePath -and -not $ArchiveInfo)
 $installVerb = 'Install'
-if ($installedVersion) {
+if ($installedVersion -and $archiveNameUnknown) {
+  # The archive filename does not identify its version, so the same-version
+  # no-op cannot be decided yet. The archive is validated after extraction.
+  Warn "Zoveli $installedVersion is already installed in $Dir; the archive will be verified after extraction."
+} elseif ($installedVersion) {
   $comparison = 0
   if ($Version) { $comparison = Compare-Version $installedVersion $Version }
   if ($Version -and $comparison -lt 0) {
@@ -764,6 +773,27 @@ try {
   if (-not $src -or -not (Test-Path -LiteralPath (Join-Path $src.FullName 'runtime.json')) -or
       -not (Test-Path -LiteralPath (Join-Path $src.FullName 'zoveli.cmd'))) {
     Fail 'Archive does not contain a valid Zoveli runtime.'
+  }
+
+  # The archive contents are authoritative. This also supports local archives
+  # that were renamed after download.
+  $runtimeMeta = $null
+  try {
+    $runtimeMeta = Get-Content -LiteralPath (Join-Path $src.FullName 'runtime.json') -Raw | ConvertFrom-Json
+  } catch {
+    Fail "Could not read runtime.json from the archive: $($_.Exception.Message)"
+  }
+  $archiveVersion = [string]$runtimeMeta.version
+  $archiveArch = [string]$runtimeMeta.arch
+  if ([string]::IsNullOrWhiteSpace($archiveVersion)) {
+    Fail 'The archive runtime.json does not declare a version.'
+  }
+  if ($Version -and $archiveVersion -ne $Version) {
+    Fail "Archive version $archiveVersion does not match requested version $Version."
+  }
+  $Version = $archiveVersion
+  if ($archiveArch -and $archiveArch -ne $HostArch -and -not $Force) {
+    Fail "Archive is for windows-$archiveArch, but this machine is windows-$HostArch. Pass -Force only if you accept emulation."
   }
 
   if ((Test-Path -LiteralPath $Dir) -and (Get-ChildItem -LiteralPath $Dir -Force | Select-Object -First 1)) {

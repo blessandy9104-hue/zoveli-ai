@@ -69,6 +69,11 @@ the new section **before** running `pnpm release:check --release`.
 - **Windows forced reinstall:** `install.ps1 -Force` now actually reinstalls
   the same version instead of returning early, matching the documented behavior
   and the runtime installer.
+- **Windows renamed local archives:** `-Archive` no longer rejects a copy whose
+  filename does not match `zoveli-<version>-windows-<arch>.tar.gz`. The version
+  and architecture are validated from the archive's `runtime.json` after the
+  checksum passes, so a tampered renamed copy still fails checksum verification
+  rather than failing on its name.
 - **Windows uninstall with environment defaults:** `-Uninstall` no longer
   conflicts with `ZOVELI_VERSION`, `ZOVELI_ARCHIVE`, or `ZOVELI_RUNTIME_URL`
   when those values come from the environment; only explicitly passed

@@ -210,7 +210,9 @@ Useful forms:
 `-Force` is required to downgrade or to reinstall the same version. `-Unblock`
 removes Mark-of-the-Web from an archive downloaded through a browser (and from
 the installed executables) so SmartScreen or antivirus heuristics are less
-likely to block the bundled `node.exe`.
+likely to block the bundled `node.exe`. `-Archive` also accepts a renamed copy
+you verified yourself: the version and architecture are read from the archive's
+`runtime.json` after the checksum passes.
 
 ### Windows on ARM64
 

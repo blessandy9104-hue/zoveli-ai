@@ -268,6 +268,20 @@ try {
   if ($checkBefore.Text -notmatch 'Installed: none') { Fail '--check did not report an empty install' }
   Pass 'check-before'
 
+  # Regression: a local archive may be renamed after download. The installer
+  # must still reach checksum verification instead of rejecting the filename.
+  $renamedArchive = Join-Path $script:Sandbox 'renamed archive.tar.gz'
+  Copy-Item -LiteralPath $Archive -Destination $renamedArchive
+  Set-Content -LiteralPath "$renamedArchive.sha256" -Value (('0' * 64) + '  renamed archive.tar.gz') -Encoding ASCII
+  $renamedInstall = Join-Path $script:Sandbox 'renamed-install'
+  $renamed = Invoke-Child ("& ([scriptblock]::Create((Get-Content -LiteralPath $(Quote-PS $Installer) -Raw))) -Yes -Archive $(Quote-PS $renamedArchive) -Dir $(Quote-PS $renamedInstall)") 'renamed-archive.txt'
+  if ($renamed.Code -eq 0) { Fail 'a renamed archive with a mismatched checksum was accepted' }
+  if ($renamed.Text -notmatch 'SHA-256 verification failed') {
+    Fail 'a renamed archive was rejected before checksum verification'
+  }
+  if (Test-Path -LiteralPath $renamedInstall) { Fail 'the failed renamed-archive install left a directory behind' }
+  Pass 'renamed-archive-checksum'
+
   $install = Invoke-Child $installScript 'install.txt'
   Assert-Exit $install 'install'
   if ($install.Text -notmatch 'Zoveli .* is ready') {
