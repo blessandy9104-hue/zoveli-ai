@@ -9,8 +9,15 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-18
+
 ### Fixed
 
+- **Updater downloads on slower connections:** `zoveli update` now gives the
+  runtime archive a 15-minute deadline while release metadata and checksums
+  keep the 30-second deadline. The previous 30-second deadline covered the
+  whole body, so a healthy 104 MB Windows download could abort mid-transfer
+  with "The operation was aborted due to timeout".
 - **Windows installer rerun diagnostics:** `install.ps1` no longer turns Node's
   SQLite stderr warning into a terminating `NativeCommandError` when it runs
   `zoveli doctor` after an install or same-version rerun.

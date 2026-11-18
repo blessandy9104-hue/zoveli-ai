@@ -155,6 +155,35 @@ describe('zoveli update', () => {
     expect(calls.some((url) => url.includes('/releases/download/'))).toBe(true);
   });
 
+  it('gives archive downloads a longer deadline than release metadata', async () => {
+    const dir = tempDir();
+    const installer = join(dir, 'install-zoveli-runtime.ps1');
+    writeFileSync(installer, '# fake installer\n');
+    const assetName = 'zoveli-0.8.0-windows-x64.tar.gz';
+    const bytes = new TextEncoder().encode('fake archive');
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/releases/latest')) return releaseResponse(assetName);
+      if (url.endsWith('.sha256')) return new Response(`${digest}  ${assetName}\n`);
+      return new Response(bytes, { status: 200 });
+    });
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+    const exit = await runUpdate(['--yes'], {
+      currentVersion: '0.7.0',
+      platform: 'win32',
+      arch: 'x64',
+      cwd: dir,
+      installerPath: installer,
+      fetchImpl: fetchMock as unknown as typeof fetch,
+      runInstaller: () => 0,
+      log: () => {},
+    });
+    expect(exit).toBe(0);
+    const deadlines = timeoutSpy.mock.calls.map(([milliseconds]) => milliseconds);
+    expect(deadlines).toContain(30_000);
+    expect(deadlines).toContain(15 * 60_000);
+  });
+
   it('rejects a checksum mismatch before invoking the installer', async () => {
     const dir = tempDir();
     const installer = join(dir, 'install-zoveli-runtime.ps1');

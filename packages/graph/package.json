@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/graph",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Knowledge graph visualization for vault wiki-links",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

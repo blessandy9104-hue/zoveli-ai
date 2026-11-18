@@ -16,6 +16,10 @@ import { safeFetch, safeFetchText } from './net.js';
 
 const DEFAULT_REPO = 'blessandy9104-hue/zoveli-ai';
 const MAX_UPDATE_BYTES = 512 * 1024 * 1024;
+// Release metadata and checksums are small; fail fast if the API is unhealthy.
+// Runtime archives are tens to hundreds of megabytes, so a 30-second whole-body
+// deadline aborts otherwise healthy downloads on slower connections.
+const ARCHIVE_DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
 
 interface ParsedFlags {
   check: boolean;
@@ -424,7 +428,10 @@ export async function runUpdate(argv: string[], deps: UpdateDependencies = {}): 
     let installerExit = 0;
     try {
       const archivePath = join(tempRoot, info.asset.name);
-      const archive = await safeFetch(info.asset.url, { fetchImpl: deps.fetchImpl });
+      const archive = await safeFetch(info.asset.url, {
+        fetchImpl: deps.fetchImpl,
+        timeoutMs: ARCHIVE_DOWNLOAD_TIMEOUT_MS,
+      });
       if (archive.status !== 200) {
         throw new Error(`archive download failed: HTTP ${archive.status}`);
       }

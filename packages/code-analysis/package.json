@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/code-analysis",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "AI-assisted code review: complexity hotspots, duplication, dead code, and fix suggestions",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
