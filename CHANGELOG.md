@@ -37,9 +37,9 @@ the new section **before** running `pnpm release:check --release`.
 - **Windows ARM64 asset checks and CI:** the installer checks the release
   assets before downloading and stops with a clear message when no
   `windows-arm64` archive exists instead of silently installing x64 under
-  emulation. `Runtime Artifacts` attempts a native `windows-arm64` build on the
-  `windows-11-arm` runner; if that toolchain build fails, no ARM64 asset is
-  published.
+  emulation. `Runtime Artifacts` builds a native `windows-arm64` archive on the
+  `windows-11-arm` runner and uploads it with its checksum; the leg is
+  non-blocking and real ARM64 client hardware remains untested.
 - **Windows acceptance harness:** `scripts/install-acceptance.ps1` covers
   install, doctor, metadata, idempotent rerun, PATH opt-in and deduplication,
   uninstall with vault preservation, purge, protected-directory refusal, and

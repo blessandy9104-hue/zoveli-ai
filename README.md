@@ -135,10 +135,12 @@ hardware, older macOS releases, and non-Ubuntu distributions remain
 **untested**. Real Windows 10/11 x64 client hardware, Windows on ARM64
 hardware, older Windows builds, corporate-managed machines, and real
 SmartScreen/antivirus blocks also remain **untested**; Windows CI runs on
-Windows Server 2025 rather than a Windows 11 client. CI attempts a native
-`windows-arm64` build on the `windows-11-arm` runner; if that toolchain build
-fails, no ARM64 asset is published and the installer stops with a clear
-message. Release `v0.1.3` does not include a `linux-arm64` archive; arm64 Linux
+Windows Server 2025 rather than a Windows 11 client. CI now builds the native
+`windows-arm64` runtime and publishes its archive and checksum, but that leg is
+still non-blocking and no real ARM64 client hardware has run the installer, so
+treat ARM64 as build-verified but hardware-untested. When a release has no
+ARM64 asset, the installer stops with a clear message instead of using x64.
+Release `v0.1.3` does not include a `linux-arm64` archive; arm64 Linux
 installs work once a release containing the CI-built archive is published.
 Release `v0.1.3` also predates `zoveli doctor`; the installer reports that as a
 warning and continues, and the doctor check activates with the next published

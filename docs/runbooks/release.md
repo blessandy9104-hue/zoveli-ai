@@ -56,16 +56,20 @@ non-ASCII user profile, and covers install, doctor, idempotent rerun, PATH
 opt-in, uninstall with vault preservation, purge, protected-directory refusal,
 and Mark-of-the-Web unblocking.
 
-The matrix also attempts a native `windows-arm64` build on the
-`windows-11-arm` runner. That leg is non-blocking while the PyInstaller and
-`z3-solver` ARM64 toolchain is unproven: if it fails, no `windows-arm64` asset
-is published, and the installer stops with a clear message instead of falling
-back to the x64 archive. Do not treat a red ARM64 leg as a release blocker
-unless the plan is to announce ARM64 support for that release. The unsigned
+The matrix also builds a native `windows-arm64` archive on the
+`windows-11-arm` runner. That leg is non-blocking (`continue-on-error`), so a
+toolchain regression cannot block an otherwise complete release; when it
+succeeds, the ARM64 archive and checksum are attached. If it fails, no
+`windows-arm64` asset is published, and the installer stops with a clear
+message instead of falling back to the x64 archive. Do not treat a red ARM64
+leg as a release blocker unless the plan is to announce ARM64 support for that
+release, and do not announce it for a release without the asset. Real ARM64
+client hardware remains untested even when the build is green. The unsigned
 Inno Setup `.exe` remains x64-only and is skipped on the ARM64 runner. The
 publish job still runs after an experimental-leg failure, but it refuses to
 attach anything unless every required platform archive, checksum, `.dmg`, and
-the x64 `.exe` is present.
+the x64 `.exe` is present; it logs whether the optional `windows-arm64` asset
+was produced.
 
 Locally, after building mathcore:
 

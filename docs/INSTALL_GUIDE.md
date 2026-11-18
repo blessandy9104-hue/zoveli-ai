@@ -223,6 +223,11 @@ clear message; it does **not** silently install the x64 archive under emulation.
 To accept emulation deliberately, pass the x64 `-Archive` together with
 `-Force`.
 
+CI builds and attaches the native `windows-arm64` archive and its checksum, but
+that build leg is still non-blocking and no real ARM64 client hardware has run
+this installer yet. The unsigned `.exe` installer remains x64-only and is not
+produced on ARM64.
+
 ### SmartScreen, antivirus, and Mark-of-the-Web
 
 Official Windows binaries are unsigned. SmartScreen and antivirus products may
