@@ -140,11 +140,9 @@ Windows Server 2025 rather than a Windows 11 client. CI now builds the native
 still non-blocking and no real ARM64 client hardware has run the installer, so
 treat ARM64 as build-verified but hardware-untested. When a release has no
 ARM64 asset, the installer stops with a clear message instead of using x64.
-Release `v0.1.3` does not include a `linux-arm64` archive; arm64 Linux
-installs work once a release containing the CI-built archive is published.
-Release `v0.1.3` also predates `zoveli doctor`; the installer reports that as a
-warning and continues, and the doctor check activates with the next published
-runtime.
+Release `v0.1.4` includes the CI-built `linux-arm64` archive and
+`zoveli doctor`, so the one-command installers run the full doctor check on
+every platform. Release `v0.1.3` predates both.
 
 ### Windows 10 and 11 (one command)
 

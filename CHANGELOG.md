@@ -9,6 +9,8 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-18
+
 ### Added
 
 - **One-command macOS install:** `install/install.sh` now installs and upgrades
