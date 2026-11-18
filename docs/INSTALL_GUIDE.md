@@ -94,9 +94,11 @@ user profile. Install, doctor, idempotent rerun, PATH opt-in, uninstall, vault
 preservation, purge, protected-directory refusal, and Mark-of-the-Web
 unblocking are covered. Real Windows 10/11 x64 client hardware, Windows on
 ARM64 hardware, older Windows builds, corporate-managed machines, and real
-SmartScreen/antivirus blocks remain **untested**. CI attempts a native
-`windows-arm64` build on the `windows-11-arm` runner; if that toolchain build
-fails, no ARM64 asset is published and the installer stops with a clear message.
+SmartScreen/antivirus blocks remain **untested**. CI builds a native
+`windows-arm64` archive on the `windows-11-arm` runner and publishes its
+checksum, but that leg is non-blocking and no real ARM64 client hardware has run
+the installer. When an ARM64 asset is absent, the installer stops with a clear
+message instead of using x64.
 
 ## Docker fallback (browser UI)
 
