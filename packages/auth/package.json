@@ -23,7 +23,7 @@
     "nodemailer": "^10.4.0"
   },
   "devDependencies": {
-    "tsdown": "^0.23.5",
+    "tsdown": "^0.23.7",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "oxlint": "catalog:",
