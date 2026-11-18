@@ -74,6 +74,11 @@ the new section **before** running `pnpm release:check --release`.
   and architecture are validated from the archive's `runtime.json` after the
   checksum passes, so a tampered renamed copy still fails checksum verification
   rather than failing on its name.
+- **Windows upgrade file locks:** a transient lock during the runtime directory
+  rename (for example from an antivirus scan or a just-exited child process) no
+  longer aborts an upgrade. The installer retries the rename for a few seconds,
+  removes the staging directory on failure, and reports that the existing
+  runtime was left in place instead of claiming no runtime is installed.
 - **Windows uninstall with environment defaults:** `-Uninstall` no longer
   conflicts with `ZOVELI_VERSION`, `ZOVELI_ARCHIVE`, or `ZOVELI_RUNTIME_URL`
   when those values come from the environment; only explicitly passed

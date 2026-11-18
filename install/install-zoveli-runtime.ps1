@@ -505,6 +505,22 @@ function Test-LauncherOnPath([string]$DirPath) {
   }
 }
 
+function Move-ItemWithRetry([string]$Source, [string]$Destination) {
+  # Antivirus scanners and just-exited child processes can hold a handle for a
+  # moment after a backup or version check. Rename is atomic, so retrying a
+  # failed move is safe and avoids aborting an otherwise valid upgrade.
+  $attempts = 12
+  for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+    try {
+      Move-Item -LiteralPath $Source -Destination $Destination -ErrorAction Stop
+      return
+    } catch {
+      if ($attempt -eq $attempts) { throw }
+      Start-Sleep -Milliseconds 250
+    }
+  }
+}
+
 function Backup-ExistingRuntime([string]$DirPath) {
   if (-not (Test-Path -LiteralPath (Join-Path $DirPath 'runtime.json'))) { return }
   if ($SkipBackup) {
@@ -827,12 +843,12 @@ try {
   $installed = ''
   try {
     if ((Test-Path -LiteralPath $Dir) -and (Get-ChildItem -LiteralPath $Dir -Force | Select-Object -First 1)) {
-      Move-Item -LiteralPath $Dir -Destination $previous
+      Move-ItemWithRetry $Dir $previous
       $oldMoved = $true
     } elseif (Test-Path -LiteralPath $Dir) {
       Remove-Item -LiteralPath $Dir -Force
     }
-    Move-Item -LiteralPath $stageRoot -Destination $Dir
+    Move-ItemWithRetry $stageRoot $Dir
     $newMoved = $true
     $installedCheck = Get-RuntimeVersion (Join-Path $Dir 'zoveli.cmd')
     $installed = $installedCheck.Text
@@ -844,16 +860,26 @@ try {
     if ($newMoved -and (Test-Path -LiteralPath $Dir)) {
       Remove-Item -LiteralPath $Dir -Recurse -Force -ErrorAction SilentlyContinue
     }
+    if (-not $newMoved -and (Test-Path -LiteralPath $stageRoot)) {
+      Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
     $restored = $false
     if ($oldMoved -and (Test-Path -LiteralPath $previous)) {
-      Move-Item -LiteralPath $previous -Destination $Dir -ErrorAction SilentlyContinue
-      $restored = Test-Path -LiteralPath $Dir
+      try {
+        Move-ItemWithRetry $previous $Dir
+        $restored = Test-Path -LiteralPath $Dir
+      } catch {
+        $restored = $false
+      }
     }
     if ($oldMoved -and -not $restored) {
       Fail "Upgrade failed and automatic rollback did not finish. Previous runtime: $previous`n$reason"
     }
     if ($oldMoved) {
       Fail "Upgrade failed; the previous runtime was restored.`n$reason"
+    }
+    if ((Test-Path -LiteralPath $Dir) -and (Test-Path -LiteralPath (Join-Path $Dir 'runtime.json'))) {
+      Fail "Upgrade failed; the existing runtime was left in place.`n$reason"
     }
     Fail "Upgrade failed; no runtime was left installed.`n$reason"
   }
