@@ -40,6 +40,14 @@ export interface SafeFetchResult {
   redirects: string[];
 }
 
+export interface SafeFetchStreamResult {
+  status: number;
+  headers: Headers;
+  body: ReadableStream<Uint8Array> | null;
+  url: string;
+  redirects: string[];
+}
+
 function ipv4Private(host: string): boolean {
   const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
   if (!match) return false;
@@ -127,8 +135,15 @@ function redirectLocation(response: Response): string | null {
 /**
  * Fetch with `redirect: 'manual'`. `Location` is resolved and validated before
  * the next request, so the runtime never follows a redirect to a local address.
+ *
+ * The response body is left unread. Callers that only need metadata should use
+ * safeFetch, which buffers the body; archive downloads use this function so the
+ * body can be streamed to disk with progress.
  */
-export async function safeFetch(raw: string, options: SafeFetchOptions = {}): Promise<SafeFetchResult> {
+export async function safeFetchStream(
+  raw: string,
+  options: SafeFetchOptions = {}
+): Promise<SafeFetchStreamResult> {
   const allowedHosts = options.allowedHosts ?? GITHUB_UPDATE_HOSTS;
   const fetchImpl = options.fetchImpl ?? fetch;
   const maxRedirects = options.maxRedirects ?? 5;
@@ -159,7 +174,7 @@ export async function safeFetch(raw: string, options: SafeFetchOptions = {}): Pr
       return {
         status: response.status,
         headers: response.headers,
-        body: new Uint8Array(await response.arrayBuffer()),
+        body: response.body,
         url: current.toString(),
         redirects,
       };
@@ -175,6 +190,38 @@ export async function safeFetch(raw: string, options: SafeFetchOptions = {}): Pr
   }
 
   throw new UnsafeUrlError(`too many redirects while fetching ${raw}`);
+}
+
+export async function safeFetch(raw: string, options: SafeFetchOptions = {}): Promise<SafeFetchResult> {
+  const result = await safeFetchStream(raw, options);
+  return {
+    ...result,
+    body: result.body ? await readBody(result.body) : new Uint8Array(0),
+  };
+}
+
+async function readBody(body: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return merged;
 }
 
 export async function safeFetchText(

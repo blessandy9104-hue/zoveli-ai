@@ -56,6 +56,17 @@ $Repo = 'blessandy9104-hue/zoveli-ai'
 $Branch = $(if ($env:ZOVELI_BRANCH) { $env:ZOVELI_BRANCH } else { 'main' })
 $UseColor = [string]::IsNullOrEmpty($env:NO_COLOR)
 
+# Set ZOVELI_INSTALL_LOG to a file path to record temp/download diagnostics.
+# The log is off by default so normal installs stay quiet.
+$script:InstallLogPath = $env:ZOVELI_INSTALL_LOG
+function Write-InstallLog([string]$Message) {
+  if ([string]::IsNullOrWhiteSpace($script:InstallLogPath)) { return }
+  try {
+    $line = '{0:o} pid={1} {2}' -f (Get-Date).ToUniversalTime(), $PID, $Message
+    Add-Content -LiteralPath $script:InstallLogPath -Value $line -Encoding UTF8 -ErrorAction SilentlyContinue
+  } catch { }
+}
+
 function Info([string]$Message) {
   if ($UseColor) { Write-Host $Message -ForegroundColor Green } else { Write-Host $Message }
 }
@@ -69,6 +80,80 @@ function Fail([string]$Message) {
   if ($UseColor) { Write-Host $Message -ForegroundColor Red } else { Write-Host $Message }
   exit 1
 }
+
+# Progress goes to stderr and only when stderr is an interactive terminal.
+# Piped installs, CI logs, and terminals without a console stay clean.
+function Test-InteractiveConsole {
+  if ($env:CI -and $env:CI -ne '0' -and $env:CI -ne 'false') { return $false }
+  if ($env:TERM -eq 'dumb') { return $false }
+  try {
+    if (-not [Environment]::UserInteractive) { return $false }
+    if ([Console]::IsErrorRedirected) { return $false }
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+function Format-Megabytes([double]$Bytes) {
+  return [string]::Format(
+    [System.Globalization.CultureInfo]::InvariantCulture,
+    '{0:N1} MB',
+    ($Bytes / 1MB)
+  )
+}
+
+function New-DownloadProgress([string]$Label, [long]$TotalBytes) {
+  if (-not $script:ShowProgress) { return $null }
+  return @{
+    Label = $Label
+    Total = $TotalBytes
+    Started = [DateTime]::UtcNow
+    LastWrite = [DateTime]::MinValue
+    Active = $false
+    Broken = $false
+    Width = 78
+  }
+}
+
+function Write-DownloadProgress($Progress, [long]$ReceivedBytes, [switch]$Complete) {
+  if ($null -eq $Progress -or $Progress.Broken) { return }
+  $now = [DateTime]::UtcNow
+  if (-not $Progress.Active) {
+    $Progress.Started = $now
+    $Progress.LastWrite = $now
+  } elseif (-not $Complete -and ($now - $Progress.LastWrite).TotalMilliseconds -lt 200) {
+    return
+  }
+  $seconds = [Math]::Max(($now - $Progress.Started).TotalSeconds, 0.001)
+  $rate = $ReceivedBytes / $seconds
+  if ($Progress.Total -gt 0) {
+    $percent = [Math]::Min(100, [Math]::Floor(($ReceivedBytes / $Progress.Total) * 100))
+    $line = 'Downloading {0} {1}% ({2} of {3}, {4}/s)' -f $Progress.Label, $percent, (Format-Megabytes $ReceivedBytes), (Format-Megabytes $Progress.Total), (Format-Megabytes $rate)
+  } else {
+    $line = 'Downloading {0} {1} ({2}/s)' -f $Progress.Label, (Format-Megabytes $ReceivedBytes), (Format-Megabytes $rate)
+  }
+  if ($line.Length -ge $Progress.Width) {
+    $line = $line.Substring(0, $Progress.Width)
+  } else {
+    $line = $line.PadRight($Progress.Width)
+  }
+  try {
+    [Console]::Error.Write("`r$line")
+    $Progress.Active = $true
+    $Progress.LastWrite = $now
+  } catch {
+    $Progress.Broken = $true
+  }
+}
+
+function Clear-DownloadProgress($Progress) {
+  if ($null -eq $Progress -or -not $Progress.Active -or $Progress.Broken) { return }
+  try { [Console]::Error.Write("`r" + (' ' * $Progress.Width) + "`r") } catch { }
+  $Progress.Active = $false
+}
+
+$script:ShowProgress = [bool](Test-InteractiveConsole)
 
 function Normalize-Path([string]$Path) {
   $full = [System.IO.Path]::GetFullPath($Path)
@@ -177,9 +262,32 @@ function Assert-SafeDownloadUrl([string]$Value) {
   }
 }
 
+# Unwrap MethodInvocationException and TargetInvocationException so retry
+# decisions use the real I/O error rather than the PowerShell wrapper.
+function Get-InnermostException($ErrorRecord) {
+  $ex = $ErrorRecord.Exception
+  while ($ex -and $ex.InnerException) { $ex = $ex.InnerException }
+  return $ex
+}
+
+# Only a missing destination directory is retryable. HTTP errors, timeouts,
+# and anything else must fail without a second attempt.
+function Test-RetryableDownloadFailure($ErrorRecord) {
+  $ex = Get-InnermostException $ErrorRecord
+  if ($null -eq $ex) { return $false }
+  if ($ex -is [System.IO.DirectoryNotFoundException]) { return $true }
+  if ($ex -is [System.IO.FileNotFoundException]) { return $true }
+  if ($ex -is [System.IO.IOException]) {
+    # ERROR_FILE_NOT_FOUND (2) and ERROR_PATH_NOT_FOUND (3).
+    $code = $ex.HResult -band 0xFFFF
+    if ($code -eq 2 -or $code -eq 3) { return $true }
+  }
+  return $false
+}
+
 # Follow redirects by hand so a redirect cannot point at localhost, a
 # link-local metadata service, or another machine on the user's network.
-function Invoke-SafeDownload([string]$Value, [string]$OutFile) {
+function Invoke-SafeDownloadAttempt([string]$Value, [string]$OutFile, [switch]$ShowProgress) {
   Add-Type -AssemblyName System.Net.Http
   $handler = [System.Net.Http.HttpClientHandler]::new()
   $handler.AllowAutoRedirect = $false
@@ -190,9 +298,16 @@ function Invoke-SafeDownload([string]$Value, [string]$OutFile) {
     for ($hop = 0; $hop -le 5; $hop++) {
       Assert-SafeDownloadUrl $current
       $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, $current)
-      $response = $client.SendAsync($request).GetAwaiter().GetResult()
+      $outDir = [System.IO.Path]::GetDirectoryName($OutFile)
+      Write-InstallLog "download.request url=$current out=$OutFile outDir=$outDir dirExists=$(Test-Path -LiteralPath $outDir)"
+      # ResponseHeadersRead returns as soon as the headers arrive. The body is
+      # streamed straight to disk, so the destination file exists and stays
+      # open for the whole transfer instead of leaving an empty directory that
+      # a temp cleaner can remove while the archive is buffered in memory.
+      $response = $client.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
       try {
         $code = [int]$response.StatusCode
+        Write-InstallLog "download.response status=$code outDir=$outDir dirExists=$(Test-Path -LiteralPath $outDir)"
         if ($code -in 301, 302, 303, 307, 308) {
           $location = $response.Headers.Location
           if ($null -eq $location) { throw "Redirect from $current had no Location header." }
@@ -203,9 +318,44 @@ function Invoke-SafeDownload([string]$Value, [string]$OutFile) {
           continue
         }
         if ($code -ne 200) { throw "Download failed with HTTP ${code}: $current" }
-        $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-        $file = [System.IO.File]::Create($OutFile)
-        try { $stream.CopyTo($file) } finally { $file.Dispose(); $stream.Dispose() }
+        Write-InstallLog "download.file-create file=$OutFile dirExists=$(Test-Path -LiteralPath $outDir)"
+        try {
+          $file = [System.IO.File]::Create($OutFile)
+        } catch {
+          $free = 'unknown'
+          try { $free = [math]::Round((New-Object System.IO.DriveInfo ([System.IO.Path]::GetPathRoot($OutFile))).AvailableFreeSpace / 1MB, 1) } catch { }
+          Write-InstallLog "download.file-create-failed file=$OutFile dirExists=$(Test-Path -LiteralPath $outDir) freeMB=$free error=$($_.Exception.GetType().FullName): $($_.Exception.Message)"
+          throw
+        }
+        try {
+          Write-InstallLog "download.file-created file=$OutFile exists=$(Test-Path -LiteralPath $OutFile)"
+          $totalBytes = [long]0
+          if ($null -ne $response.Content.Headers.ContentLength) {
+            $totalBytes = [long]$response.Content.Headers.ContentLength
+          }
+          $progress = $null
+          if ($ShowProgress) {
+            $progress = New-DownloadProgress ([System.IO.Path]::GetFileName($OutFile)) $totalBytes
+          }
+          $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+          try {
+            $buffer = New-Object byte[] 1048576
+            $received = [long]0
+            while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+              $file.Write($buffer, 0, $read)
+              $received += $read
+              Write-DownloadProgress $progress $received
+            }
+            $file.Flush()
+            Write-DownloadProgress $progress $received -Complete
+          } finally {
+            Clear-DownloadProgress $progress
+            $stream.Dispose()
+          }
+        } finally {
+          $file.Dispose()
+        }
+        Write-InstallLog "download.complete file=$OutFile exists=$(Test-Path -LiteralPath $OutFile) bytes=$((Get-Item -LiteralPath $OutFile -ErrorAction SilentlyContinue).Length)"
         return
       } finally {
         $response.Dispose()
@@ -213,12 +363,42 @@ function Invoke-SafeDownload([string]$Value, [string]$OutFile) {
       }
     }
     throw "Too many redirects while downloading $Value"
-  } catch {
-    Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
-    throw
   } finally {
     $client.Dispose()
     $handler.Dispose()
+  }
+}
+
+function Invoke-SafeDownload([string]$Value, [string]$OutFile, [switch]$ShowProgress) {
+  # One bounded retry exists only for the narrow race where a cleaner removes
+  # the staging directory before the destination file is created. The staging
+  # directory is recreated from scratch instead of being reused.
+  $maxAttempts = 2
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    try {
+      Invoke-SafeDownloadAttempt $Value $OutFile -ShowProgress:$ShowProgress
+      return
+    } catch {
+      $retryable = Test-RetryableDownloadFailure $_
+      Write-InstallLog "download.attempt-failed attempt=$attempt maxAttempts=$maxAttempts retryable=$retryable error=$($_.Exception.GetType().FullName): $($_.Exception.Message)"
+      Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+      if (-not $retryable -or $attempt -ge $maxAttempts) {
+        Write-InstallLog "download.failed out=$OutFile error=$($_.Exception.GetType().FullName): $($_.Exception.Message)"
+        throw
+      }
+      $outDir = [System.IO.Path]::GetDirectoryName($OutFile)
+      if ($outDir) {
+        $outRoot = [System.IO.Path]::GetPathRoot($outDir)
+        if ($outRoot -and [string]::Equals($outDir.TrimEnd('\'), $outRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+          Write-InstallLog "download.retry-refused reason=volume-root outDir=$outDir"
+          throw
+        }
+        Remove-Item -LiteralPath $outDir -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+      }
+      Write-InstallLog "download.retry attempt=$($attempt + 1) outDir=$outDir exists=$(Test-Path -LiteralPath $outDir)"
+      Start-Sleep -Milliseconds 250
+    }
   }
 }
 
@@ -732,9 +912,15 @@ if (-not $Yes) {
   if ($answer -notmatch '^(y|yes)$') { Fail 'Aborted.' }
 }
 
-$temp = Join-Path ([System.IO.Path]::GetTempPath()) ("zoveli-install-" + [guid]::NewGuid().ToString('N'))
+# Stage downloads under the app-owned state directory, never %TEMP%. Storage
+# Sense and third-party cleaners remove temp files without warning; that race
+# deleted the empty %TEMP%\zoveli-install-* directory mid-download.
+$downloadRoot = Join-Path $StateDir 'staging'
+$temp = Join-Path $downloadRoot ('download-' + [guid]::NewGuid().ToString('N'))
 $stageRoot = $null
-New-Item -ItemType Directory -Path $temp | Out-Null
+Write-InstallLog "temp.before-create path=$temp tempRoot=$downloadRoot freeMB=$([math]::Round((New-Object System.IO.DriveInfo ([System.IO.Path]::GetPathRoot($temp))).AvailableFreeSpace / 1MB, 1))"
+New-Item -ItemType Directory -Path $temp -Force | Out-Null
+Write-InstallLog "temp.created path=$temp exists=$(Test-Path -LiteralPath $temp)"
 try {
   if ($ArchivePath) {
     $archivePath = $ArchivePath
@@ -749,7 +935,7 @@ try {
     $archivePath = Join-Path $temp 'zoveli.tar.gz'
     Info "Downloading $Url"
     try {
-      Invoke-SafeDownload $Url $archivePath
+      Invoke-SafeDownload $Url $archivePath -ShowProgress
       if (-not $NoVerify) {
         Info 'Downloading checksum...'
         Invoke-SafeDownload "$Url.sha256" "$archivePath.sha256"
@@ -954,8 +1140,10 @@ try {
     }
   }
 } finally {
+  Write-InstallLog "temp.cleanup begin path=$temp exists=$(Test-Path -LiteralPath $temp)"
   if ($stageRoot -and (Test-Path -LiteralPath $stageRoot)) {
     Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
   }
   Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+  Write-InstallLog "temp.cleanup done path=$temp exists=$(Test-Path -LiteralPath $temp)"
 }

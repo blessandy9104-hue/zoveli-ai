@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   archiveName,
   compareVersions,
+  createDownloadProgress,
   installerInvocation,
   runUpdate,
   versionFromTag,
@@ -22,8 +23,27 @@ function tempDir(): string {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
+
+class FakeStderr {
+  readonly chunks: string[] = [];
+  isTTY: boolean;
+
+  constructor(isTTY: boolean) {
+    this.isTTY = isTTY;
+  }
+
+  write(chunk: string): boolean {
+    this.chunks.push(chunk);
+    return true;
+  }
+
+  get text(): string {
+    return this.chunks.join('');
+  }
+}
 
 describe('update versions', () => {
   it('compares semantic versions, prereleases, and leading v tags', () => {
@@ -64,6 +84,79 @@ describe('update versions', () => {
     expect(posix.command).toBe('sh');
     expect(posix.args).toContain('--archive');
     expect(posix.args).toContain('--yes');
+  });
+});
+
+describe('download progress', () => {
+  it('renders percent and rate, then clears the line', () => {
+    let now = 0;
+    const chunks: string[] = [];
+    const stream = {
+      isTTY: true,
+      write: (chunk: string) => {
+        chunks.push(chunk);
+        return true;
+      },
+    };
+    const progress = createDownloadProgress({
+      stream,
+      label: 'zoveli.tar.gz',
+      totalBytes: 100 * 1024 * 1024,
+      enabled: true,
+      now: () => now,
+      intervalMs: 200,
+    });
+    progress.update(10 * 1024 * 1024);
+    now = 1000;
+    progress.update(50 * 1024 * 1024);
+    now = 2000;
+    progress.update(99 * 1024 * 1024);
+    now = 2001;
+    progress.update(99 * 1024 * 1024, true);
+    progress.done();
+    expect(chunks[0]).toContain('10%');
+    expect(chunks[0]).toContain('10.0 MB');
+    expect(chunks.some((chunk) => chunk.includes('50%'))).toBe(true);
+    expect(chunks.some((chunk) => chunk.includes('100%'))).toBe(true);
+    expect(chunks.at(-1)).toMatch(/^\r\s{78}\r$/);
+    expect(chunks.join('')).not.toContain('\n');
+  });
+
+  it('renders bytes without a percentage and stays silent when disabled', () => {
+    const chunks: string[] = [];
+    const unknown = createDownloadProgress({
+      stream: {
+        write: (chunk: string) => {
+          chunks.push(chunk);
+          return true;
+        },
+      },
+      label: 'zoveli.tar.gz',
+      totalBytes: 0,
+      enabled: true,
+      now: () => 0,
+    });
+    unknown.update(1024);
+    unknown.done();
+    expect(chunks[0]).toContain('Downloading zoveli.tar.gz');
+    expect(chunks[0]).not.toContain('%');
+
+    const silent: string[] = [];
+    const disabled = createDownloadProgress({
+      stream: {
+        write: (chunk: string) => {
+          silent.push(chunk);
+          return true;
+        },
+      },
+      label: 'zoveli.tar.gz',
+      totalBytes: 1024,
+      enabled: false,
+      now: () => 0,
+    });
+    disabled.update(512);
+    disabled.done();
+    expect(silent).toEqual([]);
   });
 });
 
@@ -210,5 +303,74 @@ describe('zoveli update', () => {
     expect(exit).toBe(1);
     expect(runInstaller).not.toHaveBeenCalled();
     expect(errors.join('\n')).toMatch(/SHA-256 verification/);
+  });
+
+  it('writes archive progress to stderr on an interactive terminal', async () => {
+    const dir = tempDir();
+    const installer = join(dir, 'install-zoveli-runtime.ps1');
+    writeFileSync(installer, '# fake installer\n');
+    const assetName = 'zoveli-0.8.0-windows-x64.tar.gz';
+    const bytes = new TextEncoder().encode('fake archive');
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/releases/latest')) return releaseResponse(assetName);
+      if (url.endsWith('.sha256')) return new Response(`${digest}  ${assetName}\n`);
+      return new Response(bytes, {
+        status: 200,
+        headers: { 'content-length': String(bytes.length) },
+      });
+    });
+    vi.stubEnv('CI', '');
+    vi.stubEnv('TERM', '');
+    const stderr = new FakeStderr(true);
+    const exit = await runUpdate(['--yes'], {
+      currentVersion: '0.7.0',
+      platform: 'win32',
+      arch: 'x64',
+      cwd: dir,
+      installerPath: installer,
+      fetchImpl: fetchMock as unknown as typeof fetch,
+      runInstaller: () => 0,
+      log: () => {},
+      stderr,
+    });
+    expect(exit).toBe(0);
+    expect(stderr.text).toContain('\rDownloading ');
+    expect(stderr.text).toContain('100%');
+    expect(stderr.text).toMatch(/\r\s{78}\r$/);
+  });
+
+  it('keeps stderr clean when piped or in CI', async () => {
+    async function run(stderr: FakeStderr, ci: string): Promise<string> {
+      const dir = tempDir();
+      const installer = join(dir, 'install-zoveli-runtime.ps1');
+      writeFileSync(installer, '# fake installer\n');
+      const assetName = 'zoveli-0.8.0-windows-x64.tar.gz';
+      const bytes = new TextEncoder().encode('fake archive');
+      const digest = createHash('sha256').update(bytes).digest('hex');
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url.includes('/releases/latest')) return releaseResponse(assetName);
+        if (url.endsWith('.sha256')) return new Response(`${digest}  ${assetName}\n`);
+        return new Response(bytes, { status: 200 });
+      });
+      vi.stubEnv('CI', ci);
+      vi.stubEnv('TERM', '');
+      const exit = await runUpdate(['--yes'], {
+        currentVersion: '0.7.0',
+        platform: 'win32',
+        arch: 'x64',
+        cwd: dir,
+        installerPath: installer,
+        fetchImpl: fetchMock as unknown as typeof fetch,
+        runInstaller: () => 0,
+        log: () => {},
+        stderr,
+      });
+      expect(exit).toBe(0);
+      return stderr.text;
+    }
+
+    expect(await run(new FakeStderr(false), '')).toBe('');
+    expect(await run(new FakeStderr(true), '1')).toBe('');
   });
 });

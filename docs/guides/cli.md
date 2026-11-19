@@ -196,6 +196,13 @@ network. Release builds also publish unsigned macOS `.dmg` and Windows `.exe`
 installers; first-launch Gatekeeper and SmartScreen steps are in the
 [Sovereign Install Guide](../INSTALL_GUIDE.md).
 
+While the runtime archive downloads, `zoveli update` draws a single updating
+progress line on stderr. The line is only drawn on an interactive terminal;
+piped output, `--json`, CI runs, and `TERM=dumb` stay clean. The installers use
+the same rule: `install-zoveli-runtime.sh` shows curl's bar for the archive
+only, and `install-zoveli-runtime.ps1` writes its own line to stderr, both
+suppressed when output is redirected or `CI` is set.
+
 Installer scripts support the same version check without changing anything:
 
 ```bash

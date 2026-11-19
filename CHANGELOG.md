@@ -9,6 +9,31 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Added
+
+- **Download progress:** `zoveli update` and both runtime installers now show a
+  live progress line for the runtime archive, so a 100 MB download on a slow
+  connection no longer looks hung. `zoveli update` streams the archive to disk
+  and hashes it as it arrives instead of buffering it in memory, then prints
+  percent, transferred size, and transfer rate to stderr. Both installers use
+  the same rule: on an interactive terminal only, and never when stderr is
+  redirected, `CI` is set, or `TERM=dumb`. Piped installs, `--json` output, and
+  CI logs stay byte-for-byte clean.
+
+### Fixed
+
+- **Windows installer download race:** the runtime installer now stages
+  downloads under `%USERPROFILE%\.zoveli\staging` instead of `%TEMP%`, uses
+  `ResponseHeadersRead`, and creates the destination file as soon as the
+  response headers arrive. Previously the entire 104 MB archive was buffered in
+  memory before the file was created, so Storage Sense or another temp cleaner
+  could delete the empty `%TEMP%\zoveli-install-*` directory mid-download and
+  the installer failed with "Could not find a part of the path". If the staging
+  directory disappears before the file opens, the installer recreates it and
+  retries exactly once; HTTP and checksum failures are never retried.
+  `scripts/installer-download-test.ps1` covers the retry classification in CI
+  under Windows PowerShell 5.1 and PowerShell 7.
+
 ## [0.1.5] - 2026-11-18
 
 ### Fixed
