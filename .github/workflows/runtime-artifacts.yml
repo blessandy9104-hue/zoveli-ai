@@ -35,6 +35,7 @@ on:
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/install-acceptance.sh'
       - 'scripts/install-acceptance.ps1'
+      - 'scripts/installer-download-test.ps1'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -54,6 +55,7 @@ on:
       - 'scripts/smoke-runtime.mjs'
       - 'scripts/install-acceptance.sh'
       - 'scripts/install-acceptance.ps1'
+      - 'scripts/installer-download-test.ps1'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -231,6 +233,21 @@ jobs:
           $pwsh = Join-Path $PSHOME 'pwsh.exe'
           & $pwsh -NoProfile -File scripts/install-acceptance.ps1 -Archive "$archive" -PowerShellPath $pwsh
           if ($LASTEXITCODE -ne 0) { throw "PowerShell 7 acceptance exited with $LASTEXITCODE" }
+
+      - name: Installer download retry test (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/installer-download-test.ps1
+          if ($LASTEXITCODE -ne 0) { throw "installer download test exited with $LASTEXITCODE" }
+
+      - name: Installer download retry test (PowerShell 7)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pwsh = Join-Path $PSHOME 'pwsh.exe'
+          & $pwsh -NoProfile -File scripts/installer-download-test.ps1
+          if ($LASTEXITCODE -ne 0) { throw "installer download test exited with $LASTEXITCODE" }
 
       - name: Package unsigned macOS disk image
         if: runner.os == 'macOS'
