@@ -180,7 +180,55 @@ artifact jobs (verified `.tar.gz` archives plus `.sha256` sidecars, and unsigned
 - Download one archive on a clean machine (or clean container), run the
   portable installer, and verify `zoveli --version`, `zoveli health`, `/math`,
   `/remember` and `/recall`.
+- The clean-VM checklist in section 5 is complete for every platform this
+  release publishes, and untested platforms are named in the release notes.
 - Update the release draft if release-drafter left stale entries.
+
+## 5. Clean-VM verification checklist
+
+Run this on a fresh snapshot for each platform, with no previous Zoveli install,
+no administrator rights, and the default execution policy. Install the
+**previous** release first, then upgrade to `vX.Y.Z` — that is the only way the
+upgrade and backup paths get exercised. Tick a box only after all five steps
+pass; never tick a platform you did not run on real hardware or a clean VM.
+
+Each step is:
+
+1. **Install** — run the published one-liner or installer, then
+   `zoveli --version` and `zoveli doctor` report the expected version.
+2. **Rerun** — run the same command again; it is a same-version no-op, does not
+   recreate the vault, and exits `0`.
+3. **Upgrade** — from the previous release, run `zoveli update --yes` or the
+   installer; it verifies a pre-upgrade backup, preserves the vault, and the
+   new version reports correctly.
+4. **Doctor** — `zoveli doctor` has no unexpected failures after the upgrade
+   (warnings for optional components are fine).
+5. **Uninstall** — uninstall keeps the vault and backups. Confirm the vault
+   still opens, then reinstall and confirm the data is still there. Only
+   `--purge` deletes data.
+
+- [ ] **Windows 11 x64 — Windows PowerShell 5.1** (`irm .../install.ps1 | iex`,
+      default execution policy, no admin): install, rerun, upgrade, doctor,
+      uninstall keeps `%USERPROFILE%\.zoveli`, reinstall finds the vault.
+- [ ] **Windows 11 x64 — PowerShell 7** (`pwsh -File install.ps1`): install,
+      rerun, upgrade, doctor, uninstall keeps `%USERPROFILE%\.zoveli`.
+- [ ] **Windows 10 x64 — Windows PowerShell 5.1**: install, rerun, upgrade,
+      doctor, uninstall keeps `%USERPROFILE%\.zoveli`.
+- [ ] **Windows 11 ARM64** (only if this release published
+      `zoveli-X.Y.Z-windows-arm64.tar.gz`): install, rerun, upgrade, doctor,
+      uninstall keeps `%USERPROFILE%\.zoveli`.
+- [ ] **macOS arm64** (`sh install.sh`): install, rerun, upgrade, doctor,
+      uninstall keeps `~/.zoveli`.
+- [ ] **macOS x64**: install, rerun, upgrade, doctor, uninstall keeps
+      `~/.zoveli`.
+- [ ] **Linux x64** (`sh install.sh`): install, rerun, upgrade, doctor,
+      uninstall keeps `~/.zoveli`.
+- [ ] **Linux arm64**: install, rerun, upgrade, doctor, uninstall keeps
+      `~/.zoveli`.
+
+Record the host OS build, the shell, the exact commands, and the previous and
+target versions next to the run. If a platform was not exercised, say so in the
+release notes instead of ticking the box.
 
 ## Hotfixes
 
