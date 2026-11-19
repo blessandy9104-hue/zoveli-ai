@@ -44,6 +44,16 @@ the new section **before** running `pnpm release:check --release`.
   `scripts/installer-download-test.ps1` covers the retry classification in CI
   under Windows PowerShell 5.1 and PowerShell 7.
 
+### Platform verification
+
+- The clean-VM checklist has not been completed for any platform in this
+  release cycle: Windows 11 x64 (Windows PowerShell 5.1 and PowerShell 7),
+  Windows 10 x64, Windows 11 ARM64, macOS arm64, macOS x64, Linux x64, and
+  Linux arm64 are build-verified only. CI builds, container runs, and the
+  stub-curl test are not a substitute for the clean-VM run described in
+  `docs/runbooks/release.md`. Do not mark those platforms as verified until
+  the checklist is ticked on real hardware or a clean VM.
+
 ## [0.1.5] - 2026-11-18
 
 ### Fixed
