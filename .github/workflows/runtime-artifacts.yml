@@ -36,6 +36,7 @@ on:
       - 'scripts/install-acceptance.sh'
       - 'scripts/install-acceptance.ps1'
       - 'scripts/installer-download-test.ps1'
+      - 'scripts/installer-download-test.sh'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -56,6 +57,7 @@ on:
       - 'scripts/install-acceptance.sh'
       - 'scripts/install-acceptance.ps1'
       - 'scripts/installer-download-test.ps1'
+      - 'scripts/installer-download-test.sh'
       - 'scripts/product-acceptance.mjs'
       - 'scripts/package-installers.mjs'
       - 'package.json'
@@ -194,6 +196,10 @@ jobs:
           done
           test -n "$ARCHIVE"
           sh scripts/install-acceptance.sh --archive "$ARCHIVE"
+
+      - name: Installer download progress test (Unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/installer-download-test.sh
 
       - name: Clean-install acceptance (Unix)
         if: runner.os != 'Windows'

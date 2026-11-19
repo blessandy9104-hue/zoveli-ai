@@ -59,11 +59,20 @@ validate_url() {
 download() {
   url=$1
   out=$2
+  progress=${3:-}
   hops=0
   while [ "$hops" -le 5 ]; do
     validate_url "$url" || return 1
     headers="$TMP_DIR/headers.$$.$hops"
-    code=$(curl --proto '=https' --tlsv1.2 --max-redirs 0 -sS -o "$out" -D "$headers" -w '%{http_code}' "$url") || {
+    # curl writes its meter to stderr. Show it only for the runtime archive on
+    # an interactive terminal, so piped and CI installs stay clean.
+    if [ "$progress" = "progress" ] && [ -t 2 ] && [ -z "${CI:-}" ] && [ "${TERM:-}" != "dumb" ]; then
+      curl_opts="--progress-bar --show-error"
+    else
+      curl_opts="-sS"
+    fi
+    # shellcheck disable=SC2086
+    code=$(curl --proto '=https' --tlsv1.2 --max-redirs 0 $curl_opts -o "$out" -D "$headers" -w '%{http_code}' "$url") || {
       error "Download failed: $url"
       rm -f "$headers"
       return 1
@@ -245,7 +254,7 @@ fi
 if [ -z "$ARCHIVE" ]; then
   ARCHIVE="$TMP_DIR/zoveli.tar.gz"
   info "Downloading $ASSET_URL"
-  download "$ASSET_URL" "$ARCHIVE"
+  download "$ASSET_URL" "$ARCHIVE" progress
   download "$ASSET_URL.sha256" "$ARCHIVE.sha256"
 else
   if [ ! -f "$ARCHIVE" ]; then error "Archive not found: $ARCHIVE"; exit 1; fi

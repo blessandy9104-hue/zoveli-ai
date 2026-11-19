@@ -81,6 +81,80 @@ function Fail([string]$Message) {
   exit 1
 }
 
+# Progress goes to stderr and only when stderr is an interactive terminal.
+# Piped installs, CI logs, and terminals without a console stay clean.
+function Test-InteractiveConsole {
+  if ($env:CI -and $env:CI -ne '0' -and $env:CI -ne 'false') { return $false }
+  if ($env:TERM -eq 'dumb') { return $false }
+  try {
+    if (-not [Environment]::UserInteractive) { return $false }
+    if ([Console]::IsErrorRedirected) { return $false }
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+function Format-Megabytes([double]$Bytes) {
+  return [string]::Format(
+    [System.Globalization.CultureInfo]::InvariantCulture,
+    '{0:N1} MB',
+    ($Bytes / 1MB)
+  )
+}
+
+function New-DownloadProgress([string]$Label, [long]$TotalBytes) {
+  if (-not $script:ShowProgress) { return $null }
+  return @{
+    Label = $Label
+    Total = $TotalBytes
+    Started = [DateTime]::UtcNow
+    LastWrite = [DateTime]::MinValue
+    Active = $false
+    Broken = $false
+    Width = 78
+  }
+}
+
+function Write-DownloadProgress($Progress, [long]$ReceivedBytes, [switch]$Complete) {
+  if ($null -eq $Progress -or $Progress.Broken) { return }
+  $now = [DateTime]::UtcNow
+  if (-not $Progress.Active) {
+    $Progress.Started = $now
+    $Progress.LastWrite = $now
+  } elseif (-not $Complete -and ($now - $Progress.LastWrite).TotalMilliseconds -lt 200) {
+    return
+  }
+  $seconds = [Math]::Max(($now - $Progress.Started).TotalSeconds, 0.001)
+  $rate = $ReceivedBytes / $seconds
+  if ($Progress.Total -gt 0) {
+    $percent = [Math]::Min(100, [Math]::Floor(($ReceivedBytes / $Progress.Total) * 100))
+    $line = 'Downloading {0} {1}% ({2} of {3}, {4}/s)' -f $Progress.Label, $percent, (Format-Megabytes $ReceivedBytes), (Format-Megabytes $Progress.Total), (Format-Megabytes $rate)
+  } else {
+    $line = 'Downloading {0} {1} ({2}/s)' -f $Progress.Label, (Format-Megabytes $ReceivedBytes), (Format-Megabytes $rate)
+  }
+  if ($line.Length -ge $Progress.Width) {
+    $line = $line.Substring(0, $Progress.Width)
+  } else {
+    $line = $line.PadRight($Progress.Width)
+  }
+  try {
+    [Console]::Error.Write("`r$line")
+    $Progress.Active = $true
+    $Progress.LastWrite = $now
+  } catch {
+    $Progress.Broken = $true
+  }
+}
+
+function Clear-DownloadProgress($Progress) {
+  if ($null -eq $Progress -or -not $Progress.Active -or $Progress.Broken) { return }
+  try { [Console]::Error.Write("`r" + (' ' * $Progress.Width) + "`r") } catch { }
+  $Progress.Active = $false
+}
+
+$script:ShowProgress = [bool](Test-InteractiveConsole)
+
 function Normalize-Path([string]$Path) {
   $full = [System.IO.Path]::GetFullPath($Path)
   $root = [System.IO.Path]::GetPathRoot($full)
@@ -213,7 +287,7 @@ function Test-RetryableDownloadFailure($ErrorRecord) {
 
 # Follow redirects by hand so a redirect cannot point at localhost, a
 # link-local metadata service, or another machine on the user's network.
-function Invoke-SafeDownloadAttempt([string]$Value, [string]$OutFile) {
+function Invoke-SafeDownloadAttempt([string]$Value, [string]$OutFile, [switch]$ShowProgress) {
   Add-Type -AssemblyName System.Net.Http
   $handler = [System.Net.Http.HttpClientHandler]::new()
   $handler.AllowAutoRedirect = $false
@@ -255,8 +329,29 @@ function Invoke-SafeDownloadAttempt([string]$Value, [string]$OutFile) {
         }
         try {
           Write-InstallLog "download.file-created file=$OutFile exists=$(Test-Path -LiteralPath $OutFile)"
+          $totalBytes = [long]0
+          if ($null -ne $response.Content.Headers.ContentLength) {
+            $totalBytes = [long]$response.Content.Headers.ContentLength
+          }
+          $progress = $null
+          if ($ShowProgress) {
+            $progress = New-DownloadProgress ([System.IO.Path]::GetFileName($OutFile)) $totalBytes
+          }
           $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-          try { $stream.CopyTo($file, 1048576) } finally { $stream.Dispose() }
+          try {
+            $buffer = New-Object byte[] 1048576
+            $received = [long]0
+            while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+              $file.Write($buffer, 0, $read)
+              $received += $read
+              Write-DownloadProgress $progress $received
+            }
+            $file.Flush()
+            Write-DownloadProgress $progress $received -Complete
+          } finally {
+            Clear-DownloadProgress $progress
+            $stream.Dispose()
+          }
         } finally {
           $file.Dispose()
         }
@@ -274,14 +369,14 @@ function Invoke-SafeDownloadAttempt([string]$Value, [string]$OutFile) {
   }
 }
 
-function Invoke-SafeDownload([string]$Value, [string]$OutFile) {
+function Invoke-SafeDownload([string]$Value, [string]$OutFile, [switch]$ShowProgress) {
   # One bounded retry exists only for the narrow race where a cleaner removes
   # the staging directory before the destination file is created. The staging
   # directory is recreated from scratch instead of being reused.
   $maxAttempts = 2
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     try {
-      Invoke-SafeDownloadAttempt $Value $OutFile
+      Invoke-SafeDownloadAttempt $Value $OutFile -ShowProgress:$ShowProgress
       return
     } catch {
       $retryable = Test-RetryableDownloadFailure $_
@@ -840,7 +935,7 @@ try {
     $archivePath = Join-Path $temp 'zoveli.tar.gz'
     Info "Downloading $Url"
     try {
-      Invoke-SafeDownload $Url $archivePath
+      Invoke-SafeDownload $Url $archivePath -ShowProgress
       if (-not $NoVerify) {
         Info 'Downloading checksum...'
         Invoke-SafeDownload "$Url.sha256" "$archivePath.sha256"

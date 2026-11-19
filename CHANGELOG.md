@@ -9,6 +9,17 @@ the new section **before** running `pnpm release:check --release`.
 
 ## [Unreleased]
 
+### Added
+
+- **Download progress:** `zoveli update` and both runtime installers now show a
+  live progress line for the runtime archive, so a 100 MB download on a slow
+  connection no longer looks hung. `zoveli update` streams the archive to disk
+  and hashes it as it arrives instead of buffering it in memory, then prints
+  percent, transferred size, and transfer rate to stderr. Both installers use
+  the same rule: on an interactive terminal only, and never when stderr is
+  redirected, `CI` is set, or `TERM=dumb`. Piped installs, `--json` output, and
+  CI logs stay byte-for-byte clean.
+
 ### Fixed
 
 - **Windows installer download race:** the runtime installer now stages

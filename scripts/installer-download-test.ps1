@@ -60,6 +60,11 @@ if ($parseErrors -and $parseErrors.Count -gt 0) {
 $wanted = @(
   'Write-InstallLog',
   'Assert-SafeDownloadUrl',
+  'Test-InteractiveConsole',
+  'Format-Megabytes',
+  'New-DownloadProgress',
+  'Write-DownloadProgress',
+  'Clear-DownloadProgress',
   'Get-InnermostException',
   'Test-RetryableDownloadFailure',
   'Invoke-SafeDownloadAttempt',
@@ -83,15 +88,26 @@ if ($attempt -notmatch 'ResponseHeadersRead') {
   Pass 'download attempt uses ResponseHeadersRead'
 }
 $createAt = $attempt.IndexOf('[System.IO.File]::Create')
-$copyAt = $attempt.IndexOf('$stream.CopyTo')
-if ($createAt -lt 0 -or $copyAt -lt 0 -or $createAt -gt $copyAt) {
-  Fail 'download attempt does not create the destination file before copying the body'
+$readAt = $attempt.IndexOf('$stream.Read(')
+if ($createAt -lt 0 -or $readAt -lt 0 -or $createAt -gt $readAt) {
+  Fail 'download attempt does not create the destination file before reading the body'
 } else {
-  Pass 'destination file is created before the body is copied'
+  Pass 'destination file is created before the body is read'
+}
+if (-not $attempt.Contains('Write-DownloadProgress')) {
+  Fail 'download attempt has no progress reporting'
+} else {
+  Pass 'download attempt reports progress through the shared helper'
 }
 
 foreach ($definition in $definitions) {
   . ([scriptblock]::Create($definition.Extent.Text))
+}
+
+if (Test-InteractiveConsole) {
+  Fail 'progress is enabled while stderr is redirected'
+} else {
+  Pass 'progress stays off while stderr is redirected'
 }
 
 function New-TestLog([string]$Root, [string]$Name) {

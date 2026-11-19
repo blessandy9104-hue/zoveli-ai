@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import {
+  createWriteStream,
   existsSync,
-  mkdirSync,
   mkdtempSync,
   rmSync,
   writeFileSync,
@@ -10,9 +11,11 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { ZOVELI_VERSION } from '@zoveli/core/version';
 import { parseFlags, type FlagDefinition } from './flags.js';
-import { safeFetch, safeFetchText } from './net.js';
+import { safeFetch, safeFetchStream, safeFetchText } from './net.js';
 
 const DEFAULT_REPO = 'blessandy9104-hue/zoveli-ai';
 const MAX_UPDATE_BYTES = 512 * 1024 * 1024;
@@ -98,7 +101,88 @@ export interface UpdateDependencies {
   confirm?: (message: string) => boolean | Promise<boolean>;
   log?: (line: string) => void;
   errorLine?: (line: string) => void;
+  stderr?: ProgressStream;
   now?: () => Date;
+}
+
+export interface ProgressStream {
+  write(chunk: string): unknown;
+  isTTY?: boolean;
+}
+
+export interface DownloadProgress {
+  update(receivedBytes: number, complete?: boolean): void;
+  done(): void;
+}
+
+export function createDownloadProgress(options: {
+  stream: ProgressStream;
+  label: string;
+  totalBytes: number;
+  enabled: boolean;
+  now?: () => number;
+  intervalMs?: number;
+}): DownloadProgress {
+  const now = options.now ?? Date.now;
+  const intervalMs = options.intervalMs ?? 200;
+  const width = 78;
+  let startedAt = 0;
+  let lastAt = 0;
+  let started = false;
+  let active = false;
+  let broken = false;
+
+  const write = (text: string) => {
+    if (broken) return;
+    try {
+      options.stream.write(text);
+    } catch {
+      broken = true;
+    }
+  };
+
+  const render = (receivedBytes: number, complete: boolean) => {
+    const seconds = Math.max((now() - startedAt) / 1000, 0.001);
+    const rate = receivedBytes / seconds;
+    let line: string;
+    if (options.totalBytes > 0) {
+      const percent = complete
+        ? 100
+        : Math.min(100, Math.floor((receivedBytes / options.totalBytes) * 100));
+      line = `Downloading ${options.label} ${percent}% ${megabytes(receivedBytes)}/${megabytes(options.totalBytes)} ${megabytes(rate)}/s`;
+    } else {
+      line = `Downloading ${options.label} ${megabytes(receivedBytes)} ${megabytes(rate)}/s`;
+    }
+    const padded =
+      line.length >= width ? line.slice(0, width) : line + ' '.repeat(width - line.length);
+    write(`\r${padded}`);
+    active = true;
+  };
+
+  return {
+    update(receivedBytes: number, complete = false) {
+      if (!options.enabled) return;
+      if (!started) {
+        started = true;
+        startedAt = now();
+        lastAt = startedAt;
+      }
+      const finished =
+        complete || (options.totalBytes > 0 && receivedBytes >= options.totalBytes);
+      if (!finished && active && now() - lastAt < intervalMs) return;
+      lastAt = now();
+      render(receivedBytes, complete);
+    },
+    done() {
+      if (!options.enabled || !active) return;
+      write(`\r${' '.repeat(width)}\r`);
+      active = false;
+    },
+  };
+}
+
+function megabytes(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 interface GitHubRelease {
@@ -338,10 +422,6 @@ function printInfo(info: UpdateInfo, log: (line: string) => void): void {
   }
 }
 
-function sha256(bytes: Uint8Array): string {
-  return createHash('sha256').update(bytes).digest('hex');
-}
-
 function firstToken(text: string): string {
   return text.trim().split(/\s+/)[0]?.toLowerCase() || '';
 }
@@ -428,17 +508,59 @@ export async function runUpdate(argv: string[], deps: UpdateDependencies = {}): 
     let installerExit = 0;
     try {
       const archivePath = join(tempRoot, info.asset.name);
-      const archive = await safeFetch(info.asset.url, {
+      const archive = await safeFetchStream(info.asset.url, {
         fetchImpl: deps.fetchImpl,
         timeoutMs: ARCHIVE_DOWNLOAD_TIMEOUT_MS,
       });
       if (archive.status !== 200) {
         throw new Error(`archive download failed: HTTP ${archive.status}`);
       }
-      if (archive.body.byteLength > MAX_UPDATE_BYTES) {
+      if (!archive.body) {
+        throw new Error('archive download returned no body');
+      }
+      const declaredLength = Number(archive.headers.get('content-length') ?? '');
+      const totalBytes =
+        Number.isFinite(declaredLength) && declaredLength > 0 ? declaredLength : 0;
+      if (totalBytes > MAX_UPDATE_BYTES) {
         throw new Error(`release archive is larger than ${MAX_UPDATE_BYTES} bytes`);
       }
-      const digest = sha256(archive.body);
+
+      const progressStream = deps.stderr ?? process.stderr;
+      const progress = createDownloadProgress({
+        stream: progressStream,
+        label: info.asset.name,
+        totalBytes,
+        enabled:
+          Boolean(progressStream.isTTY) &&
+          !flags.json &&
+          !process.env.CI &&
+          process.env.TERM !== 'dumb',
+      });
+      const hash = createHash('sha256');
+      let received = 0;
+      const archiveFile = createWriteStream(archivePath);
+      try {
+        const source = Readable.fromWeb(archive.body as unknown as NodeReadableStream);
+        for await (const chunk of source) {
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+          received += buffer.byteLength;
+          if (received > MAX_UPDATE_BYTES) {
+            throw new Error(`release archive is larger than ${MAX_UPDATE_BYTES} bytes`);
+          }
+          hash.update(buffer);
+          if (!archiveFile.write(buffer)) await once(archiveFile, 'drain');
+          progress.update(received);
+        }
+        progress.update(received, true);
+        archiveFile.end();
+        await once(archiveFile, 'close');
+      } catch (error) {
+        archiveFile.destroy();
+        throw error;
+      } finally {
+        progress.done();
+      }
+      const digest = hash.digest('hex');
 
       const checksum = await safeFetchText(info.asset.checksumUrl, { fetchImpl: deps.fetchImpl });
       if (checksum.status !== 200) {
@@ -452,8 +574,6 @@ export async function runUpdate(argv: string[], deps: UpdateDependencies = {}): 
         throw new Error('release archive failed SHA-256 verification');
       }
 
-      mkdirSync(dirname(archivePath), { recursive: true });
-      writeFileSync(archivePath, archive.body);
       writeFileSync(
         `${archivePath}.sha256`,
         `${digest}  ${info.asset.name}\n`
