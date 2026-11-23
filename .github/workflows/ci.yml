@@ -329,7 +329,7 @@ jobs:
         # Filesystem mode: base/head diff scanning fails on push-to-main
         # ("BASE and HEAD commits are the same"). --only-verified fails
         # the build only on live, verifiable secrets.
-        uses: trufflesecurity/trufflehog@v3.99.9
+        uses: trufflesecurity/trufflehog@v3.100.0
         with:
           path: ./
           # Pin the scanner image tag instead of the action's "latest" default.
