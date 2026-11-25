@@ -576,8 +576,11 @@ async function main() {
     const dailyBriefPlugin = (pluginOut.plugins ?? []).find(
       (plugin) => plugin.name === 'zoveli-daily-brief'
     );
+    const intelligencePlugin = (pluginOut.plugins ?? []).find(
+      (plugin) => plugin.name === 'zoveli-intelligence'
+    );
     assert(
-      pluginOut.enabled === 25 && pluginOut.optIn === 2 && pluginOut.disabled === 1,
+      pluginOut.enabled === 25 && pluginOut.optIn === 3 && pluginOut.disabled === 1,
       `unexpected plugin inventory: ${JSON.stringify({
         enabled: pluginOut.enabled,
         optIn: pluginOut.optIn,
@@ -586,10 +589,11 @@ async function main() {
     );
     assert(disabledPlugin?.status === 'disabled', 'zoveli-webresearch was not disabled');
     assert(dailyBriefPlugin?.status === 'opt-in', 'zoveli-daily-brief was not listed as opt-in');
+    assert(intelligencePlugin?.status === 'opt-in', 'zoveli-intelligence was not listed as opt-in');
     pass(
       checks,
       'plugin-disable',
-      `${(pluginOut.plugins ?? []).length} plugins; webresearch disabled`,
+      `${(pluginOut.plugins ?? []).length} plugins; webresearch disabled; intelligence opt-in`,
       pluginStart
     );
 
