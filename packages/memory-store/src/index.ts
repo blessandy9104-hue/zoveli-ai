@@ -4,6 +4,7 @@ import { MemoryStore, getStore, resolveDbPath, resolveVaultPath, resetStoreForTe
 export { MemoryStore, getStore, resetStoreForTests, resolveDbPath, resolveVaultPath };
 export * from './store.js';
 export * from './maintenance.js';
+export * from './backup-retention.js';
 
 export const zoveliMemoryStore = definePlugin({
   name: 'zoveli-memory-store',

@@ -212,9 +212,21 @@ install/install-zoveli-runtime.ps1 -Check
 
 ## Data maintenance
 
+Backups are never pruned automatically. Installs, upgrades, and uninstalls keep
+every pre-upgrade backup under `~/.zoveli/backups`; `zoveli backups prune
+--keep N` is the only command that removes them, and it always keeps the newest
+valid pre-upgrade backup (even with `--keep 0`). `zoveli backups list` is
+read-only and exits successfully even when some entries cannot be pruned.
+
 ```bash
 # Prove backup/restore works without touching real data
 zoveli recovery-check
+
+# Inspect pre-upgrade backups (read-only; invalid entries are listed, not fatal)
+zoveli backups list
+
+# Delete all but the 2 newest valid pre-upgrade backups (asks on a terminal)
+zoveli backups prune --keep 2
 
 # WAL-safe backup with a SHA-256 manifest (safe while Zoveli runs)
 pnpm vault:backup -- --out ./backups/2026-10-19
@@ -233,7 +245,13 @@ Portable runtimes expose the same operations without pnpm, for example
 `zoveli backup`, `zoveli verify <dir>`, `zoveli restore <dir> --force`, and
 `zoveli migrate`. `--db`, `--vault`, `--auth-dir` and `--audit` override the
 default paths. `node apps/cli/dist/cli.js backup --help` prints the full usage.
-See `docs/runbooks/backup-restore.md` and `docs/runbooks/vault-corruption.md`.
+
+`zoveli backups prune` requires `--keep N` and skips manual `--out` backups,
+symlinks and junctions, entries that resolve outside the backups directory, and
+directories without a valid `manifest.json`. Pass `--yes` when stdin is not a
+terminal; `--json` also requires `--yes`. `--root DIR` overrides
+`~/.zoveli/backups`. See `docs/runbooks/backup-restore.md` and
+`docs/runbooks/vault-corruption.md`.
 
 ## Config drift check
 

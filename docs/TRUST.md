@@ -208,7 +208,13 @@ pnpm vault:restore -- ./backups/2026-11-03 --force
 ```
 
 Deleting your data is local and immediate: stop Zoveli, then remove the paths
-above. Backups you created elsewhere are not touched. See
+above. Backups you created elsewhere are not touched.
+
+Backups are never pruned automatically: installs, upgrades, and uninstalls keep
+every pre-upgrade backup under `~/.zoveli/backups`. `zoveli backups prune
+--keep N` is the only deletion path. It skips symlinks and junctions, manual
+`--out` backups, and any directory without a valid `manifest.json`, and it
+always keeps the newest valid pre-upgrade backup. See
 [backup/restore](runbooks/backup-restore.md) and
 [vault corruption](runbooks/vault-corruption.md) for recovery drills.
 

@@ -14,6 +14,7 @@ Usage:
   zoveli eval [--json]            run trust benchmarks and publish the score
   zoveli update [--check]         check for and install the latest release
   zoveli recovery-check           prove backup/restore works in isolation
+  zoveli backups list|prune       inspect and prune pre-upgrade backups
   zoveli backup|verify|restore|migrate   vault maintenance
   zoveli --version                print the version
   zoveli --help                   show this help
@@ -66,6 +67,11 @@ async function main() {
   if (argv[0] === 'recovery-check') {
     const { runRecoveryCheck } = await import('./recovery-check.js');
     process.exitCode = await runRecoveryCheck(argv.slice(1));
+    return;
+  }
+  if (argv[0] === 'backups') {
+    const { runBackupsCommand } = await import('./backups.js');
+    process.exitCode = await runBackupsCommand(argv.slice(1));
     return;
   }
   const maintenance = await import('./maintenance.js');

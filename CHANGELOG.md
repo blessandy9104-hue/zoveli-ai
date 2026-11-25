@@ -20,6 +20,16 @@ the new section **before** running `pnpm release:check --release`.
   redirected, `CI` is set, or `TERM=dumb`. Piped installs, `--json` output, and
   CI logs stay byte-for-byte clean.
 
+- **Manual backup retention:** installs, upgrades, and uninstalls never delete
+  a backup. Every pre-upgrade backup stays under `~/.zoveli/backups` until you
+  run `zoveli backups prune --keep N`; the newest valid pre-upgrade backup is
+  always kept, even with `--keep 0`. `zoveli backups list` is read-only and
+  exits successfully even when some entries are invalid. Pruning skips
+  symlinks and junctions, manual `--out` backups, entries that resolve outside
+  the backups directory, and directories without a valid `manifest.json`. It
+  asks for confirmation on a terminal and requires `--yes` when stdin is not a
+  TTY; `--json` also requires `--yes`.
+
 ### Fixed
 
 - **Windows installer download race:** the runtime installer now stages

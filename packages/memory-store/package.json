@@ -4,6 +4,18 @@
   "description": "SQLite-backed local-first memory store with FTS5 (replaces Obsidian flat-file vault as source of truth)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./backup-retention": {
+      "types": "./dist/backup-retention.d.ts",
+      "import": "./dist/backup-retention.js",
+      "require": "./dist/backup-retention.js"
+    }
+  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
