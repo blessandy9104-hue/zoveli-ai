@@ -218,7 +218,7 @@ jobs:
     # the pinned @playwright/test version, so no browser or apt install runs.
     # Keep the tag in sync with the @playwright/test version in package.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
       options: --user 1001
     steps:
       - name: Checkout
