@@ -1,6 +1,6 @@
 {
   "name": "@zoveli/intelligence-plugin",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Optional Zoveli adapter for the @zoveli/intelligence subsystem",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
