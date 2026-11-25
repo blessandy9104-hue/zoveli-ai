@@ -52,6 +52,11 @@ export default defineConfig({
     // mapping resolved to a literal `packages/*/src` path and never worked.
     alias: [
       {
+        // Leaf module: lets CLI/tests use retention without loading SQLite.
+        find: '@zoveli/memory-store/backup-retention',
+        replacement: path.resolve(__dirname, 'packages/memory-store/src/backup-retention.ts'),
+      },
+      {
         find: /^@zoveli\/([^/]+)\/src(.*)$/,
         replacement: path.resolve(__dirname, 'packages/$1/src$2'),
       },

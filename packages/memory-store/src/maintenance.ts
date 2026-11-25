@@ -4,9 +4,9 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { MemoryStore, resolveDbPath, resolveVaultPath, type ImportReport } from './store.js';
 import { openDatabaseSync, SCHEMA_VERSION } from './database.js';
+import { BACKUP_FORMAT, BACKUP_VERSION } from './backup-format.js';
 
-export const BACKUP_FORMAT = 'zoveli-backup';
-export const BACKUP_VERSION = 1;
+export { BACKUP_FORMAT, BACKUP_VERSION };
 
 export interface DataPaths {
   dbPath: string;
