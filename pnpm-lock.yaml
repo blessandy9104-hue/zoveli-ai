@@ -403,6 +403,9 @@ importers:
       '@zoveli/health':
         specifier: workspace:*
         version: link:../health
+      '@zoveli/intelligence-plugin':
+        specifier: workspace:*
+        version: link:../intelligence-plugin
       '@zoveli/languages':
         specifier: workspace:*
         version: link:../languages
@@ -446,6 +449,31 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@20.19.43)(tsx@4.23.15))
+
+  packages/intelligence-plugin:
+    dependencies:
+      '@deepseek-ai/dsh-core':
+        specifier: workspace:*
+        version: link:../shim-dsh-core
+      '@zoveli/intelligence':
+        specifier: file:../../vendor/zoveli-intelligence-0.1.1.tgz
+        version: file:vendor/zoveli-intelligence-0.1.1.tgz
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      oxlint:
+        specifier: 'catalog:'
+        version: 0.18.1
+      tsdown:
+        specifier: ^0.23.1
+        version: 0.23.7(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4)(vite@6.4.5(@types/node@24.19.2)(tsx@4.23.15))
 
   packages/languages:
     dependencies:
@@ -1478,6 +1506,12 @@ packages:
     resolution: {integrity: sha512-CSTUi/ya58q2PuWTpk//BNSpXgOz7ol45T+SDuU7QfD/vN1FcLjSh99KDQzLf4AbIy43ORUw5UFehhfMGPNj9w==}
     cpu: [x64]
     os: [win32]
+
+  '@zoveli/intelligence@file:vendor/zoveli-intelligence-0.1.1.tgz':
+    resolution: {integrity: sha512-e7B33rKlmyq2b/pZHY+CBp4i19aeOu6wyF/tN8UL+VyivHbpkia/2agjkfWQGNmIOc0nsbG62JTqc2gm75TrAQ==, tarball: file:vendor/zoveli-intelligence-0.1.1.tgz}
+    version: 0.1.1
+    engines: {node: '>=22.16.0'}
+    hasBin: true
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -2874,6 +2908,8 @@ snapshots:
 
   '@yuku-toolchain/win32-x64@0.28.1':
     optional: true
+
+  '@zoveli/intelligence@file:vendor/zoveli-intelligence-0.1.1.tgz': {}
 
   accepts@2.0.0:
     dependencies:
